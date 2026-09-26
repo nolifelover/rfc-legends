@@ -63,6 +63,30 @@ export interface Attestation {
   nonce: bigint;
 }
 
+/**
+ * RoosterRWA.Registration — custodian (farm) co-signature for minting one
+ * bird. keccak256("Registration(string ringId,uint8 sireLine,uint64 hatchedAt,uint256 sireTokenId,uint256 damTokenId,address to,uint64 nonce)")
+ */
+export const REGISTRATION_TYPE = [
+  { name: 'ringId', type: 'string' },
+  { name: 'sireLine', type: 'uint8' },
+  { name: 'hatchedAt', type: 'uint64' },
+  { name: 'sireTokenId', type: 'uint256' },
+  { name: 'damTokenId', type: 'uint256' },
+  { name: 'to', type: 'address' },
+  { name: 'nonce', type: 'uint64' },
+] as const;
+
+export interface Registration {
+  ringId: string;
+  sireLine: number;
+  hatchedAt: bigint;
+  sireTokenId: bigint;
+  damTokenId: bigint;
+  to: Hex;
+  nonce: bigint;
+}
+
 export function rareItemsDomain(chainId: number, verifyingContract: Hex) {
   return {
     name: RARE_ITEMS_DOMAIN_NAME,
@@ -106,5 +130,19 @@ export function attestationTypedData(
     types: { EIP712Domain: EIP712_DOMAIN_TYPE, Attestation: ATTESTATION_TYPE },
     primaryType: 'Attestation',
     message: attestation,
+  };
+}
+
+/** Typed-data payload ready for viem's `signTypedData` / `verifyTypedData`. */
+export function registrationTypedData(
+  chainId: number,
+  verifyingContract: Hex,
+  registration: Registration,
+) {
+  return {
+    domain: roosterRwaDomain(chainId, verifyingContract),
+    types: { EIP712Domain: EIP712_DOMAIN_TYPE, Registration: REGISTRATION_TYPE },
+    primaryType: 'Registration',
+    message: registration,
   };
 }

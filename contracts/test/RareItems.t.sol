@@ -307,6 +307,19 @@ contract RareItemsTest is Test {
         rare.pause();
     }
 
+    function test_SetBaseURI_RotatesUri() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), alice));
+        rare.setBaseURI("https://evil.example/");
+
+        vm.expectEmit(true, true, true, true);
+        emit RareItems.BaseURIChanged("https://live.example/api/items/");
+        vm.prank(owner);
+        rare.setBaseURI("https://live.example/api/items/");
+
+        assertEq(rare.uri(3001), "https://live.example/api/items/3001");
+    }
+
     // -------------------------------------------------------------------- uri
 
     function test_Uri_DecimalAppend() public view {

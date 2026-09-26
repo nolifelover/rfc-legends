@@ -43,6 +43,7 @@ contract Deploy is Script {
         d.farmSigner = vm.envOr("FARM_SIGNER_ADDRESS", ANVIL_FARM_SIGNER);
         d.treasury = vm.envOr("TREASURY_ADDRESS", ANVIL_TREASURY);
         string memory baseURI = vm.envOr("RARE_ITEMS_BASE_URI", string("http://localhost:3000/api/items/"));
+        string memory roosterBaseURI = vm.envOr("ROOSTER_BASE_URI", string("http://localhost:3000/api/roosters/"));
 
         vm.startBroadcast(deployerKey);
 
@@ -52,7 +53,7 @@ contract Deploy is Script {
         RareItems rare = new RareItems(d.gameSigner, registry, baseURI, owner);
         RareMarket market = new RareMarket(rare, usdc, registry, d.treasury, owner);
         // RFC Club holds mint rights; starts as deployer, transfer later.
-        RoosterRWA rooster = new RoosterRWA(d.farmSigner, owner);
+        RoosterRWA rooster = new RoosterRWA(d.farmSigner, owner, roosterBaseURI);
 
         d.usdc = address(usdc);
         d.registry = address(registry);

@@ -47,8 +47,13 @@ contract RareItems is ERC1155, Ownable, Pausable {
     /// @notice dropId => already minted. Makes every drop claimable exactly once.
     mapping(bytes32 => bool) public dropMinted;
 
+    /// @dev Kept in our own storage (not OZ's immutable) so it can rotate via
+    ///      {setBaseURI} when the app host changes.
+    string private _baseTokenURI;
+
     event RareMinted(address indexed to, uint256 indexed itemId, uint256 amount, bytes32 indexed dropId);
     event VoucherSignerTransferred(address indexed previousSigner, address indexed newSigner);
+    event BaseURIChanged(string newBaseURI);
 
     error VoucherExpired(uint256 deadline, uint256 blockTimestamp);
     error InvalidSigner(address recovered, address expected);
@@ -65,6 +70,13 @@ contract RareItems is ERC1155, Ownable, Pausable {
         }
         voucherSigner = _voucherSigner;
         humanRegistry = _humanRegistry;
+        _baseTokenURI = baseURI;
+    }
+
+    /// @notice Rotates the metadata base URI (e.g. localhost -> live host).
+    function setBaseURI(string calldata newBaseURI) external onlyOwner {
+        _baseTokenURI = newBaseURI;
+        emit BaseURIChanged(newBaseURI);
     }
 
     /// @notice Mints a rare drop against a server-signed voucher. Anyone may
@@ -118,7 +130,7 @@ contract RareItems is ERC1155, Ownable, Pausable {
     ///         the configured base URI (64 lowercase hex chars, no 0x prefix
     ///         per the ERC); otherwise appends the decimal id.
     function uri(uint256 id) public view override returns (string memory) {
-        string memory base = super.uri(id);
+        string memory base = _baseTokenURI;
         bytes memory baseBytes = bytes(base);
         if (baseBytes.length == 0) return "";
 
