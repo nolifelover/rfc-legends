@@ -83,8 +83,15 @@ export async function GET(req: Request) {
 
   if (url.searchParams.get('query')) {
     // Run an arbitrary saved event query (judges can probe any of the four).
-    const rows = await runEventQuery(url.searchParams.get('query') as string, limit)
-    return NextResponse.json({ configured, source: 'multibaas', rows })
+    try {
+      const rows = await runEventQuery(url.searchParams.get('query') as string, limit)
+      return NextResponse.json({ configured, source: 'multibaas', rows })
+    } catch (err) {
+      return NextResponse.json(
+        { configured, source: 'multibaas', error: err instanceof Error ? err.message : String(err) },
+        { status: 502 },
+      )
+    }
   }
 
   if (configured) {

@@ -17,17 +17,26 @@ SSH_OPTS=(-o ControlMaster=auto -o ControlPath="$HOME/.ssh/cm-edge.sock" -o Cont
 edg() { ssh "${SSH_OPTS[@]}" "$HOST" "$@"; }
 rsync_edge() { rsync -az -e "ssh ${SSH_OPTS[*]}" "$@"; }
 
-echo "==> syncing repo -> $HOST:~/rfc-legends (secrets excluded)"
+echo "==> building locally first (one build, shipped everywhere)"
+"$REPO/scripts/deploy.sh" > /tmp/deploy-local-for-edge.log 2>&1 || {
+  echo "!! local build failed — see /tmp/deploy-local-for-edge.log" >&2; exit 1;
+}
+tail -2 /tmp/deploy-local-for-edge.log
+
+echo "==> syncing repo + prebuilt web -> $HOST:~/rfc-legends (secrets excluded)"
 rsync_edge --delete \
-  --exclude .git --exclude node_modules --exclude .next --exclude .data \
-  --exclude 'pb_data*' --exclude '.env*' --exclude apps/web/.data \
+  --exclude .git --exclude .data --exclude 'pb_data*' --exclude '.env*' \
+  --exclude apps/web/.data --exclude pocketbase/pocketbase \
   "$REPO/" "$HOST:rfc-legends/"
+# the local production build (stage dir) replaces the app source on the box;
+# node_modules rides along so the runtime image is self-contained
+rsync_edge --delete "$HOME/rfc-legends-prod/web/" "$HOST:rfc-legends/apps/web/"
 
 echo "==> copying + tuning the production env"
 scp "${SSH_OPTS[@]}" -q "$REPO/apps/web/.env.production.local" "$HOST:rfc-legends/apps/web/.env.production.local"
 edg 'cd ~/rfc-legends/apps/web && sed -i "s|^POCKETBASE_URL=.*|POCKETBASE_URL=http://pocketbase:8091|" .env.production.local && grep -q "^POCKETBASE_SUPERUSER_PASSWORD=" .env.production.local && echo env-ok'
 
-echo "==> building containers (this is the slow part)"
+echo "==> building containers (fast: runtime image copies the prebuilt app)"
 edg 'cd ~/rfc-legends && cp deploy/rfctv/compose.yaml compose.yaml && sudo docker compose build 2>&1 | tail -3'
 
 echo "==> starting (loopback only)"
