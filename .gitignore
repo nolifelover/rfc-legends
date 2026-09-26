@@ -27,3 +27,6 @@ docs/bar/
 # PocketBase binary and data
 pocketbase/pocketbase
 pocketbase/pb_data/
+
+# local secrets (API keys) — never commit
+.secret*
