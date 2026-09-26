@@ -77,7 +77,10 @@ async function enrichItemIds(sales: { listingId: string; itemId?: string }[], ch
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
-  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 20)))
+  // garbage limits fall back to the default instead of poisoning the
+  // MultiBaas query and silently degrading to the RPC path
+  const rawLimit = Number(url.searchParams.get('limit') ?? 20)
+  const limit = Math.min(100, Math.max(1, Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 20))
   const raw = url.searchParams.get('raw') === '1'
   const configured = Boolean(mbConfig())
 
