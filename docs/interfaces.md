@@ -229,7 +229,7 @@ eth-dev2 hit its 5-hour usage limit. Until it returns, these owners replace it:
 | `apps/web/src/components/game/**`, `apps/web/src/game/types.ts`, `apps/web/src/app/page.tsx`, `apps/web/src/app/layout.tsx` | eth-dev1 |
 | `apps/web/src/server/game/**` (engine) | eth-dev3 |
 
-eth-dev2 takes the lane back when it returns, after a handoff message from the lead.
+eth-dev2 is back as of 13:19 UTC. The takeover owners keep these paths through critic round 3 to avoid collisions near the freeze. eth-dev2 is the independent game-lane verifier (G-QA): read-only plus tests, with fixes routed through the lead.
 
 ## 8b. Decisions made during the build
 
