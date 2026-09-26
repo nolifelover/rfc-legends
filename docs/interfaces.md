@@ -229,6 +229,13 @@ eth-dev2 hit its 5-hour usage limit. Until it returns, these owners replace it:
 | `apps/web/src/components/game/**`, `apps/web/src/game/types.ts`, `apps/web/src/app/page.tsx`, `apps/web/src/app/layout.tsx` | eth-dev1 |
 | `apps/web/src/server/game/**` (engine; ENG2 adds server-side coins/เบี้ย + demo common drops; ENG3 adds a second zone at Base Lv 30) | eth-dev3 |
 
+**Mobile graphics lane (15:44 UTC, by the user's direction): the Codex session (tmux `eth:codex`).**
+- Scope: mobile-only presentation, meaning mobile-gated changes in `apps/web/src/game/**` plus new assets under `apps/web/public/game/mobile/`.
+- Mobile-gated CSS in `apps/web/src/components/game/**` is allowed only after announcing the files in `.omx/coordination/`.
+- Codex works on its own worktree/branch, and the lead reviews and merges it. Desktop must look unchanged.
+- Out of scope: gameplay, economy, contracts, `server/**`, `api/**`, market, and World ID.
+- Merge cutoff 18:00 UTC. scene-builder is frozen at 4496bd8 and makes no further edits.
+
 eth-dev2 is back as of 13:19 UTC. The takeover owners keep these paths through critic round 3 to avoid collisions near the freeze. eth-dev2 is the independent game-lane verifier (G-QA): read-only plus tests, with fixes routed through the lead.
 
 ## 8b. Decisions made during the build
