@@ -22,7 +22,7 @@ export const SIRE_LINES: SireLineInfo[] = [
     id: "kumarnjeen",
     roman: "Kumarnjeen",
     thai: "กุมารจีน",
-    personality: "Sharp and clever — reads the fight like an open book.",
+    personality: "Sharp and clever — quick as a spark.",
     bias: "TEC++ · SPD+",
     skill: {
       roman: "Keen Flurry",
@@ -50,7 +50,7 @@ export const SIRE_LINES: SireLineInfo[] = [
     id: "chaokhunthong",
     roman: "Chaokhunthong",
     thai: "เจ้าขุนทอง",
-    personality: "Graceful and stately — born for the arena spotlight.",
+    personality: "Graceful and stately — the star of every beauty show.",
     bias: "All-round · SPR+",
     skill: {
       roman: "Golden Grace",
@@ -69,7 +69,7 @@ export const SIRE_LINES: SireLineInfo[] = [
     skill: {
       roman: "Iron Heart",
       thai: "ใจเหล็ก",
-      effect: "Survives one lethal hit per battle at 1 HP",
+      effect: "Shrugs off one knockout per outing, staying at 1 HP",
     },
     badge: "bg-orange-100 text-red-800",
     ring: "border-red-400",
@@ -78,7 +78,7 @@ export const SIRE_LINES: SireLineInfo[] = [
     id: "raptor",
     roman: "Raptor",
     thai: "แร๊พเตอร์",
-    personality: "Bold and fast — strikes before the foe blinks.",
+    personality: "Bold and fast — calm, watchful, never rattled.",
     bias: "SPD++ · TEC+",
     skill: {
       roman: "Hawk Dash",
