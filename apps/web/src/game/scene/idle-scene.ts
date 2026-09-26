@@ -130,6 +130,9 @@ export class IdleScene extends Phaser.Scene {
   private coinsShown = 0
   private coinsKnown = false
   private pips!: BossPips
+  /** graceful degrade: with unspent points and hits under 2% of the target's HP, say why */
+  private hintChip: Chip | null = null
+  private hintUntil = 0
   private harvestShown = 0
   private pendingLoot: LootEntry[] = []
   /** units drained from the queue but not yet arrived at the chip */
@@ -985,6 +988,33 @@ export class IdleScene extends Phaser.Scene {
     this.fx.setNoSpawn(p.x, p.y)
   }
 
+  /**
+   * A player who never spent stat points hits for ~1 against real monster HP —
+   * true, but it looks stuck. Rather than fake the number, a chip says what to do
+   * (the HUD's stat panel is one tap away). Hidden again once hits land properly.
+   */
+  private checkHint(value: number, targetMaxHp: number): void {
+    const weak = this.player.statPoints >= 10 && value < targetMaxHp * 0.02
+    const now = this.time.now
+    if (weak) this.hintUntil = now + 4000
+    const show = now < this.hintUntil
+    if (show && !this.hintChip) {
+      this.hintChip = new Chip(this.ui, '✦ Spend stat points to hit harder', { fontFamily: this.font, fontSize: 24, accent: 0xffd24a })
+      this.hintChip.container.setDepth(55).setAlpha(0)
+      this.ui.tweens.add({ targets: this.hintChip.container, alpha: 1, duration: 300 })
+      this.ui.tweens.add({ targets: this.hintChip.container, scale: 1.04, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    } else if (!show && this.hintChip) {
+      const chip = this.hintChip
+      this.hintChip = null
+      this.ui.tweens.killTweensOf(chip.container)
+      this.ui.tweens.add({ targets: chip.container, alpha: 0, duration: 300, onComplete: () => chip.destroy() })
+    }
+    if (this.hintChip) {
+      const r = this.ui.rect
+      this.hintChip.container.setPosition(r.x0 + L.SAFE + this.hintChip.boxWidth / 2, r.y1 - L.SAFE - 24)
+    }
+  }
+
   /** UI-scene (canvas) coordinates → world coordinates under the world camera. */
   private uiToWorld(pt: { x: number; y: number }): { x: number; y: number } {
     const p = this.cameras.main.getWorldPoint(pt.x, pt.y)
@@ -1377,6 +1407,7 @@ export class IdleScene extends Phaser.Scene {
       return
     }
     if (kind === 'crit') this.fx.sparkle(p.container.x - p.h * 0.3, this.topYOf(p) + p.h * 0.3, 8)
+    if (kind === 'trainer') this.checkHint(value, p.maxHp)
     // the boss only dies when the server says so; cosmetic hits stop at 1 HP
     p.hp = Math.max(p.boss && !this.bossServerDead ? 1 : 0, p.hp - value)
     const lethal = p.hp <= 0
