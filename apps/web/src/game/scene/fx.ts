@@ -299,7 +299,7 @@ export class Fx {
   }
 
   /** Small floating label, e.g. "+1 Paddy Rice" next to the Harvest chip. */
-  tick(x: number, y: number, label: string, color: string, size = TYPE.lootTick): void {
+  tick(x: number, y: number, label: string, color: string, size: number = TYPE.lootTick): void {
     const t = this.acquire()
     t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: 5 })
     t.setText(label)
