@@ -43,7 +43,7 @@ export const LAYOUT = {
   PACK_MAX: 8,
   WALK_SPEED: 420, // px/s while advancing
   /** Heroes. */
-  TRAINER_X: 430,
+  TRAINER_X: 370,
   TRAINER_FEET: 862,
   TRAINER_H: 400,
   ROOSTER_X: 800,
