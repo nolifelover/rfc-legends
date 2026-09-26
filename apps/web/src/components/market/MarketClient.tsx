@@ -30,9 +30,9 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
     {
       label: "List",
       sub: "escrow",
-      done: Boolean(wallet && listings.data?.active.some((l) => l.seller.toLowerCase() === wallet)),
+      done: Boolean(wallet && listings.data?.sellers.includes(wallet)),
     },
-    { label: "Sold", sub: "90 / 10 split", done: Boolean(receipt) },
+    { label: "Sold", sub: "90 / 10 split", done: Boolean(receipt || (wallet && listings.data?.soldParties.includes(wallet))) },
   ];
 
   return (

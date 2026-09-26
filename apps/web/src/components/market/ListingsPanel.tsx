@@ -26,18 +26,21 @@ export function useListings(deployment: Deployment | null | undefined) {
     queryKey: ["market-listings", deployment?.RareMarket],
     enabled: Boolean(deployment && client),
     refetchInterval: 15_000,
-    queryFn: async (): Promise<{ active: ActiveListing[]; everListedItemIds: number[] }> => {
+    queryFn: async (): Promise<{
+      active: ActiveListing[];
+      everListedItemIds: number[];
+      /** Lowercase addresses that ever listed, and parties to past sales (for the progress row). */
+      sellers: string[];
+      soldParties: string[];
+    }> => {
       const market = deployment!.RareMarket;
       // Public Sepolia RPCs refuse getLogs from block 0, and the address export
       // has no deploy block, so scan a recent window (~1 week of blocks).
       const fromBlock = (await client!.getBlockNumber()) - BigInt(50_000);
-      const logs = await client!.getContractEvents({
-        address: market,
-        abi: rareMarketAbi,
-        eventName: "Listed",
-        fromBlock,
-        toBlock: "latest",
-      });
+      const [logs, sales] = await Promise.all([
+        client!.getContractEvents({ address: market, abi: rareMarketAbi, eventName: "Listed", fromBlock, toBlock: "latest" }),
+        client!.getContractEvents({ address: market, abi: rareMarketAbi, eventName: "Sold", fromBlock, toBlock: "latest" }),
+      ]);
       const ids = [...new Set(logs.map((l) => l.args.listingId!))];
       const rows = await Promise.all(
         ids.map((id) => client!.readContract({ address: market, abi: rareMarketAbi, functionName: "getListing", args: [id] })),
@@ -49,7 +52,9 @@ export function useListings(deployment: Deployment | null | undefined) {
         .reverse();
       // Sold-out listings still tell a buyer which item ids to check balances for.
       const everListedItemIds = [...new Set(logs.map((l) => Number(l.args.itemId!)))];
-      return { active, everListedItemIds };
+      const sellers = [...new Set(logs.map((l) => l.args.seller!.toLowerCase()))];
+      const soldParties = [...new Set(sales.flatMap((s) => [s.args.seller!.toLowerCase(), s.args.buyer!.toLowerCase()]))];
+      return { active, everListedItemIds, sellers, soldParties };
     },
   });
 }
