@@ -20,7 +20,7 @@ Already seeded on the recording host (2026-09-26 10:43 UTC, through its real UI)
   - Profile 1 (seller): **Demo A** = `prodA` `0xa29e…e5e7` (the active account when you start) and **Demo A2** = `prodA2` `0x57Dc…CdEF6`.
   - Profile 2 (buyer/bot): **Demo B** = `buyerB` `0x3A8A…deAB` and **Demo C** = `botC` `0xB8EB…529b`.
 - [ ] **World App is open** on the presenter's phone: unlocked, up to date, signed in, with the **Orb-verified** World ID, on a good connection, notifications silenced.
-- [ ] **Demo mode badge is visible.** "⚡ Demo mode: boosted rates" shows under the nav on /game and /market.
+- [ ] **Demo badge is visible.** The "⚡ Demo (อัตราเร่งสำหรับสาธิต)" pill shows at the top right of /game, and the demo badge shows on /market. Never present the boosted rates as real.
 - [ ] **Production World ID.** Opening the verify widget shows a QR code but **no** "Testing in staging? Use the simulator" line. If that line appears, `WORLD_ENVIRONMENT` is still `staging` (see §1).
 - [ ] **Browser is 1920×1080 at 100% zoom.** Maximize the window on a 1920×1080 display. On a bigger screen, set the window to exactly 1920×1080 with a window-resizer extension or the OS; DevTools device mode doesn't work here because it switches off when DevTools closes. Reset zoom with Ctrl/Cmd + 0. Hide the bookmarks bar and close other tabs.
 - [ ] **Clean start.** Demo A has no character yet and isn't verified (see §6 if you're re-taking). Demo B holds test USDC. Demo C shows its unminted MVP Card #3001 on /market.
@@ -61,7 +61,7 @@ Top up from the deployer (`contracts/.env` `DEPLOYER_PRIVATE_KEY`) with at most 
 
 ## 3. Pre-flight (T−15 min)
 
-1. https://rfclegends.rfcclub.app/market loads and shows the **Demo mode: boosted rates** badge.
+1. https://rfclegends.rfcclub.app/market loads and shows the demo badge.
 2. Opening the verify widget there shows a QR code with **no** simulator line. That confirms production World ID.
 3. As C on that host, **Your rare drops** shows the unminted MVP Card #3001. If it doesn't, re-seed it (see §6).
 4. Presenter's phone: World App is up to date, and the World ID holds the Orb credential.
@@ -73,19 +73,21 @@ Top up from the deployer (`contracts/.env` `DEPLOYER_PRIVATE_KEY`) with at most 
 Expected on-screen text is quoted exactly as rehearsed.
 
 ### Scene 1: play to Base Lv 30 (wallet A)
-1. Open **/game**. **Wait 2 seconds after the page loads**, then click **Connect wallet** and pick A in MetaMask. Clicking earlier does nothing, because wagmi is still hydrating; the game lane has a fix queued as G5-4.
+/game runs in **game mode**: the site nav folds into a ☰ menu (top left, next to the wallet chip), the demo badge is a small pill, and there's no footer. The steps below describe beats rather than positions, so they survive visual polish and a zone change at Lv 30.
+
+1. Open **/game**. Disconnected, it shows "Connect your wallet to begin your journey". **Wait about 2 seconds** after load, then click **Connect wallet** and pick A in MetaMask. (Clicking earlier can do nothing while wagmi hydrates.)
 2. Type a trainer name (for example "Khun Gai"), pick a sire line (for example **Thep**), and click **Begin the journey**.
-   Expected: the live field scene ("ทุ่งนาบ้านเกิด · Home Fields") with the "Demo mode: boosted rates" badge, a **Stat points: 48 ▸** button, and the HUD (Base Lv, HP/SP/EXP, **✨ Rare drops (0)**).
-3. Click **Stat points: 48 ▸**. In the "SPEND STAT POINTS" dialog, press **+** on **STR** ×8, **AGI** ×6 and **DEX** ×6, then close it with **×**.
-4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. Rehearsal: **Lv 1 to Lv 30 took 1.2 minutes.**
-5. *(Optional, shows rejection c)* before Lv 30, open **Market** and press **Mint as NFT** on any drop. Expected: "⛔ Rejected `base_level_too_low` Base Lv N: reach Base Lv 30 to mint rare drops." Toasts before Lv 30 are real drops too, but they hit this same level rejection.
+   Expected: the live scene starts. The HUD shows the trainer's title and "Lv 1", HP/SP/EXP bars, the rooster, and the goal line "Next: Base Lv 30 → unlock minting rare drops (N to go)". Its buttons are **✦ 48 points to spend ▸**, 🎒, **🛡 Guild** and ⟳. In-canvas chips count kills and harvest/coins and show "BOSS IN n".
+3. Click **✦ 48 points to spend ▸**. In the dialog, press **+** on **STR** ×8, **AGI** ×6 and **DEX** ×6, then close it with **×**.
+4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. On the recording host (13:58 UTC rehearsal), **Lv 1 to Lv 30 took 1.1 minutes.**
+5. *(Optional, shows rejection c)* before Lv 30, open **☰ → Market** in a separate window and press **Mint as NFT** on any drop. Expected: "⛔ Rejected `base_level_too_low` Base Lv N: reach Base Lv 30 to mint rare drops." Toasts before Lv 30 are real drops too, but they hit this same level rejection.
 
 > **Don't navigate the /game tab away while leveling.** To show /roosters (or anything else) during this segment, open it in a **separate window**, and never open /game there. When the /game tab comes back, the toast component treats drops that arrived meanwhile as already seen, so the Lv-30 toast never shows.
 
-### Scene 2: the drop toast, then Mint & sell
-6. At the Lv-30 kill, a Monster Card drop is guaranteed. MVP Cards drop at 55% per boss kill. Toasts slide in at the bottom right: "RARE DROP! MVP CARD การ์ดราชาหนูนา" with **Mint & sell →** and **Keep playing**. In the rehearsal, both the Monster Card and the MVP Card toasts appeared within 3 seconds of reaching Lv 30.
-7. Click **Mint & sell →** on the red **MVP Card** toast. **Toasts vanish after about 7 seconds.** If you miss one, click **✨ Rare drops (N)** in the HUD: it opens /market, where every drop is listed (without the highlight).
-   Expected: `/market?dropId=0x…` with "MVP Card #3001 การ์ดราชาหนูนา" highlighted in yellow, "From your latest boss drop", and **Mint as NFT**.
+### Scene 2: the Lv-30 boss beat, the toast, then Mint & sell
+6. At Lv 30 the scene plays a short ceremony: level-up banners plus "MVP DEFEATED!" / "RARE DROP UNLOCKED!", and loot flies to the harvest chip. A Monster Card is guaranteed at the Lv-30 kill, and an MVP Card drops at 55% per boss kill. **About 7 seconds after Lv 30**, rare-drop toasts slide in at the bottom right: "MVP CARD การ์ดราชาหนูนา" and/or "MONSTER CARD การ์ดหนูนา", each with **Mint & sell →** and an "auto-hides" hint. The HUD pill becomes **✨ Rare drops (N)**. *(A second zone may unlock at Lv 30 and change the backdrop. The toasts are what matter.)*
+7. Click **Mint & sell →** on the **MVP Card** toast (red border), or on the Monster Card toast if no MVP dropped. **Toasts auto-hide after a few seconds.** If you miss one, click **✨ Rare drops (N)**: it opens /market, where every drop is listed (without the highlight).
+   Expected: `/market?dropId=0x…` with the card highlighted in yellow ("MVP Card #3001 การ์ดราชาหนูนา" or "Monster Card #1001 การ์ดหนูนา"), "From your latest boss drop", and **Mint as NFT**.
 
 ### Scene 3: World ID verify (wallet A)
 8. In the **World ID · proof of human** card, click **Verify with World ID**.
@@ -155,6 +157,19 @@ Rehearsed through the real UI with an injected wallet in headless Chromium, on s
 | (a) C mints MVP Card #3001 | 403 `not_verified_human` | 09:05:26Z |
 | (a) B (unverified) tries to resell | contract `NotVerifiedHuman`, no wallet prompt | 09:05:46Z |
 | (b) A2-staging verifies | 409 `nullifier_bound_to_other_wallet` | 08:40:27Z |
+
+**W13 prod re-rehearsal (recording host, D4 build, 13:57 UTC).** Fresh unverified wallet `0x27a6…f0c9`, no World ID verify anywhere:
+
+| Beat (elapsed) | Result |
+|---|---|
+| Connect, create "Khun Gai" (0:10) | Game-mode layout, HUD "✦ 48 points to spend ▸" |
+| Stats spent through the dialog (0:37) | Dialog closes with × |
+| Base Lv 30 (1:15, i.e. 1.1 min after create) | Boss ceremony; MVP Card + Monster Card toasts at 1:22 |
+| **Mint & sell →** (1:22) | `/market?dropId=0xf7b6…df1a`, Monster Card #1001 highlighted |
+| Mint as this unverified wallet (1:37) | 403 `not_verified_human` with the reason card |
+| Bot C, MVP Card #3001 (prod seed) | 403 `not_verified_human` |
+| B tries to resell MVP Card #3001 | contract `NotVerifiedHuman`, before any wallet prompt |
+| Recent sales panel | "source: MultiBaas ✓" with the latest sales |
 
 **W10 MultiBaas check (earn.dev):** A listed Monster Card #1001 (#5) at 5 USDC, and B bought it ([`0xc3ce2129…b1b5`](https://sepolia.etherscan.io/tx/0xc3ce212966aee5c628677dfa6ca6e5afa2c0583568c00d11ea2055596a06b1b5)). The Recent sales panel showed it via MultiBaas **6 s** after the receipt.
 
