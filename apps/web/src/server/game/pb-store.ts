@@ -69,20 +69,30 @@ export class PbGameStore implements GameStore {
   }
 
   async saveDrop(address: string, drop: Drop): Promise<void> {
+    await this.saveDrops(address, [drop])
+  }
+
+  async saveDrops(address: string, drops: Drop[]): Promise<void> {
+    if (drops.length === 0) return
     const client = await pb()
     await client
       .collection('players')
       .getFirstListItem(`address = "${address}"`)
       .catch((err: unknown) => notFound(err, 'PLAYER_NOT_FOUND'))
-    const dropId = normDropId(drop.dropId)
-    await client.collection('drops').create({ address, dropId, data: { ...drop, dropId } })
+    // one batch transaction for the whole sync (D1) instead of N sequential creates
+    const batch = client.createBatch()
+    for (const drop of drops) {
+      const dropId = normDropId(drop.dropId)
+      batch.collection('drops').create({ address, dropId, data: { ...drop, dropId } })
+    }
+    await batch.send()
   }
 
   async updateDropStatus(
     address: string,
     dropId: string,
     status: DropStatus,
-    txHash?: string,
+    txHash?: string | null,
   ): Promise<void> {
     const client = await pb()
     const id = normDropId(dropId)
@@ -92,7 +102,8 @@ export class PbGameStore implements GameStore {
       .catch((err: unknown) => notFound(err, 'DROP_NOT_FOUND'))
     const data = rec.data as Drop
     data.status = status
-    if (txHash !== undefined) data.txHash = txHash
+    if (txHash === null) delete data.txHash
+    else if (txHash !== undefined) data.txHash = txHash
     await client.collection('drops').update(rec.id, { dropId: id, data })
   }
 }

@@ -36,19 +36,25 @@ describe('exp curve — GDD §4.3 round(1.6 × Lv^3.75)', () => {
   })
 })
 
-describe('stat points — GDD §2.2', () => {
-  it('grants 3 + floor(L/5) per level reached', () => {
+describe('stat points — GDD §2.2 (3 + floor((L−1)/5), per the balance note)', () => {
+  it('grants 3 + floor((L−1)/5) per level reached', () => {
     expect(statPointsForLevel(2)).toBe(3)
-    expect(statPointsForLevel(5)).toBe(4)
-    expect(statPointsForLevel(10)).toBe(5)
+    expect(statPointsForLevel(5)).toBe(3)
+    expect(statPointsForLevel(6)).toBe(4)
+    expect(statPointsForLevel(10)).toBe(4)
+    expect(statPointsForLevel(11)).toBe(5)
   })
 
-  it('totals 61 points received at Lv5 (48 start + 13 gained)', () => {
-    expect(totalStatPointsAt(5)).toBe(61)
+  it('totals 60 points received at Lv5 (48 start + 12 gained)', () => {
+    expect(totalStatPointsAt(5)).toBe(60)
   })
 
-  it('totals 82 points received at Lv10 (48 start + 34 gained)', () => {
-    expect(totalStatPointsAt(10)).toBe(82)
+  it('totals 80 points received at Lv10 (48 start + 32 gained)', () => {
+    expect(totalStatPointsAt(10)).toBe(80)
+  })
+
+  it('totals exactly 1,273 points at Lv99 — the GDD balance note figure', () => {
+    expect(totalStatPointsAt(99)).toBe(1273)
   })
 
   it('raising one stat 1→99 costs 628 total (GDD balance note)', () => {

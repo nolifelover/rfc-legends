@@ -157,6 +157,7 @@ describe('syncPlayer', () => {
     expect(drops[0].itemId).toBe(2001)
     const got = await getDrop(A, drop.dropId)
     expect(got?.dropId).toBe(drop.dropId)
+    await setDropStatus(A, drop.dropId, 'minting')
     await setDropStatus(A, drop.dropId, 'minted', '0xdeadbeef')
     expect((await getDrop(A, drop.dropId))?.status).toBe('minted')
     expect((await getDrop(A, drop.dropId))?.txHash).toBe('0xdeadbeef')
@@ -164,6 +165,41 @@ describe('syncPlayer', () => {
     await expect(
       setDropStatus('0xdddddddddddddddddddddddddddddddddddddddd', drop.dropId, 'minted'),
     ).rejects.toThrowError('DROP_NOT_FOUND')
+  })
+
+  it('enforces forward-only drop status transitions (D4)', async () => {
+    useDataDir(path.join(dir, 'd4'))
+    const store = getStore()
+    await createPlayer(A, 'นายไก่เอ', 'raptor', T0)
+    const mkDrop = async (n: number) => {
+      const dropId = ('0x' + n.toString(16).padStart(2, '0').repeat(32)) as `0x${string}`
+      await store.saveDrop(A, { dropId, itemId: 2001, rarity: 'legendary', status: 'unminted', droppedAt: T0 })
+      return dropId
+    }
+
+    // rejected transitions
+    const unminted = await mkDrop(1)
+    await expect(setDropStatus(A, unminted, 'minted')).rejects.toThrowError('INVALID_STATUS') // skips minting
+    await expect(setDropStatus(A, unminted, 'unminted')).rejects.toThrowError('INVALID_STATUS') // no-op
+
+    const mintingId = await mkDrop(2)
+    await setDropStatus(A, mintingId, 'minting')
+    await expect(setDropStatus(A, mintingId, 'minting')).rejects.toThrowError('INVALID_STATUS') // no-op
+
+    const mintedId = await mkDrop(3)
+    await setDropStatus(A, mintedId, 'minting')
+    await setDropStatus(A, mintedId, 'minted', '0xabc')
+    await expect(setDropStatus(A, mintedId, 'minting')).rejects.toThrowError('INVALID_STATUS') // backwards
+    await expect(setDropStatus(A, mintedId, 'unminted')).rejects.toThrowError('INVALID_STATUS') // minted is terminal
+    await expect(setDropStatus(A, mintedId, 'minted')).rejects.toThrowError('INVALID_STATUS') // no-op
+
+    // allowed: minting → unminted rollback clears any txHash
+    const rollbackId = await mkDrop(4)
+    await setDropStatus(A, rollbackId, 'minting', '0xstale')
+    await setDropStatus(A, rollbackId, 'unminted')
+    const rolled = await getDrop(A, rollbackId)
+    expect(rolled?.status).toBe('unminted')
+    expect(rolled?.txHash).toBeUndefined()
   })
 
   it('matches dropIds case-insensitively (worldid lane passes lowercase)', async () => {

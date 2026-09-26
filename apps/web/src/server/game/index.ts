@@ -2,7 +2,7 @@
 // Server-authoritative: each sync recomputes state from elapsed time; no background worker.
 
 import { DEFAULT_MAP_ID } from '../../game/data/maps'
-import type { Drop, DropStatus, Player, SireLine, StatKey } from '../../game/types'
+import type { Drop, DropStatus, Player, Rarity, SireLine, StatKey } from '../../game/types'
 import {
   DEMO_OPTS,
   DEMO_EXP_MULT,
@@ -57,6 +57,49 @@ export function normalizeAddress(address: string): string {
   return a
 }
 
+// --- per-address serialization (D2) ---
+const addressLocks = new Map<string, Promise<unknown>>()
+
+/**
+ * Serializes state transitions per address: two overlapping syncs would otherwise both derive
+ * from the same snapshot — lost sessionCounter increments, lastSyncedAt regression and duplicate
+ * dropIds (which also collide with the onchain dropMinted dedup and make getDrop ambiguous).
+ * In-process only; a multi-instance deployment would need a DB-level lock (fine for our single
+ * dev/demo instance). The map is bounded by distinct addresses seen this process.
+ */
+function withAddressLock<T>(address: string, fn: () => Promise<T>): Promise<T> {
+  const prev = addressLocks.get(address) ?? Promise.resolve()
+  const run = prev.then(fn, fn)
+  addressLocks.set(
+    address,
+    run.then(
+      () => undefined,
+      () => undefined,
+    ),
+  )
+  return run
+}
+
+// --- drop persistence cap (D1) ---
+/** A demo-mode offline catch-up can roll thousands of mintables; persist only the rarest N. */
+export const MAX_DROPS_PER_SYNC = 100
+/** mvp_card > monster_card > legendary (non-mintables never reach Drop records at all). */
+const DROP_RARITY_PRIORITY: Record<Rarity, number> = {
+  mvp_card: 0,
+  monster_card: 1,
+  legendary: 2,
+  common: 3,
+  rare: 3,
+  epic: 3,
+}
+
+// --- forward-only drop status machine (D4) ---
+const VALID_DROP_TRANSITIONS: Record<DropStatus, readonly DropStatus[]> = {
+  unminted: ['minting'],
+  minting: ['minted', 'unminted'], // → unminted = mint aborted (rollback; clears any txHash)
+  minted: [], // terminal
+}
+
 function engineOpts(): EngineOpts {
   return demoMode ? DEMO_OPTS : NORMAL_OPTS
 }
@@ -100,11 +143,13 @@ export async function createPlayer(
   const trimmed = (name ?? '').trim()
   if (trimmed.length < 1 || trimmed.length > 24) throw new GameError('INVALID_NAME')
   if (!SIRE_LINES.includes(sireLine)) throw new GameError('INVALID_SIRE_LINE')
-  const store = getStore()
-  if (await store.getPlayer(a)) throw new GameError('PLAYER_EXISTS')
-  const player = buildPlayer(a, trimmed, sireLine, nowMs)
-  await store.savePlayer(player)
-  return player
+  return withAddressLock(a, async () => {
+    const store = getStore()
+    if (await store.getPlayer(a)) throw new GameError('PLAYER_EXISTS')
+    const player = buildPlayer(a, trimmed, sireLine, nowMs)
+    await store.savePlayer(player)
+    return player
+  })
 }
 
 export async function getPlayer(address: string): Promise<Player | null> {
@@ -131,21 +176,29 @@ export async function setDropStatus(
 ): Promise<void> {
   const a = normalizeAddress(address)
   if (!DROP_STATUSES.includes(status)) throw new GameError('INVALID_STATUS')
-  await getStore().updateDropStatus(a, dropId.toLowerCase(), status, txHash)
+  return withAddressLock(a, async () => {
+    const current = await getDrop(a, dropId)
+    if (!current) throw new GameError('DROP_NOT_FOUND')
+    if (!VALID_DROP_TRANSITIONS[current.status].includes(status)) throw new GameError('INVALID_STATUS')
+    const isRollback = current.status === 'minting' && status === 'unminted'
+    await getStore().updateDropStatus(a, dropId.toLowerCase(), status, isRollback ? null : txHash)
+  })
 }
 
 export async function allocateStats(address: string, allocations: Partial<Record<StatKey, number>>): Promise<Player> {
   const a = normalizeAddress(address)
-  const store = getStore()
-  const player = await store.getPlayer(a)
-  if (!player) throw new GameError('PLAYER_NOT_FOUND')
-  try {
-    applyAllocation(player, allocations)
-  } catch (err) {
-    throw new GameError(err instanceof Error ? err.message : 'INVALID_ALLOCATION')
-  }
-  await store.savePlayer(player)
-  return player
+  return withAddressLock(a, async () => {
+    const store = getStore()
+    const player = await store.getPlayer(a)
+    if (!player) throw new GameError('PLAYER_NOT_FOUND')
+    try {
+      applyAllocation(player, allocations)
+    } catch (err) {
+      throw new GameError(err instanceof Error ? err.message : 'INVALID_ALLOCATION')
+    }
+    await store.savePlayer(player)
+    return player
+  })
 }
 
 export interface SyncResult {
@@ -162,51 +215,57 @@ export interface SyncResult {
  */
 export async function syncPlayer(address: string, nowMs: number = Date.now()): Promise<SyncResult> {
   const a = normalizeAddress(address)
-  const store = getStore()
-  let player = await store.getPlayer(a)
-  if (!player) throw new GameError('PLAYER_NOT_FOUND')
+  return withAddressLock(a, async () => {
+    const store = getStore()
+    let player = await store.getPlayer(a)
+    if (!player) throw new GameError('PLAYER_NOT_FOUND')
 
-  const elapsedMs = nowMs - player.lastSyncedAt
-  if (elapsedMs < 1000) {
-    return { player, live: null, offline: null, demoMode }
-  }
-
-  player.sessionCounter += 1
-  const rng = mulberry32(hashSeed(player.address, player.sessionCounter))
-  const opts = engineOpts()
-
-  const elapsedSec = Math.floor(elapsedMs / 1000)
-  const liveTicks = Math.min(elapsedSec, LIVE_WINDOW)
-  let live: CombatAggregates | null = null
-  let offline: OfflineAggregates | null = null
-
-  if (liveTicks > 0) {
-    const res = simulateLive(player, liveTicks, rng, opts)
-    player = res.player
-    live = res.aggregates
-  }
-  const offlineSeconds = elapsedSec - LIVE_WINDOW
-  if (offlineSeconds > 0) {
-    const res = settleOffline(player, offlineSeconds, rng, opts)
-    player = res.player
-    offline = res.aggregates
-  }
-
-  const rolled = [...(live?.drops ?? []), ...(offline?.drops ?? [])]
-  for (const drop of rolled) {
-    player.dropCounter += 1
-    const record: Drop = {
-      // bytes32 hex is minted lowercase; all lookups are case-insensitive
-      dropId: makeDropId(player.address, player.sessionCounter, player.dropCounter).toLowerCase() as `0x${string}`,
-      itemId: drop.itemId,
-      rarity: drop.rarity,
-      status: 'unminted',
-      droppedAt: nowMs,
+    const elapsedMs = nowMs - player.lastSyncedAt
+    if (elapsedMs < 1000) {
+      return { player, live: null, offline: null, demoMode }
     }
-    await store.saveDrop(a, record)
-  }
 
-  player.lastSyncedAt = nowMs
-  await store.savePlayer(player)
-  return { player, live, offline, demoMode }
+    player.sessionCounter += 1
+    const rng = mulberry32(hashSeed(player.address, player.sessionCounter))
+    const opts = engineOpts()
+
+    const elapsedSec = Math.floor(elapsedMs / 1000)
+    const liveTicks = Math.min(elapsedSec, LIVE_WINDOW)
+    let live: CombatAggregates | null = null
+    let offline: OfflineAggregates | null = null
+
+    if (liveTicks > 0) {
+      const res = simulateLive(player, liveTicks, rng, opts)
+      player = res.player
+      live = res.aggregates
+    }
+    const offlineSeconds = elapsedSec - LIVE_WINDOW
+    if (offlineSeconds > 0) {
+      const res = settleOffline(player, offlineSeconds, rng, opts)
+      player = res.player
+      offline = res.aggregates
+    }
+
+    // D1: batch-persist at most MAX_DROPS_PER_SYNC drops (rarest first) in ONE store write
+    const rolled = [...(live?.drops ?? []), ...(offline?.drops ?? [])]
+    const persisted = rolled
+      .sort((x, y) => DROP_RARITY_PRIORITY[x.rarity] - DROP_RARITY_PRIORITY[y.rarity])
+      .slice(0, MAX_DROPS_PER_SYNC)
+      .map((drop) => {
+        player.dropCounter += 1
+        return {
+          // bytes32 hex is minted lowercase; all lookups are case-insensitive
+          dropId: makeDropId(player.address, player.sessionCounter, player.dropCounter).toLowerCase() as `0x${string}`,
+          itemId: drop.itemId,
+          rarity: drop.rarity,
+          status: 'unminted' as const,
+          droppedAt: nowMs,
+        } satisfies Drop
+      })
+    if (persisted.length > 0) await store.saveDrops(a, persisted)
+
+    player.lastSyncedAt = nowMs
+    await store.savePlayer(player)
+    return { player, live, offline, demoMode }
+  })
 }

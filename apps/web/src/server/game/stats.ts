@@ -13,9 +13,13 @@ export function expToNext(lv: number): number {
   return Math.round(1.6 * lv ** 3.75)
 }
 
-/** GDD §2.2: reaching level L grants 3 + floor(L/5) stat points */
+/**
+ * GDD §2.2: reaching level L grants 3 + floor((L−1)/5) stat points. The (L−1) form is what the
+ * GDD's own balance note uses: 48 start + this rule = 1,273 total points at Lv99, which is what
+ * makes its "raise two stats to 99 (628 each)" reasoning work. (floor(L/5) would give 1,292.)
+ */
 export function statPointsForLevel(lv: number): number {
-  return 3 + Math.floor(lv / 5)
+  return 3 + Math.floor((lv - 1) / 5)
 }
 
 /** Total points a player has received by base level lv (start 48 at Lv1). */

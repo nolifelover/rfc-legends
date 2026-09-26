@@ -19,7 +19,10 @@ export interface GameStore {
   savePlayer(player: Player): Promise<void>
   listDrops(address: string): Promise<Drop[]>
   saveDrop(address: string, drop: Drop): Promise<void>
-  updateDropStatus(address: string, dropId: string, status: DropStatus, txHash?: string): Promise<void>
+  /** Persist many drops in one write/transaction — syncPlayer uses this (D1: one save per sync). */
+  saveDrops(address: string, drops: Drop[]): Promise<void>
+  /** `txHash: null` clears the field (used when a mint is rolled back). */
+  updateDropStatus(address: string, dropId: string, status: DropStatus, txHash?: string | null): Promise<void>
 }
 
 export class JsonFileStore implements GameStore {
@@ -31,16 +34,54 @@ export class JsonFileStore implements GameStore {
     return path.join(this.dir, 'game.json')
   }
 
+  /**
+   * Read + minimally validate the db. ENOENT → fresh empty db. Any other read/parse error →
+   * move the file aside to `<name>.corrupt-<ts>.bak` and rethrow (D3: a catch-all here would make
+   * a corrupted file look empty and the next save would silently wipe every player). Garbage
+   * records (no string address) are dropped into the same backup with a warning, good ones kept.
+   */
   private async readRaw(): Promise<DbShape> {
+    let txt: string
     try {
-      const txt = await fs.readFile(this.file, 'utf8')
-      const parsed = JSON.parse(txt) as DbShape
-      // NB: always return a FRESH empty db — a shared const would get mutated by savePlayer's
-      // transact and poison every later "missing file" read.
-      return parsed && typeof parsed === 'object' && parsed.players ? parsed : { players: {} }
-    } catch {
-      return { players: {} }
+      txt = await fs.readFile(this.file, 'utf8')
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return { players: {} }
+      await this.backupCorrupt().catch(() => undefined)
+      throw new Error(`GAME_DATA_CORRUPT: cannot read ${this.file} (backed up if possible): ${String(err)}`)
     }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(txt)
+    } catch (err) {
+      await this.backupCorrupt().catch(() => undefined)
+      throw new Error(`GAME_DATA_CORRUPT: cannot parse ${this.file} (backed up if possible): ${String(err)}`)
+    }
+    const raw = parsed && typeof parsed === 'object' && (parsed as DbShape).players ? (parsed as DbShape) : null
+    if (!raw) {
+      await this.backupCorrupt().catch(() => undefined)
+      throw new Error(`GAME_DATA_CORRUPT: ${this.file} is not a valid game db (backed up if possible)`)
+    }
+    const db: DbShape = { players: {} }
+    const bad: Record<string, unknown> = {}
+    for (const [addr, rec] of Object.entries(raw.players)) {
+      if (rec && typeof rec === 'object' && typeof (rec as Player).address === 'string') {
+        db.players[addr] = rec as StoredPlayer
+      } else {
+        bad[addr] = rec
+        console.warn(`[game-store] dropping corrupt player record ${addr} (backed up)`)
+      }
+    }
+    if (Object.keys(bad).length > 0) {
+      await fs.mkdir(this.dir, { recursive: true })
+      await fs.writeFile(`${this.file}.corrupt-${Date.now()}.bak`, JSON.stringify({ players: bad }, null, 2))
+    }
+    return db
+  }
+
+  /** Move the (unreadable) data file aside so the next save can't overwrite the evidence. */
+  private async backupCorrupt(): Promise<void> {
+    await fs.mkdir(this.dir, { recursive: true })
+    await fs.rename(this.file, `${this.file}.corrupt-${Date.now()}.bak`)
   }
 
   private async writeRaw(db: DbShape): Promise<void> {
@@ -82,21 +123,27 @@ export class JsonFileStore implements GameStore {
   }
 
   async saveDrop(address: string, drop: Drop): Promise<void> {
+    await this.saveDrops(address, [drop])
+  }
+
+  async saveDrops(address: string, drops: Drop[]): Promise<void> {
+    if (drops.length === 0) return
     await this.transact(async (db) => {
       const rec = db.players[address]
       if (!rec) throw new Error('PLAYER_NOT_FOUND')
-      rec.drops = [...rec.drops, drop]
-      await this.writeRaw(db)
+      rec.drops = [...rec.drops, ...drops]
+      await this.writeRaw(db) // ONE write for the whole batch (D1)
     })
   }
 
-  async updateDropStatus(address: string, dropId: string, status: DropStatus, txHash?: string): Promise<void> {
+  async updateDropStatus(address: string, dropId: string, status: DropStatus, txHash?: string | null): Promise<void> {
     await this.transact(async (db) => {
       const rec = db.players[address]
       const drop = rec?.drops.find((d) => d.dropId === dropId)
       if (!drop) throw new Error('DROP_NOT_FOUND')
       drop.status = status
-      if (txHash !== undefined) drop.txHash = txHash
+      if (txHash === null) delete drop.txHash
+      else if (txHash !== undefined) drop.txHash = txHash
       await this.writeRaw(db)
     })
   }
