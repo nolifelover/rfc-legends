@@ -70,10 +70,9 @@ function Bar({
         <span className="absolute inset-y-0 left-2.5 hidden items-center text-xl font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] md:flex">
           {curMax}
         </span>
-        {/* mobile: compact current value only, never collides with the % */}
-        <span className="absolute inset-y-0 left-2.5 flex items-center text-base font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] md:hidden">
-          {compact(value)}
-        </span>
+        {/* mobile: % only — a raw value beside the % overlapped it in
+            narrow rows (worst case: high-level rooster EXP at 390px) */}
+
         {showPercent ? (
           <span className="absolute inset-y-0 right-2.5 flex items-center text-xl font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)]">
             {pct.toFixed(1)}%
