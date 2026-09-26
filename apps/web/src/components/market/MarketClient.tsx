@@ -110,7 +110,12 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
         <div className="flex min-w-0 flex-col gap-6">
           {receipt ? <SplitReceipt r={receipt} onClose={() => setReceipt(null)} /> : null}
           <DropsPanel address={wallet} focusDropId={focusDropId} />
-          <InventoryPanel address={wallet} deployment={deployment} candidateItemIds={[...mintedIds, ...listedIds]} />
+          <InventoryPanel
+            address={wallet}
+            deployment={deployment}
+            candidateItemIds={[...mintedIds, ...listedIds]}
+            verified={status.data?.verified}
+          />
           <ListingsPanel address={wallet} deployment={deployment} onSold={setReceipt} />
         </div>
       </div>

@@ -21,11 +21,14 @@ export function InventoryPanel({
   address,
   deployment,
   candidateItemIds,
+  verified,
 }: {
   address?: Hex;
   deployment: Deployment | null | undefined;
   /** Item ids worth checking: minted drops + anything seen in listings. */
   candidateItemIds: number[];
+  /** World ID status of the wallet; undefined while loading. */
+  verified?: boolean;
 }) {
   const client = usePublicClient({ chainId: sepolia.id });
   const ids = [...new Set(candidateItemIds)].sort((a, b) => a - b);
@@ -52,6 +55,12 @@ export function InventoryPanel({
       <h2 className="mb-4 text-lg font-bold text-bark">
         Your minted items
       </h2>
+      {address && verified === false ? (
+        <p role="status" className="mb-4 rounded-2xl border-2 border-clay/40 bg-clay/10 px-4 py-3 text-sm text-clay-deep">
+          <b>Selling is locked for this wallet.</b> Only World ID verified humans can list on the Rare Market, and
+          RareMarket checks HumanRegistry onchain, so a bot wallet can&apos;t sell even if it holds items.
+        </p>
+      ) : null}
       {!address || !deployment ? (
         <p className="text-sm text-bark-soft">{!address ? "Connect a wallet." : "Contracts aren't deployed yet."}</p>
       ) : balances.isLoading && ids.length ? (
@@ -63,7 +72,14 @@ export function InventoryPanel({
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
           {balances.data.map((b) => (
-            <ListForm key={b.itemId} address={address} deployment={deployment} itemId={b.itemId} balance={b.balance} />
+            <ListForm
+              key={b.itemId}
+              address={address}
+              deployment={deployment}
+              itemId={b.itemId}
+              balance={b.balance}
+              verified={verified}
+            />
           ))}
         </ul>
       )}
@@ -76,11 +92,13 @@ function ListForm({
   deployment,
   itemId,
   balance,
+  verified,
 }: {
   address: Hex;
   deployment: Deployment;
   itemId: number;
   balance: bigint;
+  verified?: boolean;
 }) {
   const config = useConfig();
   const queryClient = useQueryClient();
@@ -201,7 +219,7 @@ function ListForm({
           disabled={!!step}
           className="rounded-full bg-clay px-4 py-2 text-sm font-bold text-cream hover:bg-clay-deep disabled:cursor-wait disabled:opacity-60"
         >
-          {step ?? "List 1"}
+          {step ?? (verified === false ? "Verify with World ID to list" : "List 1")}
         </button>
       </form>
     </li>
