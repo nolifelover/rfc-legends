@@ -48,7 +48,7 @@ function NavLink({
 export function NavBar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isConnected } = useConnection();
+  const { address, isConnected } = useConnection();
 
   // GAME MODE (/game): the chrome collapses to a floating brand + menu
   // button so the canvas keeps the viewport.
@@ -71,11 +71,24 @@ export function NavBar() {
         >
           ☰
         </button>
-        {/* the connected chip stays reachable while playing (the demo
-            badge pill sits further right; they stack without overlap) */}
-        {isConnected ? (
-          <span className="pointer-events-auto ml-1 [&_button]:!px-3 [&_button]:!py-1 [&_button]:!text-xs">
-            <ConnectButton />
+        {/* wallet tucked behind an icon + green dot; the address reveals on
+            hover (critic r6 #4) */}
+        {isConnected && address ? (
+          <span className="group pointer-events-auto relative ml-1 inline-flex">
+            <span
+              title={`${address}
+(click to copy)`}
+              onClick={() => {
+                void navigator.clipboard?.writeText(address).catch(() => {});
+              }}
+              className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 text-lg font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
+            >
+              👛
+              <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            </span>
+            <span className="pointer-events-none absolute right-0 top-full z-50 mt-1 hidden whitespace-nowrap rounded-md border border-sun/60 bg-[#1d130c] px-2 py-1 text-xs font-bold text-cream/90 shadow-lg group-hover:block">
+              {address.slice(0, 8)}…{address.slice(-6)}
+            </span>
           </span>
         ) : null}
         {menuOpen ? (
