@@ -620,7 +620,8 @@ export class IdleScene extends Phaser.Scene {
       this.roosterPower = []
       const H = L.ROOSTER_H
       const add = (x: number, y: number, key: string, tint: number, scale: number, alpha: number, pulse = false): void => {
-        const img = this.add.image(x, y, key).setTint(tint).setScale(scale).setAlpha(alpha).setBlendMode(Phaser.BlendModes.ADD)
+        // normal blend: additive gold over the green paddy washed out to pale mint
+        const img = this.add.image(x, y, key).setTint(tint).setScale(scale).setAlpha(alpha)
         this.rooster.add(img)
         this.roosterPower.push(img)
         if (pulse && !this.reduced) {
@@ -654,13 +655,11 @@ export class IdleScene extends Phaser.Scene {
           .setTint(tt === 2 ? 0xffd24a : 0xdfe6ee)
           .setScale(3.2, 0.55)
           .setAlpha(tt === 2 ? 0.75 : 0.5)
-          .setBlendMode(Phaser.BlendModes.ADD)
         const hoe = this.add
           .image(0.3 * H, -0.62 * H, FX.glow)
           .setTint(tt === 2 ? 0xffd24a : 0x7ee0ff)
           .setScale(tt === 2 ? 2.4 : 1.7)
           .setAlpha(tt === 2 ? 0.8 : 0.55)
-          .setBlendMode(Phaser.BlendModes.ADD)
         this.trainer.add([trim, hoe])
         this.trainerPower.push(trim, hoe)
         if (!this.reduced) this.tweens.add({ targets: hoe, alpha: 0.35, scale: hoe.scale * 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -801,10 +800,9 @@ export class IdleScene extends Phaser.Scene {
     this.pinChips()
   }
 
-  /** Forward hook for ENG2: once `player.coins` exists, the coin chip appears and ticks on real deltas. */
+  /** Server เบี้ย (additive field: undefined until the engine has credited any). */
   private serverCoins(p: Player): number | null {
-    const c = (p as unknown as { coins?: unknown }).coins
-    return typeof c === 'number' && Number.isFinite(c) ? c : null
+    return typeof p.coins === 'number' && Number.isFinite(p.coins) ? p.coins : null
   }
 
   private readCoins(p: Player): void {
