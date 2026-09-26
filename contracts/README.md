@@ -1,6 +1,6 @@
 # RFC Legends contracts — real roosters as RWAs, a voucher-gated drop economy, and a 90/10 onchain market
 
-**Summary (one sentence):** RFC Legends turns each real rooster at Ninlanee Farm into a verifiable onchain asset, so rare drops minted from World ID-verified gameplay carry provenance no virtual pet can. *(23 words)*
+**Summary (one sentence):** RFC Legends turns each real rooster at Ninlanee Farm into a verifiable onchain asset, so rare drops minted from World ID-verified gameplay carry provenance no virtual pet can. *(28 words)*
 
 ## What holding a RoosterRWA token means
 
@@ -43,10 +43,10 @@ Deployer `0x741Ab117d67ecA72a54d3669fb84e399bfE5Ed98`, start block 11784988. All
 
 ## MultiBaas
 
-Status: **LIVE.** All five contracts are uploaded and linked with event indexing, and the market sale history is served through MultiBaas event queries — `/api/market/sales` currently returns `source: "multibaas"` with the real Sepolia sale (tx [`0xfb5d…60f04`](https://sepolia.etherscan.io/tx/0xfb5dccc04df2c16d291689680a1664d0c1dbb4a819c5c9f4314dd226ba106f04), decoded `Sold` with the exact 1.80/0.20 split). Verify yourself: `curl '.../api/market/sales'` (field `source`), or `?query=rfc-rare-minted` for the other feeds.
+Status: **LIVE.** All five contracts are uploaded and linked with event indexing, and the market sale history is served through MultiBaas event queries — `/api/market/sales` currently returns `source: "multibaas"` with the real Sepolia sale (tx [`0xfb5d…06f04`](https://sepolia.etherscan.io/tx/0xfb5dccc04df2c16d291689680a1664d0c1dbb4a819c5c9f4314dd226ba106f04), decoded `Sold` with the exact 1.80/0.20 split). Verify yourself: `curl '.../api/market/sales'` (field `source`), or `?query=rfc-rare-minted` for the other feeds.
 
-- Setup (idempotent, one command): [`scripts/multibaas-setup.mjs`](scripts/multibaas-setup.mjs) — creates the five contracts (label+ABI+bytecode), links each Sepolia address with event indexing, and saves four queries: `rfc-sold` ([`Sold`](src/RareMarket.sol#L74)), `rfc-rare-minted` ([`RareMinted`](src/RareItems.sol#L52)), `rfc-attestation-recorded` + `rfc-rooster-minted` ([`RoosterRWA`](src/RoosterRWA.sol#L96-L101)).
-- REST helper: [`../apps/web/src/lib/contracts/multibaas.ts`](../apps/web/src/lib/contracts/multibaas.ts) — `getSaleHistory()` (line 60) executes the saved `rfc-sold` query over `GET /api/v0/queries/rfc-sold/results`; `runEventQuery()` runs any of the four.
+- Setup (idempotent, one command): [`scripts/multibaas-setup.mjs`](scripts/multibaas-setup.mjs) — creates the five contracts (label+ABI+bytecode), links each Sepolia address with event indexing, and saves four queries: `rfc-sold` ([`Sold`](src/RareMarket.sol#L54)), `rfc-rare-minted` ([`RareMinted`](src/RareItems.sol#L52)), `rfc-attestation-recorded` + `rfc-rooster-minted` ([`RoosterRWA`](src/RoosterRWA.sol#L81-L99)).
+- REST helper: [`../apps/web/src/lib/contracts/multibaas.ts`](../apps/web/src/lib/contracts/multibaas.ts) — `getSaleHistory()` (line 91) executes the saved `rfc-sold` query over `GET /api/v0/queries/rfc-sold/results`; `runEventQuery()` runs any of the four.
 - Visible integration: [`../apps/web/src/app/api/market/sales/route.ts`](../apps/web/src/app/api/market/sales/route.ts) — the market UI reads the 90/10 feed here, with a direct-RPC fallback for pre-indexing history and `?raw=1` for the unprocessed rows.
 - Full timeline and friction notes (required feedback): [`../docs/feedback/multibaas.md`](../docs/feedback/multibaas.md). The short version: the event-query model is excellent — decoded, alias-named rows straight into the UI — but the endpoint reference renders empty without JavaScript and several schema rules (lowercase labels, required bytecode, `inputIndex` on fields, operator `equal`) only surface as raw SQL errors, so first contact took ~15 minutes instead of ~5.
 
@@ -108,4 +108,4 @@ Deploy to Sepolia: `cd contracts && forge script script/Deploy.s.sol --rpc-url $
 |---|---|---|
 | Jakkarin Sanguanwong | Other | — |
 | Tanabut Krinoonsingha | Other | — |
-| Todsaporn Sangboon | Fullstack development | — |
+| Todsaporn Sangboon | Fullstack development | [@nolifelover](https://github.com/nolifelover) |

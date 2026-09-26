@@ -9,13 +9,13 @@ Project page: https://ethglobal.com/events/tokyo2026/project
 - [x] Live demo (primary): https://rfclegends.rfcclub.app — production build, demo-mode badge visible. Mirror: https://rfc-legends.earn.dev.rawinlab.com
 - [ ] Demo video: record 2–4 min, ≥720p, clear voice — script follows the e2e demo beat
 - [ ] Images / screenshots
-- [ ] Final submit — only after the video and the two pending tx hashes below are in
+- [ ] Final submit — only after the video link is in
 
 Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC). Do not claim anything not in the repo.
 
 ### Live vs pending (keep the form aligned with this)
 
-**Live on Sepolia:** all 5 contracts (verified on Etherscan+Sourcify), World ID verify → `HumanRegistry.markVerified` (0xa081…58ff), voucher mint → `RareItems`, list/buy → 90/10 `Sold` (0xcd9b…6356, 0xfb5d…60f04, both MultiBaas-indexed), ENSv2 `rfclegends.eth` + permissioned resolver + sire subname, item metadata routes, guild chat + guild boss (PocketBase realtime), idle game with demo mode, market sale feed through MultiBaas.
+**Live on Sepolia:** all 5 contracts (verified on Etherscan+Sourcify), World ID verify → `HumanRegistry.markVerified` (0xa081…58ff), voucher mint → `RareItems`, list/buy → 90/10 `Sold` (0xcd9b…6356, 0xfb5d…06f04, both MultiBaas-indexed), ENSv2 `rfclegends.eth` + permissioned resolver + sire subname, item metadata routes, guild chat + guild boss (PocketBase realtime), idle game with demo mode, market sale feed through MultiBaas.
 
 **Pending (do NOT claim until landed):** demo video link. Everything else listed as live has been verified on Sepolia.
 
@@ -31,7 +31,7 @@ Idle MMORPG: level up with your rooster companion. Real roosters live onchain as
 
 **Description** (trim to what's live — paste-ready)
 
-RFC Legends is an idle MMORPG with classic Ragnarok-style progression, themed around Thai native gamecock breeds. You play as a trainer adventuring with a rooster companion; both level up automatically, even offline (demo mode boosts rates for the video — always badged).
+RFC Legends is an idle MMORPG with classic job/stat/card progression, themed around Thai native rooster breeds. You play as a trainer adventuring with a rooster companion; both level up automatically, even offline (demo mode boosts rates for the video — always badged).
 
 The game is backed by real animals. Each real rooster at Ninlanee Farm is an onchain RWA: the farm co-signs every mint (ring id, bloodline, hatch date), one ring id can only ever be one token, and the farm signs weekly health attestations anyone can relay onchain. Each bird gets an ENSv2 name; offspring are subnames of their sire, so a bloodline is verifiable by anyone.
 
