@@ -1,8 +1,8 @@
 "use client";
 
 // World ID gate for the drop economy. States a viewer can see:
-//   checking status → not verified → (widget) → verifying → verified ✓
-//                                              ↘ rejected (server reason) / cancelled
+//   checking status → not verified → sign (wallet) → (widget) → verifying → verified ✓
+//                                                           ↘ rejected (server reason) / cancelled
 // Rejections come from our own server, which verifies the proof with World and
 // enforces one human = one wallet, so the reason shown is the real one.
 
@@ -10,6 +10,8 @@ import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { IDKitErrorCodes, IDKitResult } from "@worldcoin/idkit";
+import { useConfig } from "wagmi";
+import { signMessage } from "wagmi/actions";
 import {
   fetchRpContext,
   humanStatusKey,
@@ -17,18 +19,20 @@ import {
   txUrl,
   useHumanStatus,
 } from "@/lib/worldid/client";
-import type { RpContextResponse, VerifyResponse } from "@/lib/worldid/types";
+import { ownershipMessage } from "@/lib/worldid/ownership";
+import type { HumanStatusResponse, OwnershipProof, RpContextResponse, VerifyResponse } from "@/lib/worldid/types";
 
 const WorldIdWidget = dynamic(() => import("./WorldIdWidget"), { ssr: false });
 
 type Phase =
   | { kind: "idle" }
   | { kind: "starting" }
+  | { kind: "signing" }
   | { kind: "scanning"; ctx: RpContextResponse }
   | { kind: "verifying"; ctx: RpContextResponse }
   | { kind: "verified"; res: Extract<VerifyResponse, { verified: true }> }
   | { kind: "rejected"; code: string; reason: string }
-  | { kind: "cancelled" }
+  | { kind: "cancelled"; why: string }
   | { kind: "error"; message: string };
 
 type Rejection = Extract<VerifyResponse, { verified: false }>;
@@ -41,11 +45,13 @@ export type VerifyHumanProps = {
 
 export function VerifyHuman({ address, onVerified, className = "" }: VerifyHumanProps) {
   const queryClient = useQueryClient();
+  const config = useConfig();
   const status = useHumanStatus(address);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [open, setOpen] = useState(false);
   const rejection = useRef<Rejection | null>(null);
   const accepted = useRef<Extract<VerifyResponse, { verified: true }> | null>(null);
+  const ownership = useRef<OwnershipProof | null>(null);
 
   // Reset when the wallet changes (derived-state pattern, no effect needed).
   const [seenAddress, setSeenAddress] = useState(address);
@@ -63,6 +69,20 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
     try {
       // Fresh RP signature every time: it expires after a few minutes.
       const ctx = await fetchRpContext(address);
+      // Prove this browser controls the wallet: sign (wallet, RP nonce, expiry).
+      setPhase({ kind: "signing" });
+      const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+      let signature: `0x${string}`;
+      try {
+        signature = await signMessage(config, {
+          account: address,
+          message: ownershipMessage({ purpose: "verify-world-id", address, nonce: ctx.rp_context.nonce, expiresAt }),
+        });
+      } catch {
+        setPhase({ kind: "cancelled", why: "The wallet signature was declined. Nothing was recorded." });
+        return;
+      }
+      ownership.current = { signature, expiresAt };
       setPhase({ kind: "scanning", ctx });
       setOpen(true);
     } catch (err) {
@@ -75,7 +95,7 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
     const res = await fetch("/api/worldid/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ address, result }),
+      body: JSON.stringify({ address, result, ownership: ownership.current }),
     });
     const body = (await res.json().catch(() => null)) as VerifyResponse | null;
     if (!res.ok || !body?.verified) {
@@ -104,7 +124,7 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
     if (rejection.current || accepted.current) {
       return;
     } else if (code === "user_rejected" || code === "cancelled") {
-      setPhase({ kind: "cancelled" });
+      setPhase({ kind: "cancelled", why: "Verification was closed before it finished. Nothing was recorded." });
     } else if (code === "max_verifications_reached") {
       setPhase({
         kind: "rejected",
@@ -119,7 +139,13 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
   function handleOpenChange(next: boolean) {
     setOpen(next);
     // Closing the widget before a proof arrived = cancelled.
-    if (!next) setPhase((p) => (p.kind === "scanning" ? { kind: "cancelled" } : p));
+    if (!next) {
+      setPhase((p) =>
+        p.kind === "scanning"
+          ? { kind: "cancelled", why: "Verification was closed before it finished. Nothing was recorded." }
+          : p,
+      );
+    }
   }
 
   const ctx = phase.kind === "scanning" || phase.kind === "verifying" ? phase.ctx : null;
@@ -143,7 +169,8 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
           address={address}
           txHash={phase.kind === "verified" ? phase.res.txHash : (status.data?.txHash ?? null)}
           note={phase.kind === "verified" ? phase.res.onchainNote : undefined}
-          onchain={status.data?.onchain ?? null}
+          onchain={phase.kind === "verified" ? phase.res.onchain : (status.data?.onchain ?? null)}
+          onchainVerified={status.data?.onchainVerified ?? null}
         />
       ) : status.isLoading ? (
         <p className="text-sm text-bark-soft">Checking World ID status…</p>
@@ -155,7 +182,7 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
             </Banner>
           ) : phase.kind === "cancelled" ? (
             <Banner tone="muted" title="Cancelled">
-              <p>Verification was closed before it finished. Nothing was recorded.</p>
+              <p>{phase.why}</p>
             </Banner>
           ) : phase.kind === "error" ? (
             <Banner tone="bad" title="Something went wrong">
@@ -173,13 +200,15 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
           <button
             type="button"
             onClick={start}
-            disabled={phase.kind === "starting" || phase.kind === "scanning" || phase.kind === "verifying"}
+            disabled={["starting", "signing", "scanning", "verifying"].includes(phase.kind)}
             className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-bark px-5 py-3 text-sm font-bold text-cream transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bark"
           >
             <WorldMark light />
             {phase.kind === "starting"
               ? "Preparing request…"
-              : phase.kind === "scanning"
+              : phase.kind === "signing"
+                ? "Sign in your wallet…"
+                : phase.kind === "scanning"
                 ? "Waiting for World App…"
                 : phase.kind === "verifying"
                   ? "Verifying proof & recording onchain…"
@@ -218,11 +247,13 @@ function Verified({
   txHash,
   note,
   onchain,
+  onchainVerified,
 }: {
   address: string;
   txHash: string | null;
   note?: string;
-  onchain: boolean | null;
+  onchain: HumanStatusResponse["onchain"];
+  onchainVerified: boolean | null;
 }) {
   return (
     <Banner tone="good" title="Verified human ✓">
@@ -235,10 +266,12 @@ function Verified({
           <a className="underline" href={txUrl(txHash)} target="_blank" rel="noreferrer">
             HumanRegistry.markVerified tx ↗
           </a>
-        ) : onchain ? (
+        ) : onchainVerified === true || onchain === "already_marked" ? (
           "Recorded in HumanRegistry onchain."
+        ) : onchain === "skipped" ? (
+          (note ?? "Verified by the game server. The onchain HumanRegistry record was skipped (contracts not configured).")
         ) : (
-          (note ?? "Verified by the game server.")
+          "Verified by the game server."
         )}
       </p>
     </Banner>

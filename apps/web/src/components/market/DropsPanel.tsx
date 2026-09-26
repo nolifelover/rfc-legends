@@ -7,8 +7,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConfig } from "wagmi";
+import { signMessage } from "wagmi/actions";
 import { rareItemsAbi } from "@/lib/contracts/abis";
 import { txUrl } from "@/lib/worldid/client";
+import { ownershipMessage, randomNonce } from "@/lib/worldid/ownership";
 import type { Hex, VoucherResponse } from "@/lib/worldid/types";
 import { describeError, itemInfo, runTx } from "./chain";
 import { RejectionCard } from "./RejectionCard";
@@ -124,11 +126,25 @@ function DropCard({
   }, [focused]);
 
   async function mint() {
+    // Prove this wallet is asking (single-use signature), so nobody else can spend its daily mints.
+    setState({ kind: "busy", step: "Sign the mint request in your wallet…" });
+    const nonce = randomNonce();
+    const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+    let signature: Hex;
+    try {
+      signature = await signMessage(config, {
+        account: address,
+        message: ownershipMessage({ purpose: "mint-rare-drop", address, dropId, nonce, expiresAt }),
+      });
+    } catch (err) {
+      setState({ kind: "rejected", source: "wallet", reason: describeError(err).message });
+      return;
+    }
     setState({ kind: "busy", step: "Checking World ID, level and drop…" });
     const res = await fetch("/api/voucher/mint", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ address, dropId }),
+      body: JSON.stringify({ address, dropId, ownership: { nonce, expiresAt, signature } }),
     });
     const body = (await res.json().catch(() => null)) as VoucherResponse | null;
     if (!body || !body.ok) {
