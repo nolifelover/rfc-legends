@@ -28,19 +28,16 @@ export const roosterRwaAbi = parseAbi([
   "function farmSigner() view returns (address)",
 ]);
 
-const SIRE_LINES = [
-  { slug: "kumarnjeen", roman: "Kumarnjeen", thai: "กุมารจีน", emoji: "🏹" },
-  { slug: "kingkong", roman: "Kingkong", thai: "คิงคอง", emoji: "💪" },
-  { slug: "chaokhunthong", roman: "Chaokhunthong", thai: "เจ้าขุนทอง", emoji: "👑" },
-  { slug: "thepbut", roman: "Thepbut", thai: "เทพบุตร", emoji: "✨" },
-  { slug: "raptor", roman: "Raptor", thai: "แร๊พเตอร์", emoji: "🦅" },
-] as const;
+import { SIRE_LINES } from "@/components/game/sire-lines";
+import type { SireLineInfo } from "@/components/game/sire-lines";
 /**
- * Presentation map for sire-line display names (romanization + Thai flavor).
- * The SOURCE OF TRUTH is always the onchain `rfc.sireLine` text record — an
- * unknown slug renders as its raw onchain value, never masked or defaulted.
+ * Sire-line display names reuse the game lane's config (romanization + Thai
+ * flavor). The SOURCE OF TRUTH is always the onchain `rfc.sireLine` record —
+ * an unknown slug renders as its raw onchain value, never masked.
  */
-export const sireLineInfo = (slug: string) => SIRE_LINES.find((s) => s.slug === slug) ?? null;
+export type { SireLineInfo };
+export const sireLineInfo = (slug: string): SireLineInfo | null =>
+  SIRE_LINES.find((s) => s.id === slug) ?? null;
 
 const parentFromEnv = (process.env.NEXT_PUBLIC_ENS_PARENT_NAME ?? "").toLowerCase();
 if (!parentFromEnv || !parentFromEnv.endsWith(".eth")) {
@@ -201,6 +198,35 @@ export async function getAttestation(
     if (a.checkedAt === BigInt(0)) return null;
     return { weightGrams: a.weightGrams, healthScore: a.healthScore, note: a.note, checkedAt: a.checkedAt, farmSigner, nonce: a.nonce };
   } catch { return null; }
+}
+
+/**
+ * Latest AttestationRecorded for a token, with the relayer's calldata decoded
+ * so the page can prove client-side that the signature recovers to the farm
+ * key. Everything is derived from the chain: tx hash, signature, digest.
+ */
+export async function getAttestationTx(
+  client: ReturnType<typeof ensClient>, rwa: Hex, tokenId: bigint,
+): Promise<{ txHash: Hex; blockNumber: bigint; signature: Hex } | null> {
+  try {
+    const logs = await client.getLogs({
+      address: rwa,
+      event: parseAbi(["event AttestationRecorded(uint256 indexed tokenId, uint32 weightGrams, uint8 healthScore, uint64 checkedAt, uint64 nonce, string note, bytes32 digest)"])[0],
+      args: { tokenId },
+      fromBlock: BigInt(11785100), toBlock: "latest",
+    });
+    const last = logs[logs.length - 1];
+    if (!last) return null;
+    const tx = await client.getTransaction({ hash: last.transactionHash });
+    const sig = (await import("viem")).decodeFunctionData({
+      abi: parseAbi(["function submitAttestation((uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce) a, bytes signature)"]),
+      data: tx.input,
+    }).args[1] as Hex;
+    return { txHash: last.transactionHash as Hex, blockNumber: last.blockNumber, signature: sig };
+  } catch (e) {
+    console.error(`[ens] getAttestationTx failed for token ${tokenId} on ${rwa} (chain ${client.chain?.id}):`, e);
+    return null;
+  }
 }
 
 /** Pedigree edges for a rooster name, derived from the ENS hierarchy itself. */
