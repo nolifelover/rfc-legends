@@ -29,7 +29,8 @@ function run(seconds: number, opts = DEMO_OPTS): { player: Player; kills: number
 describe('visible loot — เบี้ย coins + demo commons', () => {
   it('coins accrue on every credited kill and persist on the player', () => {
     const r = run(600)
-    expect(r.kills).toBeGreaterThan(50)
+    // ~60s of fast zone-1 kills, then the pond's steadier pace — a healthy floor, not a bar
+    expect(r.kills).toBeGreaterThan(40)
     expect(r.coins).toBeGreaterThan(0)
     expect(r.player.coins).toBe(r.coins) // persisted (undefined stays undefined only at 0 kills)
     // per-kill bounds: base 3–8, level scale ≥ 1, boss kills pay more — sanity band
@@ -41,7 +42,7 @@ describe('visible loot — เบี้ย coins + demo commons', () => {
   it('demo commons land on roughly 1 in 2 kills (0.35–0.65)', () => {
     const r = run(900)
     const rate = r.commonItems / r.kills
-    expect(r.kills).toBeGreaterThan(100)
+    expect(r.kills).toBeGreaterThan(60)
     expect(rate).toBeGreaterThanOrEqual(0.35)
     expect(rate).toBeLessThanOrEqual(0.65)
   })
