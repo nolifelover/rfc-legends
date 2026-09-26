@@ -255,6 +255,7 @@ No gambling, no betting, no fight results. Art is cartoon with no blood or injur
 | 08:30 | Scaffold pushed; contracts compile; ENSv2 go/no-go decided (one subname created and read back on Sepolia) |
 | 11:30 | Contracts tested and deployed to Sepolia; World ID verify round-trips locally; idle loop playable |
 | 15:30 | Demo beat works end-to-end on Sepolia |
-| 18:30 | Feature freeze; live demo deployed. After this, only fixes for things that visibly break in the demo, and redeploys go only through the lead. |
+| ~15:45 | **Freeze-candidate deploy.** User decision at 15:00: visuals are good enough, so function and stability come first and the visual critic loop has stopped. Then a full functional QA on prod. |
+| 18:30 | Hard feature freeze. After this, only fixes for things that visibly break in the demo, and redeploys go only through the lead. |
 | 20:30 | README with file:line pointers; World and Curvegrid feedback written; video recorded |
 | 22:00 | Submitted (the 2h buffer isn't optional) |
