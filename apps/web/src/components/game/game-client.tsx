@@ -12,6 +12,7 @@ import { MINTABLE_RARITIES } from "@/game/data/items";
 import type { SyncResult } from "@/server/game";
 import { reasonText } from "./api-messages";
 import { ConnectButton } from "./connect-button";
+import { WrongChainBanner } from "@/components/market/WrongChainBanner";
 import { CreateCharacter, type CreateOutcome } from "./create-character";
 import { DropToasts } from "./drop-toasts";
 import { GuildDock } from "./guild-dock";
@@ -53,7 +54,8 @@ function CenterCard({ children }: { children: React.ReactNode }) {
 }
 
 export function GameClient() {
-  const { address, isConnected } = useConnection();
+  const { address, chainId, isConnected } = useConnection();
+  const wrongChain = Boolean(address && chainId && chainId !== 11155111);
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
@@ -75,10 +77,22 @@ export function GameClient() {
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
+    // P3: a wallet that has never created a player would 400 here, so only
+    // wallets with a known player boot via sync (the welcome-back path).
+    // PLAYER_NOT_FOUND clears the flag and falls through silently.
+    const playerFlag = `rfcl:player:${address.toLowerCase()}`;
+    if (typeof window !== "undefined" && !window.localStorage.getItem(playerFlag)) {
+      setBooted(true);
+      return;
+    }
     (async () => {
       try {
         const { ok, data } = await postGame("/api/game/sync", { address });
+        if (!cancelled && ok === false && data.reason === "PLAYER_NOT_FOUND") {
+          window.localStorage.removeItem(playerFlag);
+        }
         if (!cancelled && ok && data.player) {
+          window.localStorage.setItem(playerFlag, "1");
           const prev = stateQuery.data?.player;
           applyPlayer(data.player as Player);
           considerWelcomeBack(
@@ -199,6 +213,14 @@ export function GameClient() {
     onError: (err) => setNotice({ kind: "error", text: reasonText(err.message) }),
   });
 
+  // Any successful state load with a player arms the sync-first boot for
+  // this wallet's next visit (P3 companion to the localStorage gate).
+  useEffect(() => {
+    if (address && stateQuery.data?.player) {
+      window.localStorage.setItem(`rfcl:player:${address.toLowerCase()}`, "1");
+    }
+  }, [address, stateQuery.data?.player]);
+
   // Unminted mintable drops → the HUD pill count (fresh ones also toast).
   const unminted = (stateQuery.data?.drops ?? []).filter(
     (d) => d.status === "unminted" && (MINTABLE_RARITIES as readonly string[]).includes(d.rarity),
@@ -282,6 +304,7 @@ export function GameClient() {
       }}
     >
       <div className="mx-auto flex w-full max-w-none flex-1 flex-col gap-1 px-1.5 py-1 sm:px-2 sm:py-1.5">
+        {wrongChain ? <WrongChainBanner chainId={chainId ?? 0} /> : null}
         <div className="relative flex min-h-0 flex-1 justify-center">
           {/* height = whatever the nav/banner/HUD leave free; the aspect-video
               box derives width from that height, clamped by the viewport */}
