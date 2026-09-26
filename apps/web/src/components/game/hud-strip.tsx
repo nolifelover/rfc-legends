@@ -59,7 +59,7 @@ export function HudStrip({ player }: { player: Player }) {
   const map = getMap(player.mapId);
 
   return (
-    <div className="mt-auto w-full border-t-2 border-bark/25 bg-cream/95 shadow-[0_-8px_24px_-12px_rgba(74,50,32,0.4)] backdrop-blur">
+    <div className="sticky bottom-0 z-40 mt-auto w-full border-t-2 border-bark/25 bg-cream/95 shadow-[0_-8px_24px_-12px_rgba(74,50,32,0.4)] backdrop-blur">
       <div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(190px,1fr)_2.2fr_minmax(240px,1.1fr)] items-center gap-4 px-4 py-2.5 sm:px-6">
         {/* Zone 1 — trainer */}
         <div className="min-w-0">

@@ -24,7 +24,7 @@ export function SireLineArt({
   return (
     <span
       style={{ width: size, height: size }}
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 ${info.badge} ${info.ring} ${className}`}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 bg-sun-soft/50 ${info.badge} ${info.ring} ${className}`}
       aria-hidden
     >
       {!failed ? (

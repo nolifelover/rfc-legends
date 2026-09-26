@@ -1,8 +1,8 @@
 "use client";
 
 // Owns the /game flow: connect wallet → create trainer → play screen.
-// Pre-Phaser: the scene frame is a placeholder (G4 drops the live canvas in);
-// the HUD, stat panel and polling all run on live engine numbers.
+// The scene frame hosts the live Phaser idle-combat canvas (G4); the HUD strip
+// (sticky to the viewport bottom) and stat panel run on live engine numbers.
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,9 +12,9 @@ import type { SyncResult } from "@/server/game";
 import { reasonText } from "./api-messages";
 import { ConnectButton } from "./connect-button";
 import { CreateCharacter, type CreateOutcome } from "./create-character";
-import { DemoBadge } from "./demo-badge";
 import { HudStrip } from "./hud-strip";
-import { SceneFrame, ScenePlaceholder } from "./scene-frame";
+import { IdleScene } from "./idle-scene";
+import { SceneFrame } from "./scene-frame";
 import { StatPanel, type AllocateResult } from "./stat-panel";
 
 interface GameState {
@@ -190,7 +190,6 @@ export function GameClient() {
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
-            {state.demoMode ? <DemoBadge demo /> : null}
             <span className="text-xs font-semibold text-bark-soft">
               auto-syncs every few seconds
             </span>
@@ -206,7 +205,7 @@ export function GameClient() {
         </div>
 
         <SceneFrame>
-          <ScenePlaceholder />
+          <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
         </SceneFrame>
 
         <StatPanel player={player} onAllocate={handleAllocate} />
