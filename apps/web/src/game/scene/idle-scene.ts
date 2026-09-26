@@ -172,6 +172,7 @@ export class IdleScene extends Phaser.Scene {
   /** the pest whose plate and HP bar are shown — the one being attacked right now */
   private focus: Pest | null = null
   private bossShadow: Phaser.GameObjects.Image | null = null
+  private bossEyes: Phaser.GameObjects.Image[] = []
   private lastKillX: number = L.ENGAGE_FRONT_X
   private lastKillY: number = L.FEET_FRONT
 
@@ -1620,26 +1621,39 @@ export class IdleScene extends Phaser.Scene {
     })
   }
 
-  /** Two kills before the boss, a dark Rat King silhouette looms behind the far fields. */
+  /**
+   * Boss preview: from halfway through the countdown a dark silhouette with glowing
+   * eyes stands at the far treeline (behind the paddy, so only the head and
+   * shoulders show) and grows as the pips fill.
+   */
   private updateBossShadow(): void {
     const every = this.bossEvery()
-    const near = !this.bossActive && this.killServer % every >= every - 2
-    if (near && !this.bossShadow) {
+    const t = this.bossActive ? 0 : (this.killServer % every) / every
+    const show = t >= 0.5
+    const size = Math.round(Phaser.Math.Linear(260, 720, Phaser.Math.Clamp((t - 0.5) / 0.4, 0, 1)))
+    if (show && !this.bossShadow) {
       const key = this.zone.skins[this.zone.bossId]?.key ?? MONSTER_KEYS['raja-nu-na'] ?? MONSTER_KEYS['nu-na']
-      // feet sunk behind the paddy (depth 5 < 6) so the head looms in the sky
-      const sh = this.add
-        .image(1300, L.HORIZON_Y + 220, tintedTexture(this, key, INK.outline))
-        .setOrigin(0.5, 1)
-        .setDisplaySize(560, 560)
-        .setAlpha(0)
-        .setDepth(5)
-      this.tweens.add({ targets: sh, alpha: 0.32, duration: 1200 })
-      this.tweens.add({ targets: sh, y: L.HORIZON_Y + 206, duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      const x = 1300
+      const feet = L.HORIZON_Y + 200
+      const sh = this.add.image(x, feet, tintedTexture(this, key, 0x1a120c)).setOrigin(0.5, 1).setDisplaySize(size, size).setAlpha(0).setDepth(5.7)
+      this.tweens.add({ targets: sh, alpha: 0.92, duration: 900 })
+      const eyes = [-0.07, 0.08].map((dx) =>
+        this.add.image(x + dx * size, feet - 0.57 * size, FX.glow).setTint(0xffd24a).setScale(0.9).setAlpha(0).setDepth(5.8),
+      )
+      for (const e of eyes) this.tweens.add({ targets: e, alpha: { from: 0.6, to: 1 }, scale: { from: 0.8, to: 1.1 }, duration: 700, yoyo: true, repeat: -1, delay: 900 })
       this.bossShadow = sh
-    } else if (!near && this.bossShadow) {
+      this.bossEyes = eyes
+    } else if (show && this.bossShadow) {
       const sh = this.bossShadow
+      const feet = L.HORIZON_Y + 200
+      this.tweens.add({ targets: sh, displayWidth: size, displayHeight: size, duration: 500, ease: 'Sine.easeOut' })
+      this.bossEyes.forEach((e, i) => this.tweens.add({ targets: e, x: sh.x + [-0.07, 0.08][i] * size, y: feet - 0.57 * size, duration: 500, ease: 'Sine.easeOut' }))
+    } else if (!show && this.bossShadow) {
+      const sh = this.bossShadow
+      const eyes = this.bossEyes
       this.bossShadow = null
-      this.tweens.add({ targets: sh, alpha: 0, duration: 600, onComplete: () => sh.destroy() })
+      this.bossEyes = []
+      this.tweens.add({ targets: [sh, ...eyes], alpha: 0, duration: 500, onComplete: () => { sh.destroy(); for (const e of eyes) e.destroy() } })
     }
   }
 
