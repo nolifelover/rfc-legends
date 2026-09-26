@@ -30,6 +30,12 @@ describe('manual companion follow', () => {
     for (let i = 0; i < 120; i++) state = nextManualCompanionPosition(1_100, state.x, state.side, 1 / 60)
     expect(state.x).toBe(770)
   })
+
+  it('keeps the companion clear of the target when the trainer walks past it', () => {
+    let state: { x: number; side: -1 | 1 } = { x: 520, side: 1 }
+    for (let i = 0; i < 120; i++) state = nextManualCompanionPosition(1_390, state.x, state.side, 1 / 60)
+    expect(state.x).toBe(800)
+  })
 })
 
 describe('manual scene prediction', () => {

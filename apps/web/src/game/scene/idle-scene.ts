@@ -1210,8 +1210,17 @@ export class IdleScene extends Phaser.Scene {
       this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, top)
       this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, top + 70)
       this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, top + 140)
-      if (this.ui.mobileProfile) this.pips.place(r.x0 + L.SAFE, top + 72, 'left')
-      else this.pips.place(right, top + 132 + (this.coinsKnown ? 70 : 0))
+      if (this.ui.mobileProfile) {
+        // The free top-centre lane keeps the map and countdown off the trainer's face.
+        const center = (r.x0 + r.x1) / 2
+        const headerY = r.y0 + 24 / displayScale
+        const bossVisible = Boolean(bossBar?.container.visible && bossBar.container.alpha > 0)
+        this.mapChip?.container.setVisible(!bossVisible).setPosition(center, headerY)
+        const pipsY = bossVisible && bossBar
+          ? bossBar.container.y + bossBar.boxHeight / 2 + 24 / displayScale
+          : headerY + 36 / displayScale
+        this.pips.place(center - this.pips.boxWidth / 2, pipsY, 'left')
+      } else this.pips.place(right, top + 132 + (this.coinsKnown ? 70 : 0))
       this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
       return
     }
@@ -1220,7 +1229,7 @@ export class IdleScene extends Phaser.Scene {
     const firstY = top + firstHeight / 2
     const secondY = firstY + firstHeight / 2 + 12 + secondHeight / 2
     const thirdY = secondY + secondHeight / 2 + 12 + this.coinChip.boxHeight / 2
-    this.mapChip?.container.setPosition(r.x0 + L.SAFE + this.mapChip.boxWidth / 2, firstY)
+    this.mapChip?.container.setVisible(true).setPosition(r.x0 + L.SAFE + this.mapChip.boxWidth / 2, firstY)
     this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, firstY)
     this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, secondY)
     this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, thirdY)
@@ -1742,7 +1751,8 @@ export class IdleScene extends Phaser.Scene {
     const parentHeight = this.scale.parentSize.height || this.scale.displaySize.height
     const shortWide = parentWidth > 0 && parentHeight / parentWidth < 0.52
     if (mobile) {
-      cam.centerOn(this.manualMode ? centerX : (L.TRAINER_X + L.ENGAGE_BACK_X) / 2, shortWide ? 460 : L.H / 2)
+      // Lower the visible bridge row enough to clear the expanded landscape profile.
+      cam.centerOn(this.manualMode ? centerX : (L.TRAINER_X + L.ENGAGE_BACK_X) / 2, shortWide ? 430 : L.H / 2)
     } else {
       const top = (L.H / 2 - r.y0) / zoom
       const bottom = L.H - (r.y1 - L.H / 2) / zoom

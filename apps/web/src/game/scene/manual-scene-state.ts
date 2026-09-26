@@ -2,6 +2,7 @@ import {
   MANUAL_MAX_X,
   MANUAL_MIN_X,
   MANUAL_MOVE_SPEED,
+  MANUAL_TARGET_X,
 } from '../manual-controls'
 import type { MovementDirection } from '../manual-controls'
 import type { PlayerControlState } from '../types'
@@ -37,7 +38,9 @@ export function nextManualCompanionPosition(
   let side = currentSide
   if (side === 1 && trainerX > switchRight) side = -1
   else if (side === -1 && trainerX < switchLeft) side = 1
-  const target = Math.max(MANUAL_MIN_X, Math.min(MANUAL_MAX_X, trainerX + side * followDistance))
+  // Leave space for the widest enemy silhouette when the trainer walks past it.
+  const companionLimit = MANUAL_TARGET_X - 350
+  const target = Math.max(MANUAL_MIN_X, Math.min(companionLimit, trainerX + side * followDistance))
   const maxStep = 1200 * Math.max(0, Math.min(seconds, 0.05))
   const step = Math.max(-maxStep, Math.min(maxStep, target - currentX))
   return { x: currentX + step, side }
