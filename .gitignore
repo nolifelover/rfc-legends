@@ -13,3 +13,10 @@ coverage/
 .DS_Store
 *.log
 .omc/
+
+# Foundry
+contracts/out/
+contracts/broadcast/*/31337/
+
+# local game data
+apps/web/.data/
