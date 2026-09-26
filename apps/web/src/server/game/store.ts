@@ -4,6 +4,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { Drop, DropStatus, Player } from '../../game/types'
+import { PbGameStore } from './pb-store'
 
 interface StoredPlayer extends Player {
   drops: Drop[]
@@ -101,13 +102,28 @@ export class JsonFileStore implements GameStore {
   }
 }
 
-let cached: { dir: string; store: JsonFileStore } | null = null
+let cached: { key: string; store: GameStore } | null = null
 
-/** Singleton store. Data dir: GAME_DATA_DIR or <cwd>/.data (i.e. apps/web/.data when run there). */
-export function getStore(): JsonFileStore {
-  const dir = process.env.GAME_DATA_DIR ?? path.join(process.cwd(), '.data')
-  if (!cached || cached.dir !== dir) {
-    cached = { dir, store: new JsonFileStore(dir) }
+function pbConfigured(): boolean {
+  return Boolean(
+    process.env.POCKETBASE_URL &&
+      process.env.POCKETBASE_SUPERUSER_EMAIL &&
+      process.env.POCKETBASE_SUPERUSER_PASSWORD,
+  )
+}
+
+/**
+ * Selects the singleton store (interfaces.md §5b): PocketBase when configured
+ * (POCKETBASE_URL + POCKETBASE_SUPERUSER_*) unless GAME_DATA_DIR is pinned (tests pin it to tmp
+ * dirs and must keep the JSON store). The PB client is loaded lazily inside PbGameStore, so
+ * pb.ts's 'server-only' import never resolves outside the Next server runtime.
+ */
+export function getStore(): GameStore {
+  const jsonDir = process.env.GAME_DATA_DIR ?? path.join(process.cwd(), '.data')
+  const usePb = pbConfigured() && !process.env.GAME_DATA_DIR
+  const key = usePb ? 'pocketbase' : `json:${jsonDir}`
+  if (!cached || cached.key !== key) {
+    cached = { key, store: usePb ? new PbGameStore() : new JsonFileStore(jsonDir) }
   }
   return cached.store
 }
