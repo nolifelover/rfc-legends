@@ -531,6 +531,14 @@ export function tintedTexture(scene: Phaser.Scene, baseKey: string, tint: number
   return key
 }
 
+/**
+ * Assets whose SVG the art lane has not committed yet. The loader skips them (the
+ * drawn fallback is used) so the console shows no 404s — a browser logs every
+ * missing network request, so the only quiet option is not to ask for the file.
+ * Remove an entry when its SVG lands in /public/assets.
+ */
+export const PENDING_SVG: ReadonlySet<string> = new Set([itemKey(1004), itemKey(1005), itemKey(1006), itemKey(3002)])
+
 /** Generate the code-drawn stand-in for every asset whose SVG never arrived. */
 export function ensureFallbacks(scene: Phaser.Scene): void {
   for (const spec of ART) {

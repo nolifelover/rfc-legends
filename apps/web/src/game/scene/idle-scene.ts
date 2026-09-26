@@ -29,6 +29,7 @@ import {
   ROOSTER_KEYS,
   TRAINER_KEY,
   TRAINER_WALK_KEY,
+  PENDING_SVG,
   ensureFallbacks,
   itemKey,
   makeFxTextures,
@@ -202,7 +203,10 @@ export class IdleScene extends Phaser.Scene {
   }
 
   preload(): void {
-    for (const spec of ART) this.load.svg(spec.key, spec.url, { width: spec.w, height: spec.h })
+    for (const spec of ART) {
+      if (PENDING_SVG.has(spec.key)) continue // drawn fallback, no 404 in the console
+      this.load.svg(spec.key, spec.url, { width: spec.w, height: spec.h })
+    }
   }
 
   create(): void {
