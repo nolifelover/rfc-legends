@@ -42,6 +42,7 @@ import type { DamageKind } from './fx'
 import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, zoneOf } from './juice'
 import type { ZoneSpec } from './juice'
 import type { SceneBridge, SceneMountOptions } from './scene-bridge'
+import { UiScene } from './ui-scene'
 import { MAPS, THUNG_NA } from '@/game/data/maps'
 import type { MapDef } from '@/game/types'
 import { getItem } from '@/game/data/items'
@@ -90,6 +91,8 @@ const ROW_DEPTH: Record<Row, number> = { 0: 21, 1: 22, 2: 23 }
 export class IdleScene extends Phaser.Scene {
   private bridge!: SceneBridge
   private opts!: SceneMountOptions
+  /** overlay scene: chips, pips, boss bar and ribbons live there, on a camera that never shakes */
+  private ui!: UiScene
   private fx!: Fx
   private font = 'Arial'
   private reduced = false
@@ -218,6 +221,8 @@ export class IdleScene extends Phaser.Scene {
     this.font = this.opts.fontFamily
     this.reduced = this.opts.reducedMotion
     this.demoMode = this.opts.demoMode
+    this.ui = this.scene.get('ui') as UiScene
+    this.scene.bringToTop('ui')
     this.player = this.opts.player
     this.map = MAPS[this.player.mapId] ?? THUNG_NA
     this.zone = zoneOf(this.map.id)
@@ -233,6 +238,10 @@ export class IdleScene extends Phaser.Scene {
     this.buildAmbient()
     this.buildActors()
     this.buildChips()
+    this.ui.onLayout(() => {
+      this.pinChips()
+      this.frameWorld()
+    })
     this.tuneCadence()
     if (DEV) this.bindDevKeys()
 
@@ -888,17 +897,17 @@ export class IdleScene extends Phaser.Scene {
 
   private buildChips(): void {
     // zone pill: the HUD shows the zone too, so this one fades out after 3s
-    const mapChip = new Chip(this, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24 })
-    mapChip.container.setDepth(54).setPosition(L.SAFE + mapChip.boxWidth / 2, L.SAFE)
+    const mapChip = new Chip(this.ui, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24 })
+    mapChip.container.setDepth(54).setPosition(this.ui.rect.x0 + L.SAFE + mapChip.boxWidth / 2, this.ui.rect.y0 + L.SAFE)
     this.tweens.add({ targets: mapChip.container, alpha: 0, delay: 3000, duration: 600, onComplete: () => mapChip.destroy() })
 
-    this.killChip = new Chip(this, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e })
+    this.killChip = new Chip(this.ui, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e })
     this.killChip.container.setDepth(54)
-    this.harvestChip = new Chip(this, this.harvestLabel(), { fontFamily: this.font, accent: 0x9ccc65, iconKey: itemKey(102) })
+    this.harvestChip = new Chip(this.ui, this.harvestLabel(), { fontFamily: this.font, accent: 0x9ccc65, iconKey: itemKey(102) })
     this.harvestChip.container.setDepth(54)
-    this.coinChip = new Chip(this, '0', { fontFamily: this.font, accent: 0xf2c14e, iconKey: FX.coin })
+    this.coinChip = new Chip(this.ui, '0', { fontFamily: this.font, accent: 0xf2c14e, iconKey: FX.coin })
     this.coinChip.container.setDepth(54).setVisible(false)
-    this.pips = new BossPips(this, this.bossEvery(), this.font)
+    this.pips = new BossPips(this.ui, this.bossEvery(), this.font)
     this.readCoins(this.player)
     this.pinChips()
   }
@@ -917,12 +926,16 @@ export class IdleScene extends Phaser.Scene {
     this.coinChip.container.setVisible(true)
   }
 
+  /** Chips hug the VISIBLE top-right corner (the container may crop the stage). */
   private pinChips(): void {
-    this.killChip.container.setPosition(L.W - L.SAFE - this.killChip.boxWidth / 2, L.SAFE)
-    this.harvestChip.container.setPosition(L.W - L.SAFE - this.harvestChip.boxWidth / 2, L.SAFE + 70)
+    const r = this.ui.rect
+    const right = r.x1 - L.SAFE
+    const top = r.y0 + L.SAFE
+    this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, top)
+    this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, top + 70)
     const coinRow = this.coinsKnown ? 70 : 0
-    this.coinChip.container.setPosition(L.W - L.SAFE - this.coinChip.boxWidth / 2, L.SAFE + 140)
-    this.pips.place(L.W - L.SAFE, L.SAFE + 132 + coinRow)
+    this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, top + 140)
+    this.pips.place(right, top + 132 + coinRow)
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
   }
 
@@ -953,6 +966,32 @@ export class IdleScene extends Phaser.Scene {
       n += count
     }
     return n
+  }
+
+  // ------------------------------------------------------------------ camera
+
+  /**
+   * The world camera sits at WORLD_ZOOM and looks low (FOCUS_Y), clamped so the
+   * visible band never leaves the stage; the UI camera is untouched. Also tells
+   * the FX layer where the chip block is in world space.
+   */
+  private frameWorld(): void {
+    const r = this.ui.rect
+    const cam = this.cameras.main
+    const zoom = L.WORLD_ZOOM
+    this.fx.setBaseZoom(zoom)
+    cam.setZoom(zoom)
+    const top = (L.H / 2 - r.y0) / zoom
+    const bottom = L.H - (r.y1 - L.H / 2) / zoom
+    cam.centerOn(L.W / 2, Phaser.Math.Clamp(L.FOCUS_Y, top, bottom))
+    const p = cam.getWorldPoint(r.x1 - 460, r.y0 + 270)
+    this.fx.setNoSpawn(p.x, p.y)
+  }
+
+  /** UI-scene (canvas) coordinates → world coordinates under the world camera. */
+  private uiToWorld(pt: { x: number; y: number }): { x: number; y: number } {
+    const p = this.cameras.main.getWorldPoint(pt.x, pt.y)
+    return { x: p.x, y: p.y }
   }
 
   // ---------------------------------------------------------------- dev keys
@@ -1454,14 +1493,15 @@ export class IdleScene extends Phaser.Scene {
     this.lootFlying += entry.n
     this.fx.lootArc(icon, restX, restY, () => {
       const fly = (delay: number): void => {
-        const a = this.harvestChip.anchor
+        const a = this.uiToWorld(this.harvestChip.anchor)
         this.fx.vacuum(icon, a.x, a.y, () => {
           this.lootFlying -= entry.n
           this.harvestShown += entry.n
           this.harvestChip.setLabel(this.harvestLabel())
           this.pinChips()
           this.harvestChip.bounce()
-          this.fx.tick(this.harvestChip.container.x, this.harvestChip.container.y + 62, label, INK.loot)
+          const t = this.uiToWorld({ x: this.harvestChip.container.x, y: this.harvestChip.container.y + 62 })
+          this.fx.tick(t.x, t.y, label, INK.loot)
         }, delay)
       }
       // commons lie where the enemy died until the next collect sweep; rare and
@@ -1486,7 +1526,7 @@ export class IdleScene extends Phaser.Scene {
       const restY = L.LOOT_REST_Y + Phaser.Math.Between(-16, 16)
       this.fx.lootArc(coin, restX, restY, () => {
         this.rest(coin, (delay) => {
-          const a = target.anchor
+          const a = this.uiToWorld(target.anchor)
           this.fx.vacuum(coin, a.x, a.y, () => {
             if (!ticked && this.coinsKnown && coinDelta > 0) {
               ticked = true
@@ -1494,7 +1534,8 @@ export class IdleScene extends Phaser.Scene {
               this.coinChip.setLabel(this.coinsShown.toLocaleString('en-US'))
               this.pinChips()
               this.coinChip.bounce()
-              this.fx.tick(this.coinChip.container.x, this.coinChip.container.y + 62, `+${coinDelta}`, INK.crit)
+              const t = this.uiToWorld({ x: this.coinChip.container.x, y: this.coinChip.container.y + 62 })
+              this.fx.tick(t.x, t.y, `+${coinDelta}`, INK.crit)
             } else if (!this.coinsKnown && i === 0) {
               target.pop()
             }
@@ -1559,7 +1600,7 @@ export class IdleScene extends Phaser.Scene {
     this.forceBoss = false
     this.sweepLoot()
     this.updateBossShadow()
-    new Ribbon(this, 'BOSS APPROACHING', this.font).play(700, this.reduced)
+    new Ribbon(this.ui, 'BOSS APPROACHING', this.font, this.ui.rect.y0 + 250).play(700, this.reduced)
     if (!this.reduced) {
       const vig = this.cameras.main.postFX?.addVignette(0.5, 0.5, 0.9, 0)
       if (vig) {
@@ -1618,7 +1659,7 @@ export class IdleScene extends Phaser.Scene {
         this.engage(boss)
         // heroes recoil a step
         this.tweens.add({ targets: [this.trainer, this.rooster], x: '-=30', duration: 120, yoyo: true, ease: 'Quad.easeOut' })
-        this.bossBar = new BossBar(this, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font)
+        this.bossBar = new BossBar(this.ui, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font, this.ui.rect.y0 + 150)
         this.bossBar.setHp(boss.maxHp, boss.maxHp)
         this.bossBar.show(this.reduced)
         this.nextBossAt = this.time.now + 2000
@@ -1731,7 +1772,7 @@ export class IdleScene extends Phaser.Scene {
     this.tweens.add({ targets: this.bossDim, alpha: 0, duration: 500 })
     this.fx.flash(250, 255, 240, 200)
     this.fx.confettiBurst(p.container.x, p.feetY - 300, 40)
-    this.fx.slam('MVP DEFEATED!', undefined, 300, INK.crit)
+    this.fx.slam('MVP DEFEATED!', undefined, 420, INK.crit)
     this.roosterCheer()
     // no card fly-out here: a card only rises (fx.jackpot) when the server's drop
     // list confirms one on this same poll — ~55% of boss kills in demo mode
@@ -1907,7 +1948,7 @@ export class IdleScene extends Phaser.Scene {
       const n = Math.floor(this.killServer / 10) * 10
       const wait = player.baseLevel > prev.baseLevel ? 1700 : 0
       this.time.delayedCall(wait, () => {
-        this.fx.slam(`${n.toLocaleString('en-US')} PESTS CLEARED!`, undefined, 300)
+        this.fx.slam(`${n.toLocaleString('en-US')} PESTS CLEARED!`, undefined, 420)
         this.fx.shake(JUICE.SHAKE_KILL)
         this.killChip.pop()
       })
@@ -1946,7 +1987,7 @@ export class IdleScene extends Phaser.Scene {
    */
   private playDropMoment(itemId: number, rarity: Rarity): void {
     const color = RARITY_COLORS[rarity] ?? INK.gold
-    const edge = { x: L.W - 200, y: L.H - 40 }
+    const edge = this.uiToWorld({ x: this.ui.rect.x1 - 200, y: this.ui.rect.y1 - 40 })
     this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(itemId), rarity, {
       x: edge.x,
       y: edge.y,
@@ -1956,7 +1997,7 @@ export class IdleScene extends Phaser.Scene {
       },
     })
     const label = rarity === 'mvp_card' ? 'MVP CARD DROP!' : rarity === 'monster_card' ? 'MONSTER CARD DROP!' : 'LEGENDARY DROP!'
-    new Ribbon(this, label, this.font, 250, color).play(1300, this.reduced)
+    new Ribbon(this.ui, label, this.font, this.ui.rect.y0 + 250, color).play(1300, this.reduced)
     this.roosterWide()
   }
 
@@ -1989,8 +2030,8 @@ export class IdleScene extends Phaser.Scene {
     }
     for (const p of [...this.pests]) this.removePest(p)
     this.time.delayedCall(400, () => {
-      new Ribbon(this, `NEW ZONE: ${map.name} · ${this.zone.en}`, this.font, 250, 0x5a3a8a).play(1600, this.reduced)
-      this.fx.slam('NEW ZONE!', `${this.zone.en} · Lv ${map.lvRange[0]}–${map.lvRange[1]}`, 440, INK.crit)
+      new Ribbon(this.ui, `NEW ZONE: ${map.name} · ${this.zone.en}`, this.font, this.ui.rect.y0 + 250, 0x5a3a8a).play(1600, this.reduced)
+      this.fx.slam('NEW ZONE!', `${this.zone.en} · Lv ${map.lvRange[0]}–${map.lvRange[1]}`, 520, INK.crit)
     })
     this.nextSpawnAt = this.time.now + 1300
   }
@@ -2065,10 +2106,12 @@ export function createIdleGame(
     banner: false,
     roundPixels: true,
     scale: {
-      mode: Phaser.Scale.FIT,
+      // ENVELOP: the stage covers the container and the container crops it
+      mode: Phaser.Scale.ENVELOP,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
   })
+  game.scene.add('ui', UiScene, true)
   game.scene.add('idle', IdleScene, true, { bridge, opts })
   // Phaser polls the parent size every 500ms; the frame also changes size on its
   // own (the HUD mounts below it after the canvas) and a stale canvas is clipped by

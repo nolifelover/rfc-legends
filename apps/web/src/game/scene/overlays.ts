@@ -170,14 +170,15 @@ export class BossBar {
   private readonly hpText: Phaser.GameObjects.Text
   private readonly width = 920
   private readonly height = 64
-  private readonly restY = 150
+  private readonly restY: number
   private pct = 1
   private ghost = 1
   private ghostTween: Phaser.Tweens.Tween | null = null
   private shown = false
 
-  constructor(scene: Phaser.Scene, name: string, fontFamily: string) {
+  constructor(scene: Phaser.Scene, name: string, fontFamily: string, restY = 150) {
     this.scene = scene
+    this.restY = restY
     this.container = scene.add.container(960, -120).setDepth(60).setAlpha(0)
     this.g = scene.add.graphics()
     this.nameText = scene.add

@@ -47,6 +47,11 @@ export class Fx {
   private slowScale = 1
   private freezeTimer = 0
   private slowTimer = 0
+  // world-space corner of the UI chip block (numbers stay out of it) and the
+  // world camera's resting zoom (punches are relative to it)
+  private noSpawnX: number = L.NO_SPAWN_X
+  private noSpawnY: number = L.NO_SPAWN_Y
+  private baseZoom = 1
 
   constructor(scene: Phaser.Scene, font: string, reduced: boolean) {
     this.scene = scene
@@ -143,6 +148,15 @@ export class Fx {
       .setDepth(26)
   }
 
+  setNoSpawn(x: number, y: number): void {
+    this.noSpawnX = x
+    this.noSpawnY = y
+  }
+
+  setBaseZoom(z: number): void {
+    this.baseZoom = z
+  }
+
   /** Clear timers and restore time — call from the scene's shutdown. */
   dispose(): void {
     window.clearTimeout(this.freezeTimer)
@@ -233,9 +247,9 @@ export class Fx {
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
     let sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
     let sy = y - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
-    if (sx > L.NO_SPAWN_X - 80 && sy - rise - size < L.NO_SPAWN_Y) {
-      sx = Math.min(sx, L.NO_SPAWN_X - 80)
-      sy = Math.max(sy, L.NO_SPAWN_Y + rise + size)
+    if (sx > this.noSpawnX - 80 && sy - rise - size < this.noSpawnY) {
+      sx = Math.min(sx, this.noSpawnX - 80)
+      sy = Math.max(sy, this.noSpawnY + rise + size)
     }
     t.setPosition(sx, sy).setDepth(52)
     if (crit) {
@@ -678,15 +692,16 @@ export class Fx {
   zoomPunch(zoom = 1.06, inMs = 180, outMs = 420): void {
     if (this.reduced) return
     const cam = this.scene.cameras.main
+    const base = this.baseZoom
     this.scene.tweens.killTweensOf(cam)
-    cam.setZoom(1)
+    cam.setZoom(base)
     this.scene.tweens.chain({
       targets: cam,
       tweens: [
-        { zoom, duration: inMs, ease: 'Sine.easeOut' },
-        { zoom: 1, duration: outMs, ease: 'Sine.easeInOut' },
+        { zoom: base * zoom, duration: inMs, ease: 'Sine.easeOut' },
+        { zoom: base, duration: outMs, ease: 'Sine.easeInOut' },
       ],
-      onComplete: () => cam.setZoom(1),
+      onComplete: () => cam.setZoom(base),
     })
   }
 
@@ -704,7 +719,7 @@ export class Fx {
     this.groundRing(x, feetY, INK.gold, small ? 420 : 560)
     this.scene.time.delayedCall(120, () => this.groundRing(x, feetY, INK.goldSoft, small ? 520 : 720, 420))
     this.fountain.explode(this.count(small ? 16 : 24), x, feetY - 40)
-    this.slam(label, sub, small ? 380 : 320, INK.crit)
+    this.slam(label, sub, small ? 460 : 420, INK.crit)
     this.shake(JUICE.SHAKE_KILL)
     this.zoomPunch(1.06, 300, 420)
   }
