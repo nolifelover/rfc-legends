@@ -79,6 +79,8 @@ Expected on-screen text is quoted exactly as rehearsed.
 4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. Rehearsal: **Lv 1 to Lv 30 took 1.2 minutes.**
 5. *(Optional, shows rejection c)* before Lv 30, open **Market** and press **Mint as NFT** on any drop. Expected: "⛔ Rejected `base_level_too_low` Base Lv N: reach Base Lv 30 to mint rare drops." Toasts before Lv 30 are real drops too, but they hit this same level rejection.
 
+> **Don't navigate the /game tab away while leveling.** To show /roosters (or anything else) during this segment, open it in a **separate window**, and never open /game there. When the /game tab comes back, the toast component treats drops that arrived meanwhile as already seen, so the Lv-30 toast never shows.
+
 ### Scene 2: the drop toast, then Mint & sell
 6. At the Lv-30 kill, a Monster Card drop is guaranteed. MVP Cards drop at 55% per boss kill. Toasts slide in at the bottom right: "RARE DROP! MVP CARD การ์ดราชาหนูนา" with **Mint & sell →** and **Keep playing**. In the rehearsal, both the Monster Card and the MVP Card toasts appeared within 3 seconds of reaching Lv 30.
 7. Click **Mint & sell →** on the red **MVP Card** toast. **Toasts vanish after about 7 seconds.** If you miss one, click **✨ Rare drops (N)** in the HUD: it opens /market, where every drop is listed (without the highlight).
@@ -107,7 +109,10 @@ Expected on-screen text is quoted exactly as rehearsed.
     Expected: "⛔ Rejected `not_verified_human` Wallet 0xb8eb…529b hasn't verified with World ID. Only verified humans can mint rare drops, so bot farms can't cash out."
     Selling is locked too. As **B** (holds a card, never verified), **Your minted items** shows "Selling is locked for this wallet…". Clicking **Verify with World ID to list** gives "⛔ Rejected `NotVerifiedHuman` … Refused onchain by the contract". That's RareMarket's own revert, simulated before any wallet prompt.
 18. **(b) Same human, second wallet A2:** as A2, click **Verify with World ID**, sign, and scan with the **same phone**.
-    Expected: "Rejected `nullifier_bound_to_other_wallet` This World ID is already linked to wallet 0xa29e…e5e7. One human, one wallet: a second wallet can't verify with the same World ID."
+    Expected: the red headline "**This World ID is already bound to another wallet**" with `nullifier_bound_to_other_wallet`, then "This World ID is already bound to another wallet (0xa29e…e5e7). One human, one wallet: a second wallet can't verify with the same World ID." A small line underneath names the layer that refused:
+    - "Refused by the RFC Legends server…" (the usual case, since World's Portal currently accepts repeats)
+    - "Refused by World ID's Portal: <code>", or "Refused by World App: max_verifications_reached", if World itself blocks the repeat
+    The headline is the same in every case.
     Worth saying on camera: World's API accepts the repeat verification; our server and `HumanRegistry` refuse it.
 19. **(c) Low level:** shown in step 5.
 
