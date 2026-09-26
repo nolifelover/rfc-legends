@@ -1,0 +1,23 @@
+{
+  "name": "@rfclegends/ens",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "e0": "tsx scripts/e0-register.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^18.0.4",
+    "tsx": "^4.23.15",
+    "viem": "^2.56.9"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
+  },
+  "type": "module",
+  "private": true
+}
