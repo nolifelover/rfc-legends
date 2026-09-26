@@ -204,7 +204,7 @@ export function HudStrip({
                 not repeat them (dedupe); the bag opens without a number badge */}
             {goal ? <span className="text-xl font-bold text-bark-soft">{goal}</span> : null}
             {statCta}
-            {typeof rareDropCount === "number" ? (
+            {typeof rareDropCount === "number" && rareDropCount > 0 ? (
               <Pill
                 title="Open the Rare Market"
                 href={rareDropCount > 0 && newestDropId ? `/market?dropId=${newestDropId}` : "/market"}

@@ -20,7 +20,7 @@ export function nextGoalLine(player: Player): string {
   }
   const rLv = nextRoosterStatLevel(player.rooster.level);
   void statPointsForLevel; // rule reference: points/level = 3 + floor((Lv-1)/5)
-  return `Rooster Lv ${rLv} → +stat per level`;
+  return `Rooster Lv ${rLv} → +1 stat per level`;
 }
 
 export function NextGoalRibbon({ player }: { player: Player }) {
