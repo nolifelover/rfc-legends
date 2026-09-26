@@ -1140,8 +1140,10 @@ export class IdleScene extends Phaser.Scene {
             if (target.dead) return
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * ROW_SCALE[target.row] * 0.5
+            const rsz = target.h * ROW_SCALE[target.row]
             this.fx.slash(tx - 90, ty, 1, target.boss ? 1.6 : 1)
-            this.fx.impactStar(tx - 10, ty - 20, target.boss ? 1.6 : 1)
+            // burst on the hit side of the body, low, never on the face
+            this.fx.impactStar(tx - rsz * 0.42, ty + rsz * 0.18, target.boss ? 1.1 : 0.7)
             this.fx.dustKick(L.TRAINER_X + JUICE.STRIKE_DX, L.TRAINER_FEET, 3)
             this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
           },
@@ -1197,7 +1199,9 @@ export class IdleScene extends Phaser.Scene {
             if (target.dead) return
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * rs * 0.45
-            this.fx.impactStar(tx - 30, ty, target.boss ? 1.5 : 0.95, 0xffd8a8)
+            // the peck is its own small directional arc plus a low burst on the hit side
+            this.fx.slash(tx - 60, ty + 10, 1, target.boss ? 0.9 : 0.55)
+            this.fx.impactStar(tx - target.h * rs * 0.42, ty + target.h * rs * 0.2, target.boss ? 1 : 0.6, 0xffd8a8)
             if (crit) this.fx.sparkle(dashX + 40, dashY - L.ROOSTER_H * 0.55, 8)
             this.hitPest(target, value, crit ? 'crit' : 'rooster', time)
           },
