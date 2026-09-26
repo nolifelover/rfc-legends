@@ -4,8 +4,17 @@ Beat: an MVP boss drops a rare card, the player proves they're human with World 
 
 Everything below was rehearsed end to end through the real UI on Sepolia on 2026-09-26 (see [Rehearsal evidence](#rehearsal-evidence)).
 
+**Recording host: https://rfclegends.rfcclub.app.** It's the production deploy, with its own PocketBase and `WORLD_ENVIRONMENT=production`. Contracts and balances are shared with every host because it's the same Sepolia deployment. Game state and World ID bindings are per host.
+
+Already seeded on the recording host (2026-09-26 10:43 UTC, through its real UI):
+- **Bot C** "Farm Bot 9000" (Raptor, Lv 31+) with an unminted **MVP Card #3001**, drop `0x706a8fcc…6f6a8e39`. Rehearsed there: Mint gives `not_verified_human`.
+- **B** holds MVP Card #3001 and Monster Card #1001 onchain and isn't verified there. Rehearsed there: **Verify with World ID to list** gives the contract's `NotVerifiedHuman`.
+- **A (`prodA`) and A2 (`prodA2`)** are untouched there: no character, not verified.
+- **16b (second wallet) is live only:** it needs the presenter's phone. Don't pre-run it, because a production verify binds their World ID for good.
+
 ## Presenter checklist (5 min before recording)
 
+- [ ] **Open https://rfclegends.rfcclub.app** in both browser profiles.
 - [ ] **MetaMask is on Sepolia**, in both browser profiles.
 - [ ] **Accounts imported and renamed.** Keys are in `apps/web/.data/demo-wallets.json`; import each with Import account → private key.
   - Profile 1 (seller): **Demo A** = `prodA` `0xa29e…e5e7` (the active account when you start) and **Demo A2** = `prodA2` `0x57Dc…CdEF6`.
@@ -20,7 +29,8 @@ Everything below was rehearsed end to end through the real UI on Sepolia on 2026
 
 | | Video (primary) | Rehearsal / fallback |
 |---|---|---|
-| `WORLD_ENVIRONMENT` in `apps/web/.env.local` | `production` | `staging` |
+| Host | **https://rfclegends.rfcclub.app** (its env is fixed to `production`) | https://rfc-legends.earn.dev.rawinlab.com (set `WORLD_ENVIRONMENT` in `apps/web/.env.local`) |
+| `WORLD_ENVIRONMENT` | `production` | `staging` |
 | Who proves "human" | Presenter's real World App (phone). It needs the **Orb** proof-of-human credential and World ID 4.0. | World ID simulator in a browser tab |
 | Seller wallet | **A** (`prodA`) | **A-staging** (`walletA`) |
 | Second-wallet rejection | **A2** (`prodA2`), same phone | **A2-staging** (`walletA2`), same simulator |
@@ -39,9 +49,9 @@ Private keys are in `apps/web/.data/demo-wallets.json` on the dev machine. That 
 |---|---|---|---|---|
 | `prodA` | A: seller in the video | `0xa29edaa4cfe1D97dE5d05fb3cd097D9F5a7dE5e7` | 0.03 | fresh: no character, not verified |
 | `prodA2` | A2: same presenter, second wallet | `0x57Dc7bA401ADc467d01224Eb84d5975E678CdEF6` | 0 (verify is server-paid) | fresh |
-| `buyerB` | B: buyer | `0x3A8AFA4AAe276E0887D977649C5a4d008cDfdeAB` | ~0.029 | 90 test USDC, holds 1 Monster Card, **not verified** |
-| `botC` | C: bot | `0xB8EB96af3aE58912B5b7b275258485523930529b` | 0.01 | character "Farm Bot 9000" Lv 55 with an unminted **MVP Card #3001**, never verified |
-| `walletA` | A-staging | `0x4f6bAe095982b9C9c57d4A311634e1189d56F395` | ~0.029 | verified (staging), character "Khun Gai" Lv 35 with unminted drops |
+| `buyerB` | B: buyer | `0x3A8AFA4AAe276E0887D977649C5a4d008cDfdeAB` | ~0.028 | 80 test USDC, holds MVP Card #3001 + Monster Card #1001 (onchain, every host), **not verified** on any host |
+| `botC` | C: bot | `0xB8EB96af3aE58912B5b7b275258485523930529b` | 0.01 | "Farm Bot 9000" with an unminted **MVP Card #3001** on the recording host (and on earn.dev), never verified |
+| `walletA` | A-staging | `0x4f6bAe095982b9C9c57d4A311634e1189d56F395` | ~0.027 | earn.dev only: verified (staging), character "Khun Gai" with drops |
 | `walletA2` | A2-staging | `0x41410b26cbdA4c4caA2548DD5F7D5ab2c27d8673` | 0 | refused as a second wallet |
 
 Top up from the deployer (`contracts/.env` `DEPLOYER_PRIVATE_KEY`) with at most 0.05 ETH per wallet.
@@ -50,9 +60,9 @@ Top up from the deployer (`contracts/.env` `DEPLOYER_PRIVATE_KEY`) with at most 
 
 ## 3. Pre-flight (T−15 min)
 
-1. `curl -s http://127.0.0.1:8090/api/health` shows `API is healthy`. There must be exactly one `pocketbase serve` process.
-2. The app loads at https://rfc-legends.earn.dev.rawinlab.com/market (or http://localhost:3000/market) and shows the **Demo mode: boosted rates** badge.
-3. `apps/web/.env.local` has `WORLD_ENVIRONMENT=production`, `DEMO_MODE=true` and `NEXT_PUBLIC_DEMO_MODE=true`.
+1. https://rfclegends.rfcclub.app/market loads and shows the **Demo mode: boosted rates** badge.
+2. Opening the verify widget there shows a QR code with **no** simulator line. That confirms production World ID.
+3. As C on that host, **Your rare drops** shows the unminted MVP Card #3001. If it doesn't, re-seed it (see §6).
 4. Presenter's phone: World App is up to date, and the World ID holds the Orb credential.
 5. MetaMask: A, B and C are imported, on Sepolia, and each has ETH as listed above.
 6. To show a fresh character, wallet A must not have one yet (see [Reset](#6-reset-for-re-takes)).
@@ -102,7 +112,7 @@ Expected on-screen text is quoted exactly as rehearsed.
 
 ## 5. Staging fallback (World App misbehaves)
 
-1. Set `WORLD_ENVIRONMENT=staging` in `apps/web/.env.local`.
+1. Switch to the **earn.dev host** (https://rfc-legends.earn.dev.rawinlab.com); the recording host is fixed to production. Set `WORLD_ENVIRONMENT=staging` in `apps/web/.env.local` on the dev box.
 2. Use **A-staging** instead of A. It's already verified and at Lv 35 with drops, so skip Scene 3, or show that it's already verified.
 3. For 16(b), use **A2-staging**. After **Verify with World ID** and **Sign**, open https://simulator.worldcoin.org in another tab.
    - The widget's "Use the simulator" link didn't auto-load the request in our runs. In the simulator, click **Paste code**, paste the connection link (click the QR code in the widget to copy it), then click **Continue**.
@@ -111,7 +121,9 @@ Expected on-screen text is quoted exactly as rehearsed.
 
 ## 6. Reset for re-takes
 
-Use the PocketBase admin at http://127.0.0.1:8090/_/ (superuser credentials are in `apps/web/.env.local`). Filter by the wallet in **lowercase**.
+Game state and World ID bindings live in each host's own PocketBase. On earn.dev, use http://127.0.0.1:8090/_/ (superuser credentials are in `apps/web/.env.local`). On the recording host, use its PocketBase (`pb_data_prod` on the rfctv box); ask the lead for its admin access. Filter by the wallet in **lowercase**.
+
+**Re-seed bot C** on a host: open `/game` as C, wait 2 s, then **Connect wallet**. Create "Farm Bot 9000" (Raptor), spend STR/AGI/DEX, and keep the tab open until the HUD shows Lv 30+ and a Rare-drop toast for an MVP Card (about 2 minutes). Don't mint it.
 
 | To redo… | Do this |
 |---|---|
