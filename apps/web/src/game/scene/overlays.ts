@@ -108,16 +108,20 @@ export class Nameplate {
   }
 }
 
-/** Current-HP bar drawn under a pest's feet (160×12 by default). */
+/** Current-HP bar drawn under a pest's feet (160×12 by default); each hit drains a chunk and a pale trail catches up. */
 export class HpBar {
   readonly container: Phaser.GameObjects.Container
 
+  private readonly scene: Phaser.Scene
   private readonly g: Phaser.GameObjects.Graphics
   private readonly width: number
   private readonly h: number
   private pct = 1
+  private ghost = 1
+  private ghostTween: Phaser.Tweens.Tween | null = null
 
   constructor(scene: Phaser.Scene, width = 160, height = 12, depth = 50) {
+    this.scene = scene
     this.container = scene.add.container(0, 0).setDepth(depth)
     this.g = scene.add.graphics()
     this.width = width
@@ -135,6 +139,10 @@ export class HpBar {
     g.fillRoundedRect(-width / 2, -h / 2, width, h, h / 2)
     g.fillStyle(0x57301f)
     g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, width - 4, h - 4, (h - 4) / 2)
+    // pale trail: what the last hit just took
+    const gw = Math.max(3, (width - 4) * Phaser.Math.Clamp(this.ghost, 0, 1))
+    g.fillStyle(0xfff3d6, 0.9)
+    g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, gw, h - 4, (h - 4) / 2)
     g.fillStyle(pct > 0.5 ? 0x62b04e : pct > 0.25 ? 0xe0a93e : 0xe2574c, 1)
     g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, w, h - 4, (h - 4) / 2)
     g.fillStyle(0xffffff, 0.22)
@@ -143,7 +151,20 @@ export class HpBar {
 
   setPct(pct: number): void {
     this.pct = pct
+    if (this.ghost < pct) this.ghost = pct
     this.draw()
+    this.ghostTween?.remove()
+    this.ghostTween = this.scene.tweens.addCounter({
+      from: this.ghost,
+      to: pct,
+      delay: 260,
+      duration: 300,
+      ease: 'Cubic.easeOut',
+      onUpdate: (tw) => {
+        this.ghost = tw.getValue() ?? pct
+        this.draw()
+      },
+    })
   }
 
   place(x: number, y: number): void {
@@ -156,6 +177,7 @@ export class HpBar {
   }
 
   destroy(): void {
+    this.ghostTween?.remove()
     this.container.destroy()
   }
 }
