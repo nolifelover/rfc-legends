@@ -128,6 +128,9 @@ export function GameClient() {
     onSuccess: (result) => {
       const prev = stateQuery.data?.player;
       applyPlayer(result.player);
+      // F2: drops the server just persisted must surface immediately (the
+      // runbook allows <=3s; the 4s poll alone could add up to ~4.5s)
+      void queryClient.invalidateQueries({ queryKey: stateKey });
       const live = result.live;
       const offline = result.offline;
       const awaySec = (live?.ticks ?? 0) + (offline?.seconds ?? 0);
