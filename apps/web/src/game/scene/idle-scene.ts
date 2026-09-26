@@ -1050,8 +1050,11 @@ export class IdleScene extends Phaser.Scene {
     if (this.focus && !this.focus.dead) {
       this.focus.plate.setVisible(false)
       this.focus.bar.setVisible(false)
+      this.focus.container.setDepth(ROW_DEPTH[this.focus.row])
     }
     this.focus = p
+    // the target draws in front of the rooster (25) so it is never hidden behind its legs
+    p.container.setDepth(26)
     const s = ROW_SCALE[p.row]
     // above every lane, so a front-lane body never covers a back-lane target's plate
     p.bar.container.setDepth(30)
@@ -1227,7 +1230,7 @@ export class IdleScene extends Phaser.Scene {
       tweens: [
         {
           x: -24,
-          angle: -14,
+          angle: -5,
           scaleX: 1.06,
           scaleY: 0.94,
           duration: JUICE.WINDUP,
@@ -1236,9 +1239,9 @@ export class IdleScene extends Phaser.Scene {
         },
         {
           x: JUICE.STRIKE_DX,
-          angle: 22,
-          scaleX: 0.94,
-          scaleY: 1.06,
+          angle: 6,
+          scaleX: 1.1,
+          scaleY: 0.96,
           duration: JUICE.STRIKE,
           ease: 'Expo.easeIn',
           onStart: () => sp.setTexture(TRAINER_KEY),
@@ -1261,8 +1264,8 @@ export class IdleScene extends Phaser.Scene {
             })
           },
         },
-        { x: JUICE.STRIKE_DX + 6, angle: 26, scaleX: 0.94, scaleY: 1.06, duration: JUICE.HOLD },
-        { x: JUICE.STRIKE_DX - 50, angle: 8, scaleX: 1, scaleY: 1, duration: 130, ease: 'Sine.easeOut' },
+        { x: JUICE.STRIKE_DX + 6, angle: 8, scaleX: 1.1, scaleY: 0.96, duration: JUICE.HOLD },
+        { x: JUICE.STRIKE_DX - 50, angle: 3, scaleX: 1, scaleY: 1, duration: 130, ease: 'Sine.easeOut' },
         { x: 0, angle: 0, scaleX: 1, scaleY: 1, duration: JUICE.RECOVER, ease: 'Back.easeOut' },
       ],
     })
@@ -2021,6 +2024,11 @@ export class IdleScene extends Phaser.Scene {
       }
     }
 
+    const f = this.focus
+    if (f && !f.dead) {
+      f.plate.container.x = Math.round(f.container.x)
+      f.bar.container.x = Math.round(f.container.x)
+    }
     if (time >= this.nextTrainerAt) this.trainerAttack(time)
     if (time >= this.nextRoosterAt) this.roosterAttack(time)
     if (this.bossActive && time >= this.nextBossAt) this.bossAttack(time)
