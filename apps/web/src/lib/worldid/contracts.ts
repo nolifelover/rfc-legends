@@ -204,6 +204,10 @@ export const rareMarketAbi = [
     inputs: [{ name: "listingId", type: "uint256", indexed: true }],
   },
   { type: "error", name: "NotVerifiedHuman", inputs: [{ name: "account", type: "address" }] },
+  { type: "error", name: "InvalidListing", inputs: [{ name: "amount", type: "uint256" }, { name: "unitPrice", type: "uint256" }] },
+  { type: "error", name: "ListingNotActive", inputs: [{ name: "listingId", type: "uint256" }] },
+  { type: "error", name: "InvalidPurchase", inputs: [{ name: "requested", type: "uint256" }, { name: "available", type: "uint256" }] },
+  { type: "error", name: "NotSeller", inputs: [{ name: "seller", type: "address" }] },
 ] as const;
 
 export const mockUsdcAbi = [
