@@ -206,7 +206,9 @@ export function GameClient() {
     <div className="flex flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6">
         <div className="relative flex min-h-0 flex-1 justify-center">
-          <SceneFrame className="h-[min(74vh,calc((100vw-3.5rem)*9/16))] w-auto max-w-full">
+          {/* height = whatever the nav/banner/HUD leave free; the aspect-video
+              box derives width from that height, clamped by the viewport */}
+          <SceneFrame className="h-full w-auto max-w-full">
             <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
           </SceneFrame>
         </div>
