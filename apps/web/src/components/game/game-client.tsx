@@ -68,9 +68,43 @@ export function GameClient() {
     return () => clearTimeout(t);
   }, [notice]);
 
+  // Boot sequence (QA fix): POST /api/game/sync FIRST — otherwise the state
+  // GET settles the away window server-side before the client ever sees it,
+  // and the welcome-back modal can never fire on reload.
+  const [booted, setBooted] = useState(false);
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { ok, data } = await postGame("/api/game/sync", { address });
+        if (!cancelled && ok && data.player) {
+          const prev = stateQuery.data?.player;
+          applyPlayer(data.player as Player);
+          considerWelcomeBack(
+            {
+              live: (data.live ?? null) as SyncResult["live"],
+              offline: (data.offline ?? null) as SyncResult["offline"],
+              player: data.player as Player,
+            },
+            prev ?? undefined,
+          );
+        }
+      } catch {
+        /* PLAYER_NOT_FOUND and transient errors: the state query takes over */
+      } finally {
+        if (!cancelled) setBooted(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address]);
+
   const stateQuery = useQuery({
     queryKey: stateKey,
-    enabled: !!address,
+    enabled: !!address && booted,
     // Interval polling pauses while the tab is hidden (refetchIntervalInBackground
     // defaults to false), so the server only advances the game while watched.
     refetchInterval: 4000,
@@ -86,6 +120,38 @@ export function GameClient() {
     queryClient.setQueryData<GameState>(stateKey, (old) =>
       old ? { ...old, player } : { player, drops: [], demoMode: false },
     );
+  }
+
+  /** ≥60s away → the welcome-back card; otherwise the quiet sync notice. */
+  function considerWelcomeBack(
+    result: { player: Player; live: SyncResult["live"]; offline: SyncResult["offline"] },
+    prev?: Player,
+  ): void {
+    const live = result.live;
+    const offline = result.offline;
+    const awaySec = (live?.ticks ?? 0) + (offline?.seconds ?? 0);
+    const exp = (live?.expGained ?? 0) + (offline?.expGained ?? 0);
+    const kills = (live?.kills ?? 0) + (offline?.kills ?? 0);
+    if (awaySec >= 60 && (exp > 0 || kills > 0 || (offline?.drops?.length ?? 0) > 0) && prev) {
+      setWelcomeBack({
+        seconds: awaySec,
+        expGained: exp,
+        roosterExpGained: (live?.roosterExpGained ?? 0) + (offline?.roosterExpGained ?? 0),
+        baseLevelsGained: Math.max(0, result.player.baseLevel - (prev?.baseLevel ?? result.player.baseLevel)),
+        roosterLevelsGained: Math.max(
+          0,
+          result.player.rooster.level - (prev?.rooster.level ?? result.player.rooster.level),
+        ),
+        kills,
+        drops: offline?.drops?.length ?? 0,
+      });
+    } else {
+      setNotice(
+        exp > 0 || kills > 0
+          ? { kind: "info", text: `Synced — +${exp.toLocaleString()} EXP, ${kills} defeated.` }
+          : { kind: "info", text: "Synced — everything already up to date." },
+      );
+    }
   }
 
   async function handleCreate(name: string, sireLine: SireLine): Promise<CreateOutcome> {
@@ -126,37 +192,12 @@ export function GameClient() {
       return data as unknown as SyncResult;
     },
     onSuccess: (result) => {
-      const prev = stateQuery.data?.player;
+      const prev = stateQuery.data?.player ?? undefined;
       applyPlayer(result.player);
       // F2: drops the server just persisted must surface immediately (the
       // runbook allows <=3s; the 4s poll alone could add up to ~4.5s)
       void queryClient.invalidateQueries({ queryKey: stateKey });
-      const live = result.live;
-      const offline = result.offline;
-      const awaySec = (live?.ticks ?? 0) + (offline?.seconds ?? 0);
-      const exp = (live?.expGained ?? 0) + (offline?.expGained ?? 0);
-      const kills = (live?.kills ?? 0) + (offline?.kills ?? 0);
-      if (awaySec >= 60 && (exp > 0 || kills > 0 || (offline?.drops?.length ?? 0) > 0) && prev) {
-        // "While you were away" — real server numbers only (research #10)
-        setWelcomeBack({
-          seconds: awaySec,
-          expGained: exp,
-          roosterExpGained: (live?.roosterExpGained ?? 0) + (offline?.roosterExpGained ?? 0),
-          baseLevelsGained: Math.max(0, result.player.baseLevel - (prev?.baseLevel ?? result.player.baseLevel)),
-          roosterLevelsGained: Math.max(
-            0,
-            result.player.rooster.level - (prev?.rooster.level ?? result.player.rooster.level),
-          ),
-          kills,
-          drops: (offline?.drops?.length ?? 0),
-        });
-      } else {
-        setNotice(
-          exp > 0 || kills > 0
-            ? { kind: "info", text: `Synced — +${exp.toLocaleString()} EXP, ${kills} defeated.` }
-            : { kind: "info", text: "Synced — everything already up to date." },
-        );
-      }
+      considerWelcomeBack(result, prev);
     },
     onError: (err) => setNotice({ kind: "error", text: reasonText(err.message) }),
   });
