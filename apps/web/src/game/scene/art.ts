@@ -594,6 +594,7 @@ export const FX = {
   lotus: 'fx-lotus',
   lotusWhite: 'fx-lotus-white',
   walkway: 'fx-walkway',
+  treeline: 'fx-treeline',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -725,6 +726,20 @@ export function makeFxTextures(scene: Phaser.Scene): void {
     for (const [x, y] of [[62, 40], [98, 40], [80, 30], [70, 52], [90, 52]] as const) g.strokeEllipse(x, y, 26, 40)
     g.fillStyle(0xffd24a)
     g.fillCircle(80, 46, 9)
+  })
+
+  // mid-ground treeline: rounded canopies along the horizon (white; tinted per zone)
+  make(FX.treeline, 1920, 160, (g) => {
+    g.fillStyle(0xffffff, 1)
+    g.fillRect(0, 110, 1920, 50)
+    let x = -40
+    let i = 0
+    while (x < 1980) {
+      const r = 44 + ((i * 37) % 40)
+      g.fillCircle(x, 118 - ((i * 23) % 30), r)
+      x += r * 1.1
+      i++
+    }
   })
 
   make(FX.lotusWhite, 160, 100, (g) => {

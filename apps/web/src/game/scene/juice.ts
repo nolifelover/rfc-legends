@@ -181,6 +181,8 @@ export interface ZoneSpec {
   walkway: boolean
   /** water-shimmer tint (gold glints on the pond) */
   glint: number
+  /** mid-ground treeline tint */
+  treeline: number
   names: Record<string, string>
   skins: Record<string, ZoneSkin>
   bossId: string
@@ -197,6 +199,7 @@ export const ZONES: Record<string, ZoneSpec> = {
     lotus: false,
     walkway: false,
     glint: 0xffffff,
+    treeline: 0x7fa86e,
     names: { 'nu-na': 'Field Rat', 'takka-taen-yak': 'Giant Locust', 'pu-na': 'Rice Crab', 'raja-nu-na': 'Rat King' },
     skins: {
       'nu-na': { key: 'art-monster-nu-na', h: 260 },
@@ -209,8 +212,9 @@ export const ZONES: Record<string, ZoneSpec> = {
   // dusk lotus pond: purple-orange sky, deep green water, gold glints, a walkway
   'bueng-bua': {
     en: 'Royal Lotus Pond',
-    grade: 0x8a4fb0,
-    gradeAlpha: 0.2,
+    // the grade is a light warm veil on the backdrop only; actors stay saturated
+    grade: 0xff9a5a,
+    gradeAlpha: 0.1,
     skyTint: 0xffb08a,
     hillsTint: 0x6f8f8a,
     paddyTint: 0x3f8f5a,
@@ -218,6 +222,7 @@ export const ZONES: Record<string, ZoneSpec> = {
     lotus: true,
     walkway: true,
     glint: 0xffd24a,
+    treeline: 0x2f5a52,
     names: {
       'hoi-cherry': 'Golden Apple Snail',
       'phak-tob-chawai-yak': 'Giant Water Hyacinth',

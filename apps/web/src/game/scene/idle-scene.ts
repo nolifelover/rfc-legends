@@ -106,6 +106,7 @@ export class IdleScene extends Phaser.Scene {
     paddy?: Phaser.GameObjects.Image
     ground?: Phaser.GameObjects.Image
     grade?: Phaser.GameObjects.Rectangle
+    treeline?: Phaser.GameObjects.Image
     lotus: Phaser.GameObjects.Image[]
     walkway: Phaser.GameObjects.Image[]
     shimmers: Phaser.GameObjects.Image[]
@@ -278,6 +279,10 @@ export class IdleScene extends Phaser.Scene {
     const paddy = this.add.image(0, L.HORIZON_Y, 'art-paddy').setOrigin(0, 0).setDepth(6)
     this.zoneArt.hills = hills
     this.zoneArt.paddy = paddy
+    // mid-ground treeline between the hills and the water, for depth
+    const treeline = this.add.image(0, L.HORIZON_Y - 150, FX.treeline).setOrigin(0, 0).setDepth(5.5)
+    this.zoneArt.treeline = treeline
+    if (!this.reduced) this.tweens.add({ targets: treeline, x: -4, duration: 8000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 1000 })
     // breathing parallax: the far layers drift a few px on an 8s sine
     if (!this.reduced) {
       this.tweens.add({ targets: hills, x: -6, duration: 8000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -412,6 +417,7 @@ export class IdleScene extends Phaser.Scene {
     a.sky?.setTexture(tintedTexture(this, 'art-sky', z.skyTint))
     a.hills?.setTexture(tintedTexture(this, 'art-hills', z.hillsTint)).setDisplaySize(L.W, 480)
     a.paddy?.setTexture(tintedTexture(this, 'art-paddy', z.paddyTint))
+    a.treeline?.setTexture(tintedTexture(this, FX.treeline, z.treeline))
     a.ground?.setTexture(tintedTexture(this, 'art-ground', z.groundTint)).setDisplaySize(L.W, 300)
     a.grade?.setFillStyle(z.grade, z.gradeAlpha)
     for (const l of a.lotus) l.setVisible(z.lotus)
