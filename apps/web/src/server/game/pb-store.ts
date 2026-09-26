@@ -21,6 +21,14 @@ function isNotFound(err: unknown): boolean {
   return e?.status === 404 || e?.response?.status === 404
 }
 
+/**
+ * dropIds are bytes32 hex; the engine mints them lowercase but callers (worldid lane, contracts)
+ * may pass mixed case. Normalized to lowercase on BOTH write and read so lookups always match.
+ */
+function normDropId(dropId: string): string {
+  return dropId.toLowerCase()
+}
+
 /** Re-throw store-contract error codes for the not-found cases (parity with JsonFileStore). */
 function notFound(err: unknown, code: 'PLAYER_NOT_FOUND' | 'DROP_NOT_FOUND'): never {
   if (isNotFound(err)) throw new Error(code)
@@ -66,7 +74,8 @@ export class PbGameStore implements GameStore {
       .collection('players')
       .getFirstListItem(`address = "${address}"`)
       .catch((err: unknown) => notFound(err, 'PLAYER_NOT_FOUND'))
-    await client.collection('drops').create({ address, dropId: drop.dropId, data: drop })
+    const dropId = normDropId(drop.dropId)
+    await client.collection('drops').create({ address, dropId, data: { ...drop, dropId } })
   }
 
   async updateDropStatus(
@@ -76,13 +85,14 @@ export class PbGameStore implements GameStore {
     txHash?: string,
   ): Promise<void> {
     const client = await pb()
+    const id = normDropId(dropId)
     const rec = await client
       .collection('drops')
-      .getFirstListItem(`address = "${address}" && dropId = "${dropId}"`)
+      .getFirstListItem(`address = "${address}" && dropId = "${id}"`)
       .catch((err: unknown) => notFound(err, 'DROP_NOT_FOUND'))
     const data = rec.data as Drop
     data.status = status
     if (txHash !== undefined) data.txHash = txHash
-    await client.collection('drops').update(rec.id, { dropId, data })
+    await client.collection('drops').update(rec.id, { dropId: id, data })
   }
 }

@@ -119,7 +119,8 @@ export async function listDrops(address: string): Promise<Drop[]> {
 
 export async function getDrop(address: string, dropId: string): Promise<Drop | null> {
   const drops = await listDrops(address)
-  return drops.find((d) => d.dropId === dropId) ?? null
+  const id = dropId.toLowerCase() // dropIds are bytes32 hex — matched case-insensitively
+  return drops.find((d) => d.dropId === id) ?? null
 }
 
 export async function setDropStatus(
@@ -130,7 +131,7 @@ export async function setDropStatus(
 ): Promise<void> {
   const a = normalizeAddress(address)
   if (!DROP_STATUSES.includes(status)) throw new GameError('INVALID_STATUS')
-  await getStore().updateDropStatus(a, dropId, status, txHash)
+  await getStore().updateDropStatus(a, dropId.toLowerCase(), status, txHash)
 }
 
 export async function allocateStats(address: string, allocations: Partial<Record<StatKey, number>>): Promise<Player> {
@@ -195,7 +196,8 @@ export async function syncPlayer(address: string, nowMs: number = Date.now()): P
   for (const drop of rolled) {
     player.dropCounter += 1
     const record: Drop = {
-      dropId: makeDropId(player.address, player.sessionCounter, player.dropCounter),
+      // bytes32 hex is minted lowercase; all lookups are case-insensitive
+      dropId: makeDropId(player.address, player.sessionCounter, player.dropCounter).toLowerCase() as `0x${string}`,
       itemId: drop.itemId,
       rarity: drop.rarity,
       status: 'unminted',

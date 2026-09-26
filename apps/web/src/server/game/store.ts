@@ -104,6 +104,10 @@ export class JsonFileStore implements GameStore {
 
 let cached: { key: string; store: GameStore } | null = null
 
+/**
+ * Mirrors pbConfigured() in ../pb (plus the POCKETBASE_URL check) — pb.ts can't be imported here
+ * because its 'server-only' import doesn't resolve outside the Next server runtime.
+ */
 function pbConfigured(): boolean {
   return Boolean(
     process.env.POCKETBASE_URL &&

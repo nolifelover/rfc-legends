@@ -165,6 +165,25 @@ describe('syncPlayer', () => {
       setDropStatus('0xdddddddddddddddddddddddddddddddddddddddd', drop.dropId, 'minted'),
     ).rejects.toThrowError('DROP_NOT_FOUND')
   })
+
+  it('matches dropIds case-insensitively (worldid lane passes lowercase)', async () => {
+    useDataDir(path.join(dir, 'case'))
+    await createPlayer(A, 'นายไก่เอ', 'raptor', T0)
+    const store = getStore()
+    const lower = '0x' + 'ab'.repeat(32) as `0x${string}`
+    await store.saveDrop(A, {
+      dropId: lower,
+      itemId: 3001,
+      rarity: 'mvp_card',
+      status: 'unminted',
+      droppedAt: T0,
+    })
+    // uppercase lookup finds it, uppercase status update hits the same record
+    const upper = ('0x' + 'AB'.repeat(32)) as `0x${string}`
+    expect((await getDrop(A, upper))?.dropId).toBe(lower)
+    await setDropStatus(A, upper, 'minting')
+    expect((await getDrop(A, lower))?.status).toBe('minting')
+  })
 })
 
 describe('store', () => {
