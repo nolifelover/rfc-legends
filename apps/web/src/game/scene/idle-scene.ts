@@ -162,6 +162,8 @@ export class IdleScene extends Phaser.Scene {
   private roosterPower: Phaser.GameObjects.GameObject[] = []
   private trainerPower: Phaser.GameObjects.GameObject[] = []
   private roosterTier: Tier | null = null
+  /** floor(level/10): every band adds +3% size, a longer plume and a stronger aura */
+  private roosterBand = -1
   private trainerTier: Tier | null = null
   /** "Cheer" tap: the next 3 rooster swings come 1.5× faster (cosmetic), 20s cooldown. */
   private cheerBoostLeft = 0
@@ -686,20 +688,27 @@ export class IdleScene extends Phaser.Scene {
     const tt = tierOf(this.player.baseLevel)
     this.roosterPlate.setTier(rt)
     this.trainerPlate.setTier(tt)
-    if (rt !== this.roosterTier) {
+    const band = Math.min(9, Math.floor(this.player.rooster.level / 10))
+    if (band !== this.roosterBand) {
+      this.roosterBand = band
       this.roosterTier = rt
       for (const o of this.roosterPower) o.destroy()
       this.roosterPower = []
-      const H = L.ROOSTER_H
+      // continuous growth: +3% size per 10 levels, on top of the tier gear
+      const H = L.ROOSTER_H * (1 + 0.03 * band)
+      this.roosterSprite.setDisplaySize(H, H)
+      this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - H - 58)
       const keep = (o: Phaser.GameObjects.GameObject): void => {
         this.roosterPower.push(o)
       }
-      // aura tier: size and strength under the feet
-      this.roosterAura.setAlpha(rt === 2 ? 0.95 : rt === 1 ? 0.75 : 0.45).setScale(rt === 2 ? 1.2 : rt === 1 ? 1.05 : 0.9)
+      // aura: stronger and wider with every band
+      this.roosterAura.setAlpha(Math.min(0.95, 0.35 + 0.06 * band)).setScale(0.85 + 0.04 * band)
       if (rt >= 1) {
-        // sickle tail plume behind the body (teal/silver at tier 1, four-colour at tier 2)
-        // rooted further back so the feathers emerge from behind the tail, never across the body outline
-        const plume = this.add.image(-0.32 * H, -0.4 * H, rt === 2 ? FX.plume2 : FX.plume1).setOrigin(0.92, 0.94).setScale(rt === 2 ? 0.75 : 0.62).setAlpha(0.95)
+        // plume: longer every band, colour steps at 50 (warm silver) and 70 (four-colour);
+        // rooted further back so the feathers emerge from behind the tail
+        const plumeKey = band >= 7 ? FX.plume2 : band >= 5 ? tintedTexture(this, FX.plume1, 0xffe0a0) : FX.plume1
+        const plumeScale = band >= 7 ? 0.62 + 0.06 * (band - 7) : 0.5 + 0.06 * (band - 3)
+        const plume = this.add.image(-0.32 * H, -0.4 * H, plumeKey).setOrigin(0.92, 0.94).setScale(plumeScale).setAlpha(0.95)
         this.roosterBody.add(plume)
         this.roosterBody.sendToBack(plume)
         keep(plume)
@@ -1335,7 +1344,7 @@ export class IdleScene extends Phaser.Scene {
             this.fx.dustKick(L.ROOSTER_X - 20, L.ROOSTER_FEET, 4)
           },
           onComplete: () => {
-            this.fx.afterimages(this.roosterKey, L.ROOSTER_X, L.ROOSTER_FEET, dashX, dashY, L.ROOSTER_H)
+            this.fx.afterimages(this.roosterKey, L.ROOSTER_X, L.ROOSTER_FEET, dashX, dashY, this.roosterSprite.displayHeight)
             if (target.dead) return
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * rs * 0.45
