@@ -14,6 +14,7 @@ import { readContract, simulateContract } from "wagmi/actions";
 import { rareItemsAbi, rareMarketAbi } from "@/lib/contracts/abis";
 import type { Deployment } from "@/lib/worldid/deployment";
 import type { Hex } from "@/lib/worldid/types";
+import { txUrl } from "@/lib/worldid/client";
 import { describeError, itemInfo, runTx } from "./chain";
 import { RejectionCard } from "./RejectionCard";
 
@@ -31,6 +32,8 @@ export function InventoryPanel({
   verified?: boolean;
 }) {
   const client = usePublicClient({ chainId: sepolia.id });
+  // Lives here, not in the form: a listed item leaves the wallet (escrow), so its form unmounts.
+  const [lastListed, setLastListed] = useState<{ itemId: number; txHash: Hex } | null>(null);
   const ids = [...new Set(candidateItemIds)].sort((a, b) => a - b);
   const balances = useQuery({
     queryKey: ["market-balances", address, deployment?.RareItems, ids.join(",")],
@@ -55,6 +58,14 @@ export function InventoryPanel({
       <h2 className="mb-4 text-lg font-bold text-bark">
         Your minted items
       </h2>
+      {lastListed ? (
+        <p className="mb-4 rounded-2xl border-2 border-field/40 bg-field/10 px-4 py-3 text-sm font-bold text-field-deep">
+          Listed ✓ {itemInfo(lastListed.itemId).name} is in escrow and shows up in the listings below.{" "}
+          <a className="font-normal underline" href={txUrl(lastListed.txHash)} target="_blank" rel="noreferrer">
+            view tx ↗
+          </a>
+        </p>
+      ) : null}
       {address && verified === false ? (
         <p role="status" className="mb-4 rounded-2xl border-2 border-clay/40 bg-clay/10 px-4 py-3 text-sm text-clay-deep">
           <b>Selling is locked for this wallet.</b> Only World ID verified humans can list on the Rare Market, and
@@ -79,6 +90,7 @@ export function InventoryPanel({
               itemId={b.itemId}
               balance={b.balance}
               verified={verified}
+              onListed={(txHash) => setLastListed({ itemId: b.itemId, txHash })}
             />
           ))}
         </ul>
@@ -93,24 +105,24 @@ function ListForm({
   itemId,
   balance,
   verified,
+  onListed,
 }: {
   address: Hex;
   deployment: Deployment;
   itemId: number;
   balance: bigint;
   verified?: boolean;
+  onListed: (txHash: Hex) => void;
 }) {
   const config = useConfig();
   const queryClient = useQueryClient();
   const [price, setPrice] = useState("10");
   const [step, setStep] = useState<string | null>(null);
-  const [listed, setListed] = useState(false);
   const [rejection, setRejection] = useState<{ code?: string; reason: string } | null>(null);
   const info = itemInfo(itemId);
 
   async function list() {
     setRejection(null);
-    setListed(false);
     let unitPrice: bigint;
     try {
       unitPrice = parseUnits(price, 6);
@@ -152,8 +164,8 @@ function ListForm({
         });
       }
       setStep("Confirm the listing in your wallet…");
-      await runTx(config, address, listArgs);
-      setListed(true);
+      const receipt = await runTx(config, address, listArgs);
+      onListed(receipt.transactionHash);
       void queryClient.invalidateQueries({ queryKey: ["market-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["market-balances"] });
     } catch (err) {
@@ -191,11 +203,6 @@ function ListForm({
           reason={rejection.reason}
           onDismiss={() => setRejection(null)}
         />
-      ) : null}
-      {listed ? (
-        <p className="rounded-2xl border-2 border-field/40 bg-field/10 px-4 py-2 text-sm font-bold text-field-deep">
-          Listed ✓ It&apos;s in escrow now and shows up in the listings below.
-        </p>
       ) : null}
       <form
         className="flex items-center gap-2"
