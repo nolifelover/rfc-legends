@@ -15,9 +15,10 @@
     <!-- walking stick with small hoe head -->
     <path d="M67,45 L79,92" stroke="#2B1B12" stroke-width="9"/>
     <path d="M67,45 L79,92" stroke="#8A6D55" stroke-width="5"/>
-    <path d="M66,42 Q79,35 87,42 Q83,53 70,51 Q62,46 66,42 Z" fill="#B8C4CC" stroke="#2B1B12" stroke-width="3"/>
-    <path d="M71,44.5 Q77,45 81,48.5" stroke="#E8EFF2" stroke-width="2" fill="none"/>
-    <circle cx="74" cy="46.5" r="1.5" fill="#7E8E98"/>
+    <path d="M66,42 Q79,35 87,42 Q83,53 70,51 Q62,46 66,42 Z" fill="#5C6D7D" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M69,43.5 Q76,42.5 82,46" stroke="#A9BCC9" stroke-width="2" fill="none"/>
+    <path d="M71,45.5 Q76,46.5 80,49.5" stroke="#4C5A66" stroke-width="1.6" fill="none"/>
+    <circle cx="74" cy="47" r="1.5" fill="#55636F"/>
     <circle cx="66.5" cy="44" r="2.6" fill="#8A6D55" stroke="#2B1B12" stroke-width="2.2"/>
     <!-- shorts -->
     <path d="M33,78 L63,78 L61.5,88.5 L52.5,88.5 L49.5,83 L47,88.5 L34.5,88.5 Z" fill="#2C4477" stroke="#2B1B12" stroke-width="3.6"/>
