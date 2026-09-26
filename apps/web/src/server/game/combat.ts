@@ -70,11 +70,19 @@ export const DEMO_DROP_LEGENDARY_MULT = 20
 export const DEMO_MONSTER_CARD_MULT = 50
 export const DEMO_MVP_CARD_MULT = 11000
 export const DEMO_MVP_EVERY_KILLS = 8
+/**
+ * Demo pity (docs/demo-runbook.md §4 Scene 2): the video's rehearsed flow mints Monster Card
+ * #1001, but at 2.5%/kill a monster card is only ~likely — never guaranteed — before Lv 30.
+ * The kill that first reaches this level guarantees one if none dropped yet this session.
+ * Demo-only, live sim only (the video plays live); undefined = off (normal play).
+ */
+export const DEMO_PITY_MONSTER_CARD_LEVEL = 30
 
 export interface EngineOpts {
   expMult: number
   dropOpts: DropOpts
   mvpEveryKills: number
+  pityMonsterCardLevel?: number
 }
 
 export const NORMAL_OPTS: EngineOpts = {
@@ -93,6 +101,7 @@ export const DEMO_OPTS: EngineOpts = {
     mvpCard: DEMO_MVP_CARD_MULT,
   },
   mvpEveryKills: DEMO_MVP_EVERY_KILLS,
+  pityMonsterCardLevel: DEMO_PITY_MONSTER_CARD_LEVEL,
 }
 
 export interface CombatAggregates {
@@ -158,6 +167,20 @@ export function simulateLive(
 
   let monster: MonsterDef | null = null
   let monsterHp = 0
+  // Resume a mid-fight monster from the previous sync window: without this, a boss the player
+  // can't burn down within one short auto-sync window would respawn FULL every sync and gate
+  // progression forever (killCount never advances). Resuming makes behavior independent of
+  // sync cadence — identical to one long simulation.
+  const resume = p.combat
+  if (resume) {
+    const found: MonsterDef | undefined = [map.mvp, ...map.monsters.map((s) => s.monster)].find(
+      (m) => m !== undefined && m.id === resume.monsterId,
+    )
+    if (found && resume.monsterHp > 0 && resume.monsterHp <= found.stats.hp) {
+      monster = found
+      monsterHp = resume.monsterHp
+    }
+  }
   let spawnAt = 0
   let reviveAt = -1
   let hp = maxHp(p)
@@ -177,6 +200,7 @@ export function simulateLive(
     p.killCount += 1
     agg.kills += 1
     agg.byMonster[m.id] = (agg.byMonster[m.id] ?? 0) + 1
+    const levelBefore = p.baseLevel
     const gain = m.exp * opts.expMult
     applyExp(p, gain)
     agg.expGained += gain
@@ -185,6 +209,21 @@ export function simulateLive(
     agg.drops.push(...loot.mintable)
     mergeInventory(p.inventory, loot.inventory)
     mergeInventory(agg.inventory, loot.inventory)
+    // demo pity: the kill that first reaches the target level guarantees a monster card if
+    // none dropped yet this session (docs/demo-runbook.md §4 Scene 2). If the crossing kill is
+    // the MVP boss (whose cardId is the 3xxx MVP card), pity takes a regular monster's 1xxx card.
+    const pityLevel = opts.pityMonsterCardLevel
+    if (
+      pityLevel !== undefined &&
+      levelBefore < pityLevel &&
+      p.baseLevel >= pityLevel &&
+      !agg.drops.some((d) => d.rarity === 'monster_card')
+    ) {
+      const cardSource = !m.isMvp && m.cardId !== undefined ? m : map.monsters[0].monster
+      if (cardSource.cardId !== undefined) {
+        agg.drops.push({ itemId: cardSource.cardId, rarity: 'monster_card' })
+      }
+    }
     monster = null
     spawnAt = t + MONSTER_RESPAWN_SECONDS
   }
@@ -272,6 +311,9 @@ export function simulateLive(
 
   // rooster hp is tracked for future targeting; not persisted on Player in v1
   void roosterHp
+
+  // carry the in-progress fight (if any) to the next sync window
+  p.combat = monster !== null && monsterHp > 0 ? { monsterId: monster.id, monsterHp } : undefined
 
   return { player: p, aggregates: agg }
 }

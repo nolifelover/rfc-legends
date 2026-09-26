@@ -91,6 +91,12 @@ export interface Rooster {
 }
 
 /** Server-authoritative player state, keyed by wallet address. */
+/** Mid-fight monster carried between syncs so short sync windows can't reset boss HP. */
+export interface CombatState {
+  monsterId: string
+  monsterHp: number
+}
+
 export interface Player {
   address: string // lowercase hex
   name: string
@@ -107,6 +113,7 @@ export interface Player {
   killCount: number // total kills; drives MVP spawn cadence
   sessionCounter: number // increments per sync; seeds the deterministic rng
   dropCounter: number // increments per mintable drop; part of dropId
+  combat?: CombatState // monster engaged when the last sync window ended
   lastSyncedAt: number // epoch ms
   createdAt: number // epoch ms
 }

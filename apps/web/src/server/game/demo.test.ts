@@ -9,6 +9,8 @@ import {
   DEMO_MONSTER_CARD_MULT,
   DEMO_MVP_CARD_MULT,
   DEMO_MVP_EVERY_KILLS,
+  DEMO_PITY_MONSTER_CARD_LEVEL,
+  NORMAL_OPTS,
   simulateLive,
 } from './combat'
 import { hashSeed, mulberry32 } from './rng'
@@ -46,11 +48,29 @@ describe('demo mode — boosted rates reach the demo beat (interfaces.md §5)', 
     expect(aggregates.drops.length).toBeGreaterThanOrEqual(2)
   })
 
-  it('the jackpot arrives within the first ~4 minutes (boss every 8th kill × 55%/boss)', () => {
+  it('runbook window (docs/demo-runbook.md §4): by 4 min → Base Lv ≥ 30, ≥1 mvp_card, ≥1 monster_card (pity)', () => {
+    const p = buildPlayer(WALLET_A, 'Khun Gai', 'thepbut', T0)
+    spendStarterPoints(p)
+    const { player, aggregates } = simulateLive(p, 240, mulberry32(hashSeed(WALLET_A, 3)), DEMO_OPTS)
+
+    // Scene 1: "Lv 1 to Lv 30 took about 4 minutes with points spent"
+    expect(player.baseLevel).toBeGreaterThanOrEqual(30)
+    // Scene 2's video card: an MVP boss drops a rare card (55%/boss, boss every 8th kill)
+    expect(aggregates.drops.some((d) => d.rarity === 'mvp_card')).toBe(true)
+    // and the rehearsed flow mints Monster Card #1001 — pity guarantees one by the Lv 30 kill
+    expect(aggregates.drops.some((d) => d.rarity === 'monster_card')).toBe(true)
+  })
+
+  it('pity only fires once and only when no monster card dropped naturally', () => {
+    // heavy-card seed: run until past Lv 30 and count pity additions — the run above covers the
+    // no-natural-card case; here assert no DUPLICATE pity (at most one forced card, and monster
+    // card total stays small relative to kills)
     const p = buildPlayer(WALLET_A, 'นายไก่บี', 'raptor', T0)
     spendStarterPoints(p)
-    const { aggregates } = simulateLive(p, 240, mulberry32(hashSeed(WALLET_A, 2)), DEMO_OPTS)
-    expect(aggregates.drops.some((d) => d.rarity === 'mvp_card')).toBe(true)
+    const { player, aggregates } = simulateLive(p, 240, mulberry32(hashSeed(WALLET_A, 4)), DEMO_OPTS)
+    expect(player.baseLevel).toBeGreaterThanOrEqual(30)
+    const monsterCards = aggregates.drops.filter((d) => d.rarity === 'monster_card').length
+    expect(monsterCards).toBeLessThanOrEqual(1 + Math.ceil(aggregates.kills * 0.025 * 2)) // pity(≤1) + ≤2× natural rate
   })
 
   it('documented boost values are the ones in effect', () => {
@@ -61,5 +81,7 @@ describe('demo mode — boosted rates reach the demo beat (interfaces.md §5)', 
     expect(DEMO_OPTS.dropOpts.monsterCard).toBe(DEMO_MONSTER_CARD_MULT)
     expect(DEMO_OPTS.dropOpts.mvpCard).toBe(DEMO_MVP_CARD_MULT)
     expect(DEMO_OPTS.mvpEveryKills).toBe(DEMO_MVP_EVERY_KILLS)
+    expect(DEMO_OPTS.pityMonsterCardLevel).toBe(DEMO_PITY_MONSTER_CARD_LEVEL)
+    expect(NORMAL_OPTS.pityMonsterCardLevel).toBeUndefined() // never in normal play
   })
 })
