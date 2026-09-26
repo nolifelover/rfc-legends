@@ -421,8 +421,10 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private buildChips(): void {
+    // zone pill: the HUD shows the zone too, so this one fades out after 3s
     const mapChip = new Chip(this, `${THUNG_NA.name} · Home Fields`, { fontFamily: this.font, fontSize: 24 })
-    mapChip.container.setDepth(54).setPosition(24 + mapChip.boxWidth / 2, 46)
+    mapChip.container.setDepth(54).setPosition(L.SAFE + mapChip.boxWidth / 2, L.SAFE)
+    this.tweens.add({ targets: mapChip.container, alpha: 0, delay: 3000, duration: 600, onComplete: () => mapChip.destroy() })
 
     this.killChip = new Chip(this, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e })
     this.killChip.container.setDepth(54)
@@ -433,9 +435,9 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private pinChips(): void {
-    this.killChip.container.setPosition(L.W - 24 - this.killChip.boxWidth / 2, 46)
-    this.harvestChip.container.setPosition(L.W - 24 - this.harvestChip.boxWidth / 2, 116)
-    this.pips.place(L.W - 24, 178)
+    this.killChip.container.setPosition(L.W - L.SAFE - this.killChip.boxWidth / 2, L.SAFE)
+    this.harvestChip.container.setPosition(L.W - L.SAFE - this.harvestChip.boxWidth / 2, L.SAFE + 70)
+    this.pips.place(L.W - L.SAFE, L.SAFE + 132)
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
   }
 
@@ -1291,6 +1293,18 @@ export function createIdleGame(
     },
   })
   game.scene.add('idle', IdleScene, true, { bridge, opts })
+  // Phaser polls the parent size every 500ms; the frame also changes size on its
+  // own (the HUD mounts below it after the canvas) and a stale canvas is clipped by
+  // the frame's overflow-hidden. Re-fit immediately — read the bounds first, or
+  // refresh() computes the FIT from the stale parent size.
+  const ro =
+    typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+          if (game.scale.getParentBounds()) game.scale.refresh()
+        })
+      : null
+  ro?.observe(container)
+  game.events.once(Phaser.Core.Events.DESTROY, () => ro?.disconnect())
   if (DEV) (window as unknown as { __rfcGame?: Phaser.Game }).__rfcGame = game
   return game
 }

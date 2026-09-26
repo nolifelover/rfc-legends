@@ -25,6 +25,8 @@
 export const LAYOUT = {
   W: 1920,
   H: 1080,
+  /** In-canvas chips stay inside this inset so a rounded/clipped frame never cuts them. */
+  SAFE: 48,
   /** Top of the paddy water — the horizon line (35%). */
   HORIZON_Y: 378,
   /** Top of the clay lane where everyone stands. */
