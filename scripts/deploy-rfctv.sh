@@ -45,9 +45,11 @@ edg 'curl -s http://127.0.0.1:8091/api/health | head -c 60; echo'
 
 if [ "${1:-}" = "--with-vhost" ]; then
   echo "==> installing nginx vhost (approved proxy change)"
+  # Cloudflare Full (non-strict) accepts this self-signed origin cert.
+  edg 'sudo mkdir -p /etc/nginx/ssl/rfclegends && if [ ! -f /etc/nginx/ssl/rfclegends/fullchain.pem ]; then sudo openssl req -x509 -newkey rsa:2048 -nodes -days 730 -keyout /etc/nginx/ssl/rfclegends/privkey.pem -out /etc/nginx/ssl/rfclegends/fullchain.pem -subj "/CN=rfclegends.rfcclub.app" -addext "subjectAltName=DNS:rfclegends.rfcclub.app" 2>/dev/null; echo cert-created; else echo cert-exists; fi'
   edg 'sudo tee /etc/nginx/sites-available/rfclegends >/dev/null' < "$REPO/deploy/rfctv/nginx-vhost.conf"
   edg 'sudo ln -sf /etc/nginx/sites-available/rfclegends /etc/nginx/sites-enabled/rfclegends && sudo nginx -t && sudo systemctl reload nginx'
-  edg 'curl -s -o /dev/null -w "vhost check: %{http_code}\n" -H "Host: rfclegends.rfcclub.app" http://127.0.0.1/'
+  edg 'curl -s -o /dev/null -w "vhost check :80 -> %{http_code}\n" -H "Host: rfclegends.rfcclub.app" http://127.0.0.1/; curl -sk -o /dev/null -w "vhost check :443 -> %{http_code}\n" --resolve rfclegends.rfcclub.app:443:127.0.0.1 https://rfclegends.rfcclub.app/'
 else
   echo "(vhost skipped — run with --with-vhost once the proxy change is approved)"
 fi
