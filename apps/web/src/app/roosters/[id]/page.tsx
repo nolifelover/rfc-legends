@@ -70,8 +70,11 @@ export default async function RoosterDetailPage({ params }: Props) {
   }
   const { sire } = pedigreeOf(name);
   const offspring = await listOffspring(client, name).catch(() => []);
-  // link parents by name (their tokenIds aren't loaded here); children by tokenId when known
-  const hrefFor = (target: string) => `/roosters/${encodeURIComponent(target)}`;
+  // link parents by their tokenId too (resolved after the contract read) so both
+  // directions use /roosters/<id>; the ENS name remains the fallback
+  const sireTokenId = sire
+    ? await client.getEnsText({ name: sire, key: "rfc.tokenId" }).catch(() => null)
+    : null;
 
   // dam + attestation + tx proof, all read live from the contracts
   let dam: string | null = null;
@@ -101,6 +104,14 @@ export default async function RoosterDetailPage({ params }: Props) {
   } catch { /* contracts pending — ENS-only mode */ }
 
   const line = sireLineInfo(recs.sireLine ?? "");
+  const damTokenId = dam
+    ? await client.getEnsText({ name: dam, key: "rfc.tokenId" }).catch(() => null)
+    : null;
+  const hrefFor = (target: string) => {
+    const id = target === sire ? sireTokenId : target === dam ? damTokenId : null;
+    return `/roosters/${id && /^\d+$/.test(id) ? id : encodeURIComponent(target)}`;
+  };
+
   const short = name.replace(/\.eth$/, "").split(".")[0];
   const hatched = recs.hatchedAt ? new Date(Number(recs.hatchedAt) * 1000).toISOString().slice(0, 10) : null;
 
