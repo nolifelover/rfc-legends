@@ -12,10 +12,13 @@ import { DropsPanel, useDrops } from "./DropsPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { ListingsPanel, useListings } from "./ListingsPanel";
 import { RecentSalesPanel } from "./RecentSalesPanel";
+import { TxBlockedContext } from "./chain";
+import { WrongChainBanner } from "./WrongChainBanner";
 import { SplitReceipt, type SaleReceipt } from "./SplitReceipt";
 
 export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
-  const { address } = useConnection();
+  const { address, chainId } = useConnection();
+  const wrongChain = Boolean(address && chainId && chainId !== 11155111);
   const wallet = address?.toLowerCase() as Hex | undefined;
   const deployment = getDeployment();
   const status = useHumanStatus(wallet);
@@ -37,6 +40,7 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
   ];
 
   return (
+    <TxBlockedContext.Provider value={wrongChain}>
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="mb-6">
         <p className="text-sm font-medium text-clay-deep">
@@ -74,6 +78,8 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
           </li>
         ))}
       </ol>
+
+      {wrongChain && chainId ? <WrongChainBanner chainId={chainId} /> : null}
 
       {!deployment ? (
         <p className="mb-6 rounded-2xl border-2 border-sun/50 bg-sun-soft/50 px-4 py-3 text-sm text-bark">
@@ -122,5 +128,6 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
         </div>
       </div>
     </main>
+    </TxBlockedContext.Provider>
   );
 }
