@@ -39,17 +39,20 @@ import {
   tintedTexture,
   isRiversideArtProfile,
 } from './art'
-import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './overlays'
+import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, bossBarHeight, tierOf } from './overlays'
 import type { Tier } from './overlays'
 import { Fx } from './fx'
 import type { DamageKind } from './fx'
-import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, fmt, mobileCameraZoom, mobileWorldScale, zoneOf } from './juice'
+import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, clampedWorldCenter, fmt, mobileCameraZoom, mobileWorldScale, roosterDisplayHeight, zoneOf } from './juice'
 import type { ZoneSpec } from './juice'
 import type { SceneBridge, SceneMountOptions } from './scene-bridge'
 import { UiScene } from './ui-scene'
 import { riversidePortraitBackdrop } from './riverside-backdrop'
-import { RiversideJourney, riversidePlatform } from './riverside-journey'
-import { activeManualDirection, projectedManualX } from './manual-scene-state'
+import { RiversideJourney } from './riverside-journey'
+import { activeManualDirection, nextManualCompanionPosition, projectedManualX } from './manual-scene-state'
+import { createWalkRig } from './walk-cycle'
+import type { WalkRig } from './walk-cycle'
+import { visibleFootOrigin } from './foot-origin'
 import { MAPS, THUNG_NA } from '@/game/data/maps'
 import type { MapDef } from '@/game/types'
 import { getItem } from '@/game/data/items'
@@ -170,6 +173,9 @@ export class IdleScene extends Phaser.Scene {
   private trainerBob: Phaser.Tweens.Tween | null = null
   private trainerChain: Phaser.Tweens.TweenChain | null = null
   private trainerLook = false
+  private trainerWalk: WalkRig | null = null
+  private nextProfileBoundsAt = 0
+  private profileBounds: { left: number; right: number; top: number; bottom: number } | null = null
   private rooster!: Phaser.GameObjects.Container
   private roosterBody!: Phaser.GameObjects.Container
   private roosterSprite!: Phaser.GameObjects.Image
@@ -182,6 +188,7 @@ export class IdleScene extends Phaser.Scene {
   private roosterPulse: Phaser.Tweens.Tween | null = null
   private roosterHot = false
   private roosterIdle: Phaser.Tweens.Tween | Phaser.Tweens.TweenChain | null = null
+  private roosterWalk: WalkRig | null = null
   /** level-tiered power overlays (rebuilt when a tier changes) */
   private roosterPower: Phaser.GameObjects.GameObject[] = []
   private trainerPower: Phaser.GameObjects.GameObject[] = []
@@ -205,6 +212,8 @@ export class IdleScene extends Phaser.Scene {
   private manualSequence = -1
   private manualResultSequence = -1
   private manualFacing: -1 | 1 = 1
+  private manualRoosterSide: -1 | 1 = 1
+  private manualRoosterVisualX = MANUAL_START_X + 330
   private manualTarget: Pest | null = null
   private retiredManualTarget: Pest | null = null
   private retiredManualCleanup: Phaser.Time.TimerEvent | null = null
@@ -231,6 +240,7 @@ export class IdleScene extends Phaser.Scene {
   private bossActive = false
   private bossServerDead = false
   private bossBar: BossBar | null = null
+  private nextBossBarLayoutAt = 0
   private bossDim!: Phaser.GameObjects.Rectangle
   private nextBossAt = 0
 
@@ -309,8 +319,15 @@ export class IdleScene extends Phaser.Scene {
       for (let i = 0; i < 5; i++) this.spawnPest(ROWS[i % 3], 700 + i * 220)
     }
 
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.fx.dispose())
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.fx.dispose())
+    const disposeScene = (): void => {
+      this.trainerWalk?.destroy()
+      this.roosterWalk?.destroy()
+      this.trainerWalk = null
+      this.roosterWalk = null
+      this.fx.dispose()
+    }
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, disposeScene)
+    this.events.once(Phaser.Scenes.Events.DESTROY, disposeScene)
 
     this.bridge.sceneReady({
       updateState: (player, drops, demoMode) => this.applyState(player, drops, demoMode),
@@ -476,10 +493,10 @@ export class IdleScene extends Phaser.Scene {
       // Keep the shoreline storytelling at the original coordinates, with an
       // offscreen repeated panel ready to enter without an abrupt reset.
       panel.add([
-        this.add.image(128, 826, 'art-prop-scarecrow').setOrigin(0.5, 1).setDisplaySize(108, 128),
-        this.add.image(208, 874, 'art-prop-rice-bundle').setOrigin(0.5, 1).setDisplaySize(54, 70),
-        this.add.image(1792, 870, 'art-prop-hay-bale').setOrigin(0.5, 1).setDisplaySize(88, 62),
-        this.add.image(1872, 866, 'art-prop-water-jar').setOrigin(0.5, 1).setDisplaySize(64, 74),
+        this.add.image(128, 626, 'art-prop-scarecrow').setOrigin(0.5, 1).setDisplaySize(108, 128),
+        this.add.image(208, 644, 'art-prop-rice-bundle').setOrigin(0.5, 1).setDisplaySize(54, 70),
+        this.add.image(1792, 644, 'art-prop-hay-bale').setOrigin(0.5, 1).setDisplaySize(88, 62),
+        this.add.image(1872, 642, 'art-prop-water-jar').setOrigin(0.5, 1).setDisplaySize(64, 74),
       ])
       if (!lotusMap) {
         const rice = this.add.graphics()
@@ -504,16 +521,10 @@ export class IdleScene extends Phaser.Scene {
     this.riversideJourney.addLayer(shoreline, L.W, 50)
     const fences = panelXs.map((x) => {
       const panel = this.add.container(x, 0).setDepth(3)
-      panel.add(this.add.image(1810, 780, 'art-prop-fence').setOrigin(0.5, 1).setDisplaySize(180, 110))
+      panel.add(this.add.image(1810, 620, 'art-prop-fence').setOrigin(0.5, 1).setDisplaySize(180, 110))
       return panel
     })
     this.riversideJourney.addLayer(fences, L.W, 42)
-    const platforms = panelXs.map((x) => {
-      const panel = this.add.container(x, 0).setDepth(6)
-      panel.add(riversidePlatform(this, L.W))
-      return panel
-    })
-    this.riversideJourney.addLayer(platforms, L.W, 50)
     this.zoneArt.grade = this.add.rectangle(0, 0, L.W, L.H, lotusMap ? 0x263c58 : 0x173645, lotusMap ? 0.08 : 0.035)
       .setOrigin(0, 0)
       .setDepth(10)
@@ -808,8 +819,13 @@ export class IdleScene extends Phaser.Scene {
     // trainer: container at the feet, sprite inside so attack tweens are relative
     this.trainer = this.add.container(L.TRAINER_X, L.TRAINER_FEET).setDepth(24)
     this.trainerBody = this.add.container(0, 0)
-    this.trainerSprite = this.add.image(0, 0, TRAINER_KEY).setOrigin(0.5, 1).setDisplaySize(L.TRAINER_H, L.TRAINER_H)
+    this.trainerSprite = this.add.image(0, 0, TRAINER_KEY).setOrigin(0.5, visibleFootOrigin(this, TRAINER_KEY)).setDisplaySize(L.TRAINER_H, L.TRAINER_H)
     this.trainerBody.add(this.trainerSprite)
+    this.trainerWalk = createWalkRig(this, this.trainerBody, this.trainerSprite, 'trainer', {
+      movingTextureKey: TRAINER_WALK_KEY,
+      movingOriginY: visibleFootOrigin(this, TRAINER_WALK_KEY),
+      reducedMotion: this.reduced,
+    })
     this.trainer.add(this.trainerBody)
     const worldScale = this.ui.mobileProfile ? mobileWorldScale(this.ui.rect.x1 - this.ui.rect.x0) : 1
     this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font, fontSize: TYPE.plateTrainer, mobile: this.ui.mobileProfile, worldScale })
@@ -819,18 +835,17 @@ export class IdleScene extends Phaser.Scene {
     this.tweens.add({ targets: this.trainer, scaleY: 1.025, scaleX: 0.99, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     this.scheduleTrainerLook()
 
-    // rooster: the hero — 1.2× the trainer, bloodline aura, in front
+    // rooster: a small companion at roughly one third of the trainer's visible height
     this.roosterKey = ROOSTER_KEYS[this.player.rooster.sireLine] ?? ROOSTER_KEYS.thepbut
-    this.roosterArtScale = this.riversideProfile ? 0.78 : 1
+    this.roosterArtScale = 1
     this.roosterAura = this.add
       .image(L.ROOSTER_X, L.ROOSTER_FEET - 4, FX.aura)
       .setTint(SIRE_TINT[this.player.rooster.sireLine] ?? INK.gold)
       .setDepth(22)
-      .setAlpha(0.7)
+      .setAlpha(0.55)
     this.tweens.add({
       targets: this.roosterAura,
-      scaleX: { from: 1, to: 1.08 },
-      scaleY: { from: 1, to: 1.12 },
+      alpha: { from: 0.45, to: 0.64 },
       duration: 1600,
       yoyo: true,
       repeat: -1,
@@ -839,8 +854,11 @@ export class IdleScene extends Phaser.Scene {
     this.rooster = this.add.container(L.ROOSTER_X, L.ROOSTER_FEET).setDepth(25)
     this.roosterBody = this.add.container(0, 0)
     const roosterH = L.ROOSTER_H * this.roosterArtScale
-    this.roosterSprite = this.add.image(0, 0, this.roosterKey).setOrigin(0.5, 1).setDisplaySize(roosterH, roosterH)
+    this.roosterSprite = this.add.image(0, 0, this.roosterKey).setOrigin(0.5, visibleFootOrigin(this, this.roosterKey)).setDisplaySize(roosterH, roosterH)
     this.roosterBody.add(this.roosterSprite)
+    this.roosterWalk = createWalkRig(this, this.roosterBody, this.roosterSprite, 'rooster', {
+      reducedMotion: this.reduced,
+    })
     this.rooster.add(this.roosterBody)
     this.tweens.add({ targets: this.rooster, scaleY: 1.03, scaleX: 0.985, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 300 })
     this.roosterPlate = new Nameplate(this, this.roosterLabel(), {
@@ -900,47 +918,50 @@ export class IdleScene extends Phaser.Scene {
       }
       this.roosterPower = []
       this.roosterTierRise = null
-      // continuous growth: +3% size per 10 levels, on top of the tier gear
-      const H = L.ROOSTER_H * this.roosterArtScale * (1 + 0.03 * band)
+      // Tier growth stays subtle so the companion remains around one third of the
+      // trainer's visible height even at level 70+.
+      const H = roosterDisplayHeight(this.player.rooster.level, this.roosterArtScale)
+      const decorScale = H / (480 * 0.78)
       this.roosterSprite.setDisplaySize(H, H)
+      this.roosterWalk?.syncSource()
       this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - H - 58)
       const keep = (o: Phaser.GameObjects.GameObject): void => {
         this.roosterPower.push(o)
       }
-      // aura: stronger and wider with every band
-      this.roosterAura.setAlpha(Math.min(0.95, 0.35 + 0.06 * band)).setScale(0.85 + 0.04 * band)
+      // Keep the aura and tier gear tied to the actor's new compact silhouette.
+      this.roosterAura.setScale(0.4 + 0.012 * band)
       if (rt >= 1) {
         // plume: longer every band, colour steps at 50 (warm silver) and 70 (four-colour);
         // rooted further back so the feathers emerge from behind the tail
         const plumeKey = band >= 7 ? FX.plume2 : band >= 5 ? tintedTexture(this, FX.plume1, 0xffe0a0) : FX.plume1
-        const plumeScale = band >= 7 ? 0.62 + 0.06 * (band - 7) : 0.5 + 0.06 * (band - 3)
+        const plumeScale = (band >= 7 ? 0.62 + 0.06 * (band - 7) : 0.5 + 0.06 * (band - 3)) * decorScale
         const plume = this.add.image(-0.32 * H, -0.4 * H, plumeKey).setOrigin(0.92, 0.94).setScale(plumeScale).setAlpha(0.95)
         this.roosterBody.add(plume)
         this.roosterBody.sendToBack(plume)
         keep(plume)
         if (!this.reduced) this.tweens.add({ targets: plume, angle: { from: -4, to: 4 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
         // crisp outlined comb (the SVG's head top sits at about -0.83H) and medal — no soft glow over the outline
-        const comb = this.add.image(0.19 * H, -0.86 * H, rt === 2 ? FX.comb : tintedTexture(this, FX.comb, 0xdfe6ee)).setScale(rt === 2 ? 0.95 : 0.75)
+        const comb = this.add.image(0.19 * H, -0.86 * H, rt === 2 ? FX.comb : tintedTexture(this, FX.comb, 0xdfe6ee)).setScale((rt === 2 ? 0.95 : 0.75) * decorScale)
         this.roosterBody.add(comb)
         keep(comb)
-        const medal = this.add.image(0.04 * H, -0.2 * H, rt === 2 ? FX.medal : tintedTexture(this, FX.medal, 0xdfe6ee)).setScale(rt === 2 ? 0.8 : 0.6)
+        const medal = this.add.image(0.04 * H, -0.2 * H, rt === 2 ? FX.medal : tintedTexture(this, FX.medal, 0xdfe6ee)).setScale((rt === 2 ? 0.8 : 0.6) * decorScale)
         this.roosterBody.add(medal)
         keep(medal)
       }
       if (rt === 2) {
         // bright gold ring and rising sparkles under the feet
-        const ring = this.add.image(0, -4, FX.ring).setTint(0xffd24a).setScale(3.8, 1.2).setAlpha(0.9)
+        const ring = this.add.image(0, -4, FX.ring).setTint(0xffd24a).setScale(3.8 * decorScale, 1.2 * decorScale).setAlpha(0.9)
         this.rooster.add(ring)
         this.rooster.sendToBack(ring)
         keep(ring)
         this.tweens.add({ targets: ring, angle: 360, duration: 6000, repeat: -1 })
         const rise = this.add
           .particles(L.ROOSTER_X, L.ROOSTER_FEET - 10, FX.star, {
-            x: { min: -150, max: 150 },
+            x: { min: -150 * decorScale, max: 150 * decorScale },
             lifespan: 1400,
             speedY: { min: -140, max: -60 },
             speedX: { min: -10, max: 10 },
-            scale: { start: 0.55, end: 0 },
+            scale: { start: 0.55 * decorScale, end: 0 },
             alpha: { start: 1, end: 0 },
             tint: [0xffd24a, 0xfff3d6],
             frequency: this.reduced ? 700 : 260,
@@ -960,17 +981,18 @@ export class IdleScene extends Phaser.Scene {
       this.trainerPower = []
       this.trainerTierTrail = null
       const H = L.TRAINER_H
+      const decorScale = H / 400
       if (tt >= 1) {
         // cape (tier 2, crimson with a gold hem) or scarf (tier 1, teal) behind the shoulders
-        const cloth = this.add.image(-0.1 * H, -0.55 * H, tt === 2 ? FX.cape : FX.scarf).setOrigin(0.5, 0.05).setScale(tt === 2 ? 0.8 : 0.7)
+        const cloth = this.add.image(-0.1 * H, -0.55 * H, tt === 2 ? FX.cape : FX.scarf).setOrigin(0.5, 0.05).setScale((tt === 2 ? 0.8 : 0.7) * decorScale)
         this.trainerBody.add(cloth)
         this.trainerBody.sendToBack(cloth)
         this.trainerPower.push(cloth)
         if (!this.reduced) this.tweens.add({ targets: cloth, scaleX: cloth.scaleX * 0.9, angle: tt === 2 ? -6 : -3, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
         // The riverside trainer wears a sash, so pin the tier medal to his shirt.
         const band = this.riversideProfile
-          ? this.add.image(-0.02 * H, -0.61 * H, tt === 2 ? FX.medal : tintedTexture(this, FX.medal, 0xdfe6ee)).setScale(0.45)
-          : this.add.image(0, -0.7 * H, tt === 2 ? FX.hatBand2 : FX.hatBand1).setOrigin(0.5, 0.35).setScale(0.95)
+          ? this.add.image(-0.02 * H, -0.61 * H, tt === 2 ? FX.medal : tintedTexture(this, FX.medal, 0xdfe6ee)).setScale(0.45 * decorScale)
+          : this.add.image(0, -0.7 * H, tt === 2 ? FX.hatBand2 : FX.hatBand1).setOrigin(0.5, 0.35).setScale(0.95 * decorScale)
         this.trainerBody.add(band)
         this.trainerPower.push(band)
         // sparkle trail off the tool head (no soft glow over the outline)
@@ -978,7 +1000,7 @@ export class IdleScene extends Phaser.Scene {
           .particles(L.TRAINER_X + 0.31 * H, L.TRAINER_FEET - 0.8 * H, FX.star, {
             lifespan: 700,
             speed: { min: 10, max: 40 },
-            scale: { start: 0.4, end: 0 },
+            scale: { start: 0.4 * decorScale, end: 0 },
             alpha: { start: 0.9, end: 0 },
             tint: tt === 2 ? 0xffd24a : 0x7ee0ff,
             frequency: this.reduced ? 600 : 220,
@@ -1043,8 +1065,9 @@ export class IdleScene extends Phaser.Scene {
   /** A kill makes the rooster hop and chirp (about one kill in four). */
   private roosterReactKill(): void {
     if (Math.random() > 0.25 || this.roosterChain?.isPlaying()) return
-    this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 20, Phaser.Utils.Array.GetRandom(['♪', '!', '♥', '✦']))
-    this.fx.sparkle(L.ROOSTER_X + 40, L.ROOSTER_FEET - this.roosterSprite.displayHeight * 0.6, 4)
+    const H = this.roosterSprite.displayHeight
+    this.fx.emote(L.ROOSTER_X + H * 0.45, L.ROOSTER_FEET - H - 12, Phaser.Utils.Array.GetRandom(['♪', '!', '♥', '✦']))
+    this.fx.sparkle(L.ROOSTER_X + H * 0.3, L.ROOSTER_FEET - H * 0.6, 4)
     this.roosterBob?.remove()
     this.roosterBob = null
     this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
@@ -1062,7 +1085,8 @@ export class IdleScene extends Phaser.Scene {
   private roosterCrow(): void {
     this.resetRoosterPose()
     this.roosterIdle = this.tweens.add({ targets: this.roosterBody, scaleX: 1.14, scaleY: 0.94, duration: 90, yoyo: true, repeat: 3 })
-    this.fx.speech(L.ROOSTER_X + 120, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 10, 'Cock-a-doodle-doo!')
+    const H = this.roosterSprite.displayHeight
+    this.fx.speech(L.ROOSTER_X + H * 0.9, L.ROOSTER_FEET - H - 10, 'Cock-a-doodle-doo!')
     this.fx.sparkle(L.ROOSTER_X, L.ROOSTER_FEET - this.roosterSprite.displayHeight * 0.6, 10)
     this.roosterCheer()
   }
@@ -1071,7 +1095,8 @@ export class IdleScene extends Phaser.Scene {
   private cheerTap(): void {
     const now = this.time.now
     if (now < this.cheerReadyAt) {
-      this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 20, '♥')
+      const H = this.roosterSprite.displayHeight
+      this.fx.emote(L.ROOSTER_X + H * 0.45, L.ROOSTER_FEET - H - 12, '♥')
       return
     }
     this.cheerReadyAt = now + 20000
@@ -1081,29 +1106,17 @@ export class IdleScene extends Phaser.Scene {
 
   private startTrainerBob(): void {
     this.trainerBob?.remove()
+    this.trainerBob = null
+    // Breathing scales around the feet; keep the container planted on the deck.
     this.trainer.y = L.TRAINER_FEET
-    this.trainerBob = this.tweens.add({
-      targets: this.trainer,
-      y: L.TRAINER_FEET - 8,
-      duration: 1500,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
   }
 
   private startRoosterBob(): void {
     this.roosterBob?.remove()
+    this.roosterBob = null
     const x = this.manualMode ? this.manualRoosterX() : L.ROOSTER_X
+    // The outer scale tween supplies idle motion without lifting the tiny feet.
     this.rooster.setPosition(x, L.ROOSTER_FEET)
-    this.roosterBob = this.tweens.add({
-      targets: this.rooster,
-      y: L.ROOSTER_FEET - 8,
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    })
   }
 
   private buildChips(): void {
@@ -1172,7 +1185,17 @@ export class IdleScene extends Phaser.Scene {
     }
 
     const right = r.x1 - L.SAFE
-    const top = r.y0 + L.SAFE + this.ui.topInset
+    let top = r.y0 + L.SAFE + this.ui.topInset
+    const bossBar = this.bossBar
+    if (bossBar && bossBar.container.visible && bossBar.container.alpha > 0) {
+      const chipWidth = Math.max(this.killChip.boxWidth, this.harvestChip.boxWidth, this.coinChip.boxWidth)
+      const chipLeft = right - chipWidth
+      const barLeft = bossBar.container.x - bossBar.boxWidth / 2 - 6
+      const barRight = bossBar.container.x + bossBar.boxWidth / 2 + 6
+      if (right > barLeft && chipLeft < barRight) {
+        top = Math.max(top, bossBar.container.y + bossBar.boxHeight / 2 + 18)
+      }
+    }
     if (!portrait) {
       let mapTop = top
       if (this.mapChip && !this.ui.mobileProfile) {
@@ -1287,6 +1310,7 @@ export class IdleScene extends Phaser.Scene {
     this.bossServerDead = false
     this.bossBar?.hide()
     this.bossBar = null
+    this.pinChips()
     this.clearBossPreview()
     this.bossDim.setAlpha(0)
     this.clearPestsImmediate()
@@ -1294,12 +1318,17 @@ export class IdleScene extends Phaser.Scene {
     this.killTween(this.roosterChain)
     this.trainerChain = null
     this.roosterChain = null
+    this.trainerWalk?.reset()
+    this.roosterWalk?.reset()
+    this.resetRoosterPose()
     this.trainerBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
     this.roosterBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
 
     const control = this.player.control
     const now = Date.now()
     this.manualX = control ? projectedManualX(control, now) : MANUAL_START_X
+    this.manualRoosterSide = this.manualX + 330 <= MANUAL_MAX_X ? 1 : -1
+    this.manualRoosterVisualX = Phaser.Math.Clamp(this.manualX + this.manualRoosterSide * 330, MANUAL_MIN_X, MANUAL_MAX_X)
     this.manualCorrectionX = null
     this.manualSequence = control?.sequence ?? -1
     const moving = control ? activeManualDirection(control, now) : 0
@@ -1325,6 +1354,9 @@ export class IdleScene extends Phaser.Scene {
     this.killTween(this.roosterChain)
     this.trainerChain = null
     this.roosterChain = null
+    this.trainerWalk?.reset()
+    this.roosterWalk?.reset()
+    this.resetRoosterPose()
     this.trainerBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
     this.trainerSprite.setTexture(TRAINER_KEY)
     this.roosterBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
@@ -1419,7 +1451,14 @@ export class IdleScene extends Phaser.Scene {
         this.manualCorrectionX = null
       }
     }
+    this.updateManualRooster(seconds)
     this.positionManualActors()
+  }
+
+  private updateManualRooster(seconds: number): void {
+    const next = nextManualCompanionPosition(this.manualX, this.manualRoosterVisualX, this.manualRoosterSide, seconds)
+    this.manualRoosterVisualX = next.x
+    this.manualRoosterSide = next.side
   }
 
   private positionManualActors(): void {
@@ -1434,15 +1473,12 @@ export class IdleScene extends Phaser.Scene {
       this.trainerBody.setScale(this.manualFacing, 1)
       this.trainerSprite.setTexture(this.manualDirection === 0 ? TRAINER_KEY : TRAINER_WALK_KEY)
     }
-    if (!this.roosterChain?.isPlaying() && !this.roosterIdle) this.roosterBody.setScale(this.manualFacing, 1)
+    if (!this.roosterChain?.isPlaying() && !this.roosterIdle?.isPlaying()) this.roosterBody.setScale(this.manualFacing, 1)
     this.placeHeroLabels()
   }
 
   private manualRoosterX(): number {
-    const followDistance = 330
-    const behind = Phaser.Math.Clamp(this.manualX - this.manualFacing * followDistance, MANUAL_MIN_X, MANUAL_MAX_X)
-    if (Math.abs(behind - this.manualX) >= followDistance * 0.75) return behind
-    return Phaser.Math.Clamp(this.manualX + this.manualFacing * followDistance, MANUAL_MIN_X, MANUAL_MAX_X)
+    return this.manualRoosterVisualX
   }
 
   private placeHeroLabels(): void {
@@ -1455,25 +1491,63 @@ export class IdleScene extends Phaser.Scene {
     const view = this.fx.visibleWorld()
     const trainerBaseY = L.TRAINER_FEET - L.TRAINER_H - 64
     const trainerY = trainerBaseY
-      + (this.manualMode ? -80 : this.desktopTrainerChromeOffset(trainerBaseY))
+      + (this.manualMode ? 0 : this.desktopTrainerChromeOffset(trainerBaseY))
     const roosterY = L.ROOSTER_FEET - this.roosterSprite.displayHeight - 58 + (this.manualMode ? 20 : 0)
     this.trainerPlate.container.y = Math.round(trainerY)
     this.roosterPlate.container.y = Math.round(roosterY)
     if (!this.ui.mobileProfile) {
-      this.trainerPlate.container.x = Math.round(this.trainer.x)
+      this.trainerPlate.container.x = Math.round(this.manualMode
+        ? this.manualTrainerPlateX(this.trainer.x, trainerY, view)
+        : this.trainer.x)
       this.roosterPlate.container.x = Math.round(this.rooster.x)
       return
     }
-    this.trainerPlate.container.x = Math.round(Phaser.Math.Clamp(
+    const trainerX = Phaser.Math.Clamp(
       this.trainer.x,
       view.left + this.trainerPlate.width / 2 + 12,
       view.right - this.trainerPlate.width / 2 - 12,
-    ))
+    )
+    this.trainerPlate.container.x = Math.round(this.manualMode
+      ? this.manualTrainerPlateX(trainerX, trainerY, view)
+      : trainerX)
     this.roosterPlate.container.x = Math.round(Phaser.Math.Clamp(
       this.rooster.x,
       view.left + this.roosterPlate.width / 2 + 12,
       view.right - this.roosterPlate.width / 2 - 12,
     ))
+  }
+
+  /** Keep the manual trainer label close to the head, sliding sideways only around the React profile. */
+  private manualTrainerPlateX(baseX: number, plateY: number, view: Phaser.Geom.Rectangle): number {
+    if (this.time.now >= this.nextProfileBoundsAt) {
+      this.nextProfileBoundsAt = this.time.now + 200
+      const profile = document.querySelector<HTMLElement>('[data-game-hud-overlay] [aria-label="Player status"]')?.getBoundingClientRect()
+      this.profileBounds = profile && profile.width > 0 && profile.height > 0
+        ? { left: profile.left, right: profile.right, top: profile.top, bottom: profile.bottom }
+        : null
+    }
+    const profile = this.profileBounds
+    if (!profile) return baseX
+    const canvas = this.game.canvas.getBoundingClientRect()
+    const displayScale = this.scale.displaySize.width > 0 ? this.scale.displaySize.width / L.W : 1
+    const camera = this.cameras.main
+    const zoom = Math.max(camera.zoom, 0.001)
+    const halfWidth = this.trainerPlate.width / 2
+    const plateHeight = this.trainerPlate.container.getBounds().height
+    const screenLeft = canvas.left + (baseX - halfWidth - camera.worldView.x) * zoom * displayScale
+    const screenRight = canvas.left + (baseX + halfWidth - camera.worldView.x) * zoom * displayScale
+    const screenTop = canvas.top + (plateY - camera.worldView.y) * zoom * displayScale
+    const screenBottom = screenTop + plateHeight * zoom * displayScale
+    if (screenRight <= profile.left || screenLeft >= profile.right || screenBottom <= profile.top || screenTop >= profile.bottom) return baseX
+    const rightEdgeWorld = camera.worldView.x + (profile.right + 10 - canvas.left) / (zoom * displayScale)
+    const leftEdgeWorld = camera.worldView.x + (profile.left - 10 - canvas.left) / (zoom * displayScale)
+    const rightCandidate = rightEdgeWorld + halfWidth
+    const leftCandidate = leftEdgeWorld - halfWidth
+    const minX = view.left + halfWidth + 12
+    const maxX = view.right - halfWidth - 12
+    const candidates = [rightCandidate, leftCandidate].filter((x) => x >= minX && x <= maxX)
+    if (candidates.length === 0) return Phaser.Math.Clamp(rightCandidate, minX, maxX)
+    return candidates.reduce((best, x) => Math.abs(x - baseX) < Math.abs(best - baseX) ? x : best)
   }
 
   /** Move the desktop trainer plate only when the temporary map chip covers it. */
@@ -1491,6 +1565,64 @@ export class IdleScene extends Phaser.Scene {
     const map = mapChip.container.getBounds()
     const overlaps = plateRight > map.left && plateLeft < map.right && plateBottom > map.top && plateTop < map.bottom
     return overlaps ? Math.max(0, (map.bottom + 12 - plateTop) / zoom) : 0
+  }
+
+  /** Reserve the top-centre lane, dropping below corner chrome only if it intersects. */
+  private bossBarPosition(width: number, height: number): { x: number; y: number } {
+    const r = this.ui.rect
+    const displayScale = this.scale.displaySize.width > 0 ? this.scale.displaySize.width / L.W : 1
+    const canvas = this.game.canvas.getBoundingClientRect()
+    const x = (r.x0 + r.x1) / 2
+    const outerWidth = width + 12
+    const outerHeight = height + 12
+    const left = canvas.left + (x - outerWidth / 2) * displayScale
+    const right = canvas.left + (x + outerWidth / 2) * displayScale
+    let top = canvas.top + r.y0 * displayScale + 10
+    const blockers = [
+      document.querySelector<HTMLElement>('[data-game-hud-overlay] [aria-label="Player status"]'),
+      document.querySelector<HTMLElement>('[data-game-hud-overlay] [aria-label="Open game menu"]'),
+      document.querySelector<HTMLElement>('[data-game-drop-notice]'),
+    ]
+    for (const blocker of blockers) {
+      const box = blocker?.getBoundingClientRect()
+      if (box && box.width > 0 && box.height > 0 && right > box.left && left < box.right) {
+        top = Math.max(top, box.bottom + 10)
+      }
+    }
+    return {
+      x,
+      y: (top - canvas.top) / Math.max(displayScale, 0.001) + outerHeight / 2,
+    }
+  }
+
+  private layoutBossBar(time: number): void {
+    const bar = this.bossBar
+    if (!bar || time < this.nextBossBarLayoutAt) return
+    this.nextBossBarLayoutAt = time + 200
+    const mobile = this.ui.mobileProfile
+    const displayScale = this.scale.displaySize.width > 0 ? this.scale.displaySize.width / L.W : 1
+    const visibleWidth = this.ui.rect.x1 - this.ui.rect.x0
+    const width = Math.min(760, Math.max(260, visibleWidth - L.SAFE * 2))
+    const position = this.bossBarPosition(width, bossBarHeight(mobile, displayScale))
+    bar.reflow(width, mobile, displayScale, position.x, position.y)
+    this.pinChips()
+  }
+
+  /** Keep the focused enemy's local label above the bottom touch controls. */
+  private layoutTargetLabels(target: Pest): void {
+    if (target.dead) return
+    const view = this.fx.visibleWorld()
+    const halfPlate = target.plate.width / 2 + 12
+    target.plate.container.x = Math.round(this.ui.mobileProfile
+      ? Phaser.Math.Clamp(target.container.x, view.left + halfPlate, view.right - halfPlate)
+      : target.container.x)
+    target.bar.container.x = Math.round(target.container.x)
+    const zoom = Math.max(this.cameras.main.zoom, 0.001)
+    const plateHeight = target.plate.container.getBounds().height
+    const safeBottom = view.bottom - (this.ui.bottomInset + 16) / zoom
+    const plateY = Math.min(target.feetY + 20 * ROW_SCALE[target.row], safeBottom - plateHeight)
+    target.plate.container.y = Math.round(plateY)
+    target.bar.container.y = Math.round(plateY - 10)
   }
 
   private showManualActionResult(result: GameActionResult): void {
@@ -1511,6 +1643,7 @@ export class IdleScene extends Phaser.Scene {
     this.positionManualActors()
     const body = this.trainerBody
     this.killTween(this.trainerChain)
+    this.trainerWalk?.reset()
     body.setPosition(0, 0).setAngle(0).setScale(this.manualFacing, 1)
     this.trainerChain = this.tweens.chain({
       targets: body,
@@ -1538,6 +1671,7 @@ export class IdleScene extends Phaser.Scene {
     const kind: DamageKind = result.crit ? 'crit' : 'trainer'
     this.fx.damage(target.container.x - rsz * 0.2, hitY, damage, kind)
     if (result.miss) return
+    this.bridge.emit('combat-hit', { source: 'trainer', critical: result.crit === true })
     target.sprite.setTintFill(0xffffff)
     this.time.delayedCall(JUICE.FLINCH_MS, () => {
       if (target.container.active) this.restoreSkin(target)
@@ -1589,7 +1723,8 @@ export class IdleScene extends Phaser.Scene {
     this.fx.setBaseZoom(zoom)
     this.fx.setVisibleStage(r)
     cam.setZoom(zoom)
-    const centerX = this.manualMode ? (this.manualX + MANUAL_TARGET_X) / 2 : L.W / 2
+    const desiredCenterX = this.manualMode ? (this.manualX + MANUAL_TARGET_X) / 2 : L.W / 2
+    const centerX = clampedWorldCenter(desiredCenterX, r.x1 - r.x0, zoom)
     if (mobile) {
       cam.centerOn(this.manualMode ? centerX : (L.TRAINER_X + L.ENGAGE_BACK_X) / 2, L.H / 2)
     } else {
@@ -1632,9 +1767,7 @@ export class IdleScene extends Phaser.Scene {
       if (this.hintChip.boxWidth > available) {
         this.hintChip.setLayoutScale(baseScale * available / this.hintChip.boxWidth)
       }
-      const frame = this.game.canvas.parentElement?.parentElement ?? this.game.canvas.parentElement
-      const insetPx = frame ? Number.parseFloat(getComputedStyle(frame).getPropertyValue('--game-bottom-inset')) || 180 : 180
-      const bottomInset = insetPx / Math.max(displayScale, 0.001)
+      const bottomInset = this.ui.bottomInset || 180 / Math.max(displayScale, 0.001)
       this.hintChip.container.setPosition((r.x0 + r.x1) / 2, r.y1 - bottomInset - this.hintChip.boxHeight / 2 - 12)
     }
   }
@@ -1711,6 +1844,7 @@ export class IdleScene extends Phaser.Scene {
       this.time.delayedCall(i * 70, () => {
         if (p.dead) return
         const { value, crit } = who === 'trainer' ? this.trainerHit(p.def) : this.roosterHit(p.def)
+        if (value > 0) this.bridge.emit('combat-hit', { source: who, critical: crit })
         this.hitPest(p, value, crit ? 'crit' : who, time)
       })
     }
@@ -1785,7 +1919,7 @@ export class IdleScene extends Phaser.Scene {
     const key = skin?.tint !== undefined ? tintedTexture(this, baseKey, skin.tint) : baseKey
     const feetY = ROW_FEET[row]
     const container = this.add.container(startX, feetY).setDepth(ROW_DEPTH[row]).setScale(ROW_SCALE[row])
-    const sprite = this.add.image(0, 0, key).setOrigin(0.5, 1).setDisplaySize(h, h)
+    const sprite = this.add.image(0, 0, key).setOrigin(0.5, visibleFootOrigin(this, baseKey)).setDisplaySize(h, h)
     container.add(sprite)
     const en = this.zone.names[def.id] ?? def.id
     const mobile = this.ui.mobileProfile
@@ -1915,6 +2049,7 @@ export class IdleScene extends Phaser.Scene {
     const sp = this.trainerSprite
     const body = this.trainerBody
     this.killTween(this.trainerChain)
+    this.trainerWalk?.reset()
     body.setPosition(0, 0).setScale(1, 1).setAngle(0)
     this.trainerLook = false
     // four distinct poses (the sprite pivots at the feet): wind-up leaning back on
@@ -1983,8 +2118,9 @@ export class IdleScene extends Phaser.Scene {
     const rs = ROW_SCALE[target.row]
     this.resetRoosterPose()
     const dashX = target.container.x - (target.boss ? 300 : 120 + target.h * rs * 0.45)
-    const dashY = target.feetY + (target.row === 0 ? 10 : 6)
+    const dashY = target.feetY
     this.killTween(this.roosterChain)
+    this.roosterWalk?.reset()
     this.roosterBob?.remove()
     this.roosterBob = null
     body.setScale(1, 1)
@@ -2138,13 +2274,13 @@ export class IdleScene extends Phaser.Scene {
     const rarity = item?.rarity ?? 'common'
     const tier = rarity === 'rare' || rarity === 'epic'
     if (tier) {
-      // rare / epic gain: a coloured beam to the sky and a ground ring
-      this.fx.pillar(x, feetY, RARITY_COLORS[rarity], 1080, 1100)
-      this.fx.groundRing(x, feetY, RARITY_COLORS[rarity], 640, 480)
+      // React owns the notice; keep the in-world confirmation brief and local.
+      this.fx.groundRing(x, feetY, RARITY_COLORS[rarity], 360, 260)
+      this.fx.sparkle(x, feetY - 60, 8, RARITY_COLORS[rarity])
     }
     const icon = this.add.image(x, y, itemKey(entry.id)).setDisplaySize(entry.n > 1 ? 112 : 96, entry.n > 1 ? 112 : 96).setDepth(30)
     const restX = Phaser.Math.Clamp(x - Phaser.Math.Between(JUICE.LOOT_ARC_MIN, JUICE.LOOT_ARC_MAX), 900, 1520)
-    const restY = L.LOOT_REST_Y + Phaser.Math.Between(-10, 10)
+    const restY = L.LOOT_REST_Y - icon.displayHeight / 2 + Phaser.Math.Between(-4, 4)
     const label = entry.n > 1 ? `+${entry.n}` : '+1'
     this.lootFlying += entry.n
     this.fx.lootArc(icon, restX, restY, () => {
@@ -2179,7 +2315,7 @@ export class IdleScene extends Phaser.Scene {
     for (let i = 0; i < n; i++) {
       const coin = this.add.image(x, y, FX.coin).setDepth(30).setScale(1.6)
       const restX = Phaser.Math.Clamp(x + Phaser.Math.Between(-240, 120), 900, 1520)
-      const restY = L.LOOT_REST_Y + Phaser.Math.Between(-16, 16)
+      const restY = L.LOOT_REST_Y - coin.displayHeight / 2 + Phaser.Math.Between(-4, 4)
       this.fx.lootArc(coin, restX, restY, () => {
         this.rest(coin, (delay) => {
           const a = this.uiToWorld(target.anchor)
@@ -2204,7 +2340,7 @@ export class IdleScene extends Phaser.Scene {
   /** Leave a landed icon on the ground for the next sweep (oldest fly early past REST_CAP). */
   private rest(img: Phaser.GameObjects.Image, fly: (delay: number) => void): void {
     // soft gold glow under the resting piece; gone when it flies
-    const glow = this.add.image(img.x, img.y + 6, FX.glow).setTint(INK.gold).setAlpha(0.5).setScale(1.5, 1.1).setDepth(29)
+    const glow = this.add.image(img.x, img.y + img.displayHeight / 2 - 2, FX.glow).setTint(INK.gold).setAlpha(0.5).setScale(1.5, 1.1).setDepth(29)
     this.tweens.add({ targets: glow, alpha: 0.25, scale: 1.8, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     const flyAndClear = (delay: number): void => {
       this.tweens.killTweensOf(glow)
@@ -2329,8 +2465,10 @@ export class IdleScene extends Phaser.Scene {
         this.tweens.add({ targets: [this.trainer, this.rooster], x: '-=30', duration: 120, yoyo: true, ease: 'Quad.easeOut' })
         const mobile = this.ui.mobileProfile
         const visibleWidth = this.ui.rect.x1 - this.ui.rect.x0
-        const bossBarWidth = mobile ? Math.max(300, visibleWidth - L.SAFE * 2) : 920
-        this.bossBar = new BossBar(this.ui, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font, this.ui.rect.y0 + this.ui.topInset + 150, bossBarWidth, mobile)
+        const displayScale = this.scale.displaySize.width > 0 ? this.scale.displaySize.width / L.W : 1
+        const bossBarWidth = Math.min(760, Math.max(260, visibleWidth - L.SAFE * 2))
+        const bossBarPos = this.bossBarPosition(bossBarWidth, bossBarHeight(mobile, displayScale))
+        this.bossBar = new BossBar(this.ui, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font, bossBarPos.y, bossBarWidth, mobile, bossBarPos.x, displayScale)
         this.bossBar.setHp(boss.maxHp, boss.maxHp)
         this.bossBar.show(this.reduced)
         this.nextBossAt = this.time.now + 2000
@@ -2460,6 +2598,7 @@ export class IdleScene extends Phaser.Scene {
       this.fx.impactStar(L.TRAINER_X + 60, L.TRAINER_FEET - L.TRAINER_H * 0.55, 1.1, 0xffb0a0)
       this.fx.shake([90, 0.0022])
       this.fx.dustKick(L.TRAINER_X, L.TRAINER_FEET, 4)
+      this.bridge.emit('combat-hit', { source: 'enemy', critical: false })
       this.trainerSprite.setTint(0xff6b5b)
       this.time.delayedCall(60, () => this.trainerSprite.clearTint())
       this.tweens.add({ targets: this.trainerBody, x: -40, duration: 90, yoyo: true, ease: 'Quad.easeOut' })
@@ -2469,6 +2608,7 @@ export class IdleScene extends Phaser.Scene {
   private bossVictory(p: Pest, time: number): void {
     this.bossBar?.hide()
     this.bossBar = null
+    this.pinChips()
     this.bossActive = false
     this.tweens.add({ targets: this.bossDim, alpha: 0, duration: 500 })
     this.fx.flash(250, 255, 240, 200)
@@ -2716,24 +2856,32 @@ export class IdleScene extends Phaser.Scene {
   }
 
   /**
-   * Drop moment: the card pops out of the enemy that dropped it under a beam in
-   * its rarity colour, holds, then flies to the bottom-right edge (where the HUD's
-   * Rare drops button sits) with a tick. Legendary and above also get a full-width
-   * in-canvas banner; the React toast stays small and docked.
+   * Drop moment: a compact card sparkle rises from the kill and flies to the bag.
+   * React owns the readable passive notice, so canvas feedback never covers combat.
    */
   private playDropMoment(itemId: number, rarity: Rarity): void {
     const color = RARITY_COLORS[rarity] ?? INK.gold
     const edge = this.uiToWorld({ x: this.ui.rect.x1 - 200, y: this.ui.rect.y1 - 40 })
-    this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(itemId), rarity, {
-      x: edge.x,
-      y: edge.y,
-      onArrive: () => {
+    const x = this.lastKillX
+    const feetY = this.lastKillY
+    const icon = this.add.image(x, feetY - 80, itemKey(itemId)).setDepth(47)
+    const targetScale = 88 / Math.max(1, icon.width)
+    icon.setScale(0)
+    this.fx.groundRing(x, feetY, color, 360, 260)
+    this.fx.sparkle(x, feetY - 90, 8, color)
+    this.tweens.chain({
+      targets: icon,
+      tweens: [
+        { scale: targetScale, y: feetY - 190, duration: 260, ease: 'Back.easeOut' },
+        { y: feetY - 205, duration: 220, ease: 'Sine.easeInOut' },
+      ],
+      onComplete: () => {
+        this.fx.vacuum(icon, edge.x, edge.y, () => {
         this.fx.tick(edge.x, edge.y - 40, '+1 rare drop', INK.crit, 34)
         this.fx.sparkle(edge.x, edge.y - 10, 8, color)
+        })
       },
     })
-    const label = rarity === 'mvp_card' ? 'MVP CARD DROP!' : rarity === 'monster_card' ? 'MONSTER CARD DROP!' : 'LEGENDARY DROP!'
-    new Ribbon(this.ui, label, this.font, this.ui.rect.y0 + 250, color).play(1300, this.reduced)
     this.roosterWide()
   }
 
@@ -2774,6 +2922,26 @@ export class IdleScene extends Phaser.Scene {
 
   // -------------------------------------------------------------------- loop
 
+  private updateWalkCycles(delta: number): void {
+    const moving = this.manualMode
+      ? this.manualDirection !== 0 && this.time.now < this.manualLeaseUntil
+      : !this.bossActive && !this.forceBoss
+    const facing = this.manualMode ? this.manualFacing : 1
+    const pace = this.manualMode ? 1 : 0.78
+    this.trainerWalk?.update(delta, {
+      moving,
+      facing,
+      attackActive: this.trainerChain?.isPlaying() === true,
+      pace,
+    })
+    this.roosterWalk?.update(delta, {
+      moving,
+      facing,
+      attackActive: this.roosterChain?.isPlaying() === true || this.roosterIdle?.isPlaying() === true,
+      pace,
+    })
+  }
+
   update(time: number, delta: number): void {
     this.fx.syncTime()
     if (this.fx.frozen) {
@@ -2787,6 +2955,7 @@ export class IdleScene extends Phaser.Scene {
       return
     }
     this.victim = null
+    this.layoutBossBar(time)
     const manualJourneyDirection = this.manualMode
       ? (this.time.now < this.manualLeaseUntil ? this.manualDirection : 0)
       : undefined
@@ -2794,17 +2963,15 @@ export class IdleScene extends Phaser.Scene {
 
     if (this.manualMode) {
       this.updateManualMovement(delta)
+      this.updateWalkCycles(delta)
       this.frameWorld()
       this.placeHeroLabels()
       const target = this.manualTarget
-      if (target && !target.dead) {
-        const view = this.fx.visibleWorld()
-        const halfPlate = target.plate.width / 2 + 12
-        target.plate.container.x = Math.round(Phaser.Math.Clamp(target.container.x, view.left + halfPlate, view.right - halfPlate))
-        target.bar.container.x = Math.round(target.container.x)
-      }
+      if (target) this.layoutTargetLabels(target)
       return
     }
+
+    this.updateWalkCycles(delta)
 
     // Keep labels clear of temporary canvas chrome and clamp them when the
     // mobile camera intentionally crops an actor near the stage edge.
@@ -2830,14 +2997,7 @@ export class IdleScene extends Phaser.Scene {
     }
 
     const f = this.focus
-    if (f && !f.dead) {
-      const view = this.fx.visibleWorld()
-      const halfPlate = f.plate.width / 2 + 12
-      f.plate.container.x = Math.round(this.ui.mobileProfile
-        ? Phaser.Math.Clamp(f.container.x, view.left + halfPlate, view.right - halfPlate)
-        : f.container.x)
-      f.bar.container.x = Math.round(f.container.x)
-    }
+    if (f) this.layoutTargetLabels(f)
     if (time >= this.nextTrainerAt) this.trainerAttack(time)
     if (time >= this.nextRoosterAt) this.roosterAttack(time)
     if (this.bossActive && time >= this.nextBossAt) this.bossAttack(time)

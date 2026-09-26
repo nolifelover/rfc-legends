@@ -51,7 +51,7 @@ export default function IdleCanvas({ player, drops, demoMode, onBridgeChange }: 
     bridgeRef.current?.updateState(player, drops, demoMode);
   }, [player, drops, demoMode]);
 
-  // No forced canvas sizing — Phaser's Scale.FIT letterboxes correctly if the
-  // frame is ever width-clamped away from exact 16:9.
+  // Phaser ENVELOP covers the full viewport host; its visible-rect calculation
+  // keeps actors and canvas overlays inside the cropped stage.
   return <div ref={hostRef} className="absolute inset-0" aria-hidden />;
 }

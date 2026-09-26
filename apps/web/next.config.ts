@@ -4,6 +4,8 @@ import type { NextConfig } from "next";
 const pocketbaseUrl = (process.env.POCKETBASE_URL ?? "http://127.0.0.1:8090").replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
+  // Keep the local preview's development badge clear of the touch joystick.
+  devIndicators: false,
   // The dev server is also served at https://rfc-legends.earn.dev.rawinlab.com through the proxy.
   allowedDevOrigins: ["rfc-legends.earn.dev.rawinlab.com"],
   async rewrites() {

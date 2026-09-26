@@ -1,13 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useConnection } from "wagmi";
 import { getMap } from "@/game/data/maps";
 import type { Player } from "@/game/types";
 import { expToNext, maxHp, maxSp } from "@/server/game/stats";
+import { ConnectButton } from "./connect-button";
 import { GameChromeIcon } from "./game-chrome-icon";
+import { RoosterMark } from "./rooster-mark";
 import { SireLineArt } from "./sire-line-art";
 import { sireLineInfo } from "./sire-lines";
 import styles from "./game-hud-overlay.module.css";
+
+const PROFILE_COLLAPSE_KEY = "rfcl:game-profile-collapsed";
+const PROFILE_COLLAPSE_EVENT = "rfcl:game-profile-collapse-change";
+let profileCollapseFallback = false;
+
+function subscribeProfileCollapse(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(PROFILE_COLLAPSE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(PROFILE_COLLAPSE_EVENT, onChange);
+  };
+}
+
+function profileCollapseSnapshot() {
+  try {
+    return window.localStorage.getItem(PROFILE_COLLAPSE_KEY) === "1";
+  } catch {
+    return profileCollapseFallback;
+  }
+}
+
+function setProfileCollapse(collapsed: boolean) {
+  profileCollapseFallback = collapsed;
+  try {
+    window.localStorage.setItem(PROFILE_COLLAPSE_KEY, collapsed ? "1" : "0");
+  } catch {
+    // The control still works for the session when storage is unavailable.
+  }
+  window.dispatchEvent(new Event(PROFILE_COLLAPSE_EVENT));
+}
 
 function jobTag(level: number): string {
   if (level >= 60) return "Master Trainer";
@@ -59,6 +94,8 @@ export interface GameHudOverlayProps {
   onOpenGuild?: () => void;
   statCta?: React.ReactNode;
   syncSlot?: React.ReactNode;
+  /** Optional persisted music / effects controls supplied by the game client. */
+  audioSettings?: React.ReactNode;
   goal?: React.ReactNode;
   /** Reserved for real input controls supplied by the game controller. */
   movementSlot?: React.ReactNode;
@@ -76,12 +113,18 @@ export function GameHudOverlay({
   onOpenGuild,
   statCta,
   syncSlot,
+  audioSettings,
   goal,
   movementSlot,
   actionSlot,
   className,
 }: GameHudOverlayProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [walletCopied, setWalletCopied] = useState(false);
+  const profileCollapsed = useSyncExternalStore(subscribeProfileCollapse, profileCollapseSnapshot, () => false);
+  const menuToggleRef = useRef<HTMLButtonElement>(null);
+  const menuDialogRef = useRef<HTMLElement>(null);
+  const { address, isConnected } = useConnection();
   const info = sireLineInfo(player.sireLine);
   const map = getMap(player.mapId);
   const hpMax = maxHp(player);
@@ -91,10 +134,79 @@ export function GameHudOverlay({
   const roosterExpMax = expToNext(player.rooster.level);
   const marketHref = rareDropCount && newestDropId ? `/market?dropId=${newestDropId}` : "/market";
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const dialog = menuDialogRef.current;
+    const returnFocus = menuToggleRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], input:not([disabled]), [tabindex="0"]',
+    ) ?? []);
+    focusable()[0]?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const targets = focusable();
+      const first = targets[0];
+      const last = targets[targets.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      returnFocus?.focus({ preventScroll: true });
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!walletCopied) return;
+    const timeout = window.setTimeout(() => setWalletCopied(false), 1800);
+    return () => window.clearTimeout(timeout);
+  }, [walletCopied]);
+
+  function closeMenu() {
+    setMenuOpen(false);
+  }
+
+  function runAndClose(action?: () => void) {
+    closeMenu();
+    action?.();
+  }
+
+  function copyWallet() {
+    if (!address) return;
+    void navigator.clipboard?.writeText(address).then(
+      () => setWalletCopied(true),
+      () => setWalletCopied(false),
+    );
+  }
+
   return (
     <div className={`${styles.shell}${className ? ` ${className}` : ""}`} data-game-hud-overlay>
-      <section className={styles.profileDock} aria-label="Player status">
+      <section className={styles.profileDock} aria-label="Player status" data-collapsed={profileCollapsed}>
         <div className={styles.profile}>
+          <button
+            type="button"
+            className={styles.profileCollapse}
+            aria-label={profileCollapsed ? "Expand player status" : "Collapse player status"}
+            aria-expanded={!profileCollapsed}
+            aria-pressed={profileCollapsed}
+            onClick={() => setProfileCollapse(!profileCollapsed)}
+            title={profileCollapsed ? "Expand player status" : "Collapse player status"}
+          >
+            <span aria-hidden="true">{profileCollapsed ? "+" : "−"}</span>
+          </button>
           <div className={styles.identity}>
             <span className={styles.portrait} aria-hidden="true">
               <svg className={styles.portraitFallback} viewBox="0 0 48 48" fill="none">
@@ -111,6 +223,10 @@ export function GameHudOverlay({
               <span className={styles.place}>{jobTag(player.baseLevel)} · <span lang="th">{map.name}</span></span>
             </span>
             <span className={styles.level}>Lv.{player.baseLevel}</span>
+          </div>
+          <div className={styles.compactStatus}>
+            <span>Lv.{player.baseLevel} · {player.control?.mode === "manual" ? "Manual" : "Auto"}</span>
+            <span>HP {hp.toLocaleString()}/{hpMax.toLocaleString()}</span>
           </div>
           <div className={styles.bars}>
             <Meter label="HP" value={hp} max={hpMax} tone="hp" />
@@ -143,48 +259,130 @@ export function GameHudOverlay({
 
       <nav className={styles.menuDock} aria-label="Game menu">
         <button
+          ref={menuToggleRef}
           type="button"
           className={styles.menuToggle}
-          aria-label={menuOpen ? "Close game menu" : "Open game menu"}
+          data-game-menu-toggle
+          aria-label="Open game menu"
           aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-          title={menuOpen ? "Close game menu" : "Open game menu"}
+          aria-controls="game-menu-sheet"
+          onClick={() => setMenuOpen(true)}
+          title="Open game menu"
         >
           <GameChromeIcon name="menu" width={25} height={25} />
         </button>
-        <div className={styles.menuPanel} data-open={menuOpen}>
-          {onOpenBag ? (
+        <div className={styles.menuLayer} data-game-menu hidden={!menuOpen}>
             <button
               type="button"
-              className={styles.menuAction}
-              onClick={onOpenBag}
-              aria-label={`Bag & drops (${bagCount ?? 0} items)`}
-              title={`Bag & drops (${bagCount ?? 0} items)`}
+              className={styles.menuBackdrop}
+              aria-label="Close game menu"
+              onClick={closeMenu}
+            />
+            <section
+              ref={menuDialogRef}
+              id="game-menu-sheet"
+              className={styles.menuPanel}
+              role={menuOpen ? "dialog" : undefined}
+              aria-modal={menuOpen ? true : undefined}
+              aria-labelledby={menuOpen ? "game-menu-title" : undefined}
             >
-              <GameChromeIcon name="bag" width={23} height={23} />
-              <span>Bag</span>
-              {(bagCount ?? 0) > 0 ? <span className={styles.badge}>{bagCount}</span> : null}
-            </button>
-          ) : null}
-          {onOpenGuild ? (
-            <button
-              type="button"
-              className={styles.menuAction}
-              onClick={onOpenGuild}
-              aria-label="Guild chat & boss"
-              title="Guild chat & boss"
-            >
-              <GameChromeIcon name="guild" width={23} height={23} />
-              <span>Guild</span>
-            </button>
-          ) : null}
-          <a className={styles.menuLink} href={marketHref} aria-label="Open the Rare Market" title="Open the Rare Market">
-            <GameChromeIcon name="market" width={23} height={23} />
-            <span>Market</span>
-            {(rareDropCount ?? 0) > 0 ? <span className={styles.badge}>{rareDropCount}</span> : null}
-          </a>
-          {statCta ? <span className={styles.providedSlot}>{statCta}</span> : null}
-          {syncSlot ? <span className={styles.providedSlot}>{syncSlot}</span> : null}
+              <header className={styles.menuHeader}>
+                <span className={styles.menuBrand}>
+                  <RoosterMark size={38} riverside />
+                  <span>
+                    <strong id="game-menu-title">RFC Legends</strong>
+                    <small><span lang="th">เมนูการเดินทาง</span> · Riverside</small>
+                  </span>
+                </span>
+                <button type="button" className={styles.menuClose} onClick={closeMenu} aria-label="Close game menu">
+                  <span aria-hidden="true">×</span>
+                </button>
+              </header>
+
+              <div className={styles.menuScroll}>
+                <section className={styles.menuSection} aria-labelledby="game-actions-title">
+                  <h2 id="game-actions-title" className={styles.menuSectionTitle}>Game</h2>
+                  <div className={styles.actionGrid}>
+                    {onOpenBag ? (
+                      <button
+                        type="button"
+                        className={styles.menuAction}
+                        onClick={() => runAndClose(onOpenBag)}
+                        aria-label={`Bag & drops (${bagCount ?? 0} items)`}
+                        title={`Bag & drops (${bagCount ?? 0} items)`}
+                      >
+                        <GameChromeIcon name="bag" width={24} height={24} />
+                        <span>Bag</span>
+                        {(bagCount ?? 0) > 0 ? <span className={styles.badge}>{bagCount}</span> : null}
+                      </button>
+                    ) : null}
+                    {onOpenGuild ? (
+                      <button
+                        type="button"
+                        className={styles.menuAction}
+                        onClick={() => runAndClose(onOpenGuild)}
+                        aria-label="Guild chat & boss"
+                        title="Guild chat & boss"
+                      >
+                        <GameChromeIcon name="guild" width={24} height={24} />
+                        <span>Guild</span>
+                      </button>
+                    ) : null}
+                    {statCta ? (
+                      <span className={styles.providedSlot} onClickCapture={closeMenu}>{statCta}</span>
+                    ) : null}
+                    <a className={styles.menuLink} href={marketHref} aria-label="Open the Rare Market" title="Open the Rare Market">
+                      <GameChromeIcon name="market" width={24} height={24} />
+                      <span>Market</span>
+                      {(rareDropCount ?? 0) > 0 ? <span className={styles.badge}>{rareDropCount}</span> : null}
+                    </a>
+                  </div>
+                </section>
+
+                <section className={styles.menuSection} aria-labelledby="journey-links-title">
+                  <h2 id="journey-links-title" className={styles.menuSectionTitle}>Journey</h2>
+                  <div className={styles.linkList}>
+                    <Link href="/" className={styles.siteLink} onClick={closeMenu}>
+                      <RoosterMark size={29} riverside />
+                      <span><strong>Home</strong><small>RFC Legends home</small></span>
+                      <span aria-hidden="true">›</span>
+                    </Link>
+                    <Link href="/roosters" className={styles.siteLink} onClick={closeMenu}>
+                      <SireLineArt line={player.sireLine} size={29} className="rounded-full" theme="riverside" />
+                      <span><strong>My Roosters</strong><small>Collection & pedigree</small></span>
+                      <span aria-hidden="true">›</span>
+                    </Link>
+                  </div>
+                </section>
+
+                <section className={styles.menuSection} aria-labelledby="settings-title">
+                  <h2 id="settings-title" className={styles.menuSectionTitle}>Settings</h2>
+                  {audioSettings ? <div className={styles.audioSettings}>{audioSettings}</div> : null}
+                  {syncSlot ? (
+                    <div className={styles.utilityRow} onClickCapture={closeMenu}>
+                      <span><strong>Sync progress</strong><small>Refresh server data now</small></span>
+                      <span className={styles.syncSlot}>{syncSlot}</span>
+                    </div>
+                  ) : null}
+                </section>
+
+                <section className={styles.walletSection} aria-label="Wallet">
+                  <div className={styles.walletHeading}>
+                    <GameChromeIcon name="wallet" width={22} height={22} />
+                    <span><strong>Wallet</strong><small>{isConnected ? "Connected" : "Connect to save progress"}</small></span>
+                    {isConnected ? <span className={styles.connectedDot} aria-label="Connected" /> : null}
+                  </div>
+                  {isConnected && address ? (
+                    <button type="button" className={styles.walletCopy} onClick={copyWallet}>
+                      <span className={styles.walletAddress}>{address.slice(0, 8)}…{address.slice(-6)}</span>
+                      <span>{walletCopied ? "Copied" : "Copy"}</span>
+                    </button>
+                  ) : null}
+                  <div className={styles.connectSlot}><ConnectButton /></div>
+                  <span className={styles.copyStatus} aria-live="polite">{walletCopied ? "Wallet address copied" : ""}</span>
+                </section>
+              </div>
+            </section>
         </div>
       </nav>
 

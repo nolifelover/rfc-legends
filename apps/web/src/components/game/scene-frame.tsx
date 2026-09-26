@@ -5,8 +5,8 @@ import { RoosterMark } from "./rooster-mark";
  *
  * G4 replaces the placeholder *contents* passed as children with the Phaser
  * canvas — keep the frame stable beneath the corner HUD.
- * `className` overrides sizing (default `w-full`; the game screen passes a
- * height-fit variant so the canvas can claim most of the viewport).
+ * The stage fills its parent at every aspect ratio. Phaser crops its art to
+ * this surface while the HUD stays in CSS viewport coordinates.
  */
 export function SceneFrame({
   children,
@@ -21,7 +21,7 @@ export function SceneFrame({
       tabIndex={0}
       role="region"
       aria-label="Game field. A or D to move, Space to attack."
-      className={`relative aspect-video ${className} overflow-hidden rounded-2xl border-2 border-bark/30 bg-cream shadow-[0_16px_48px_-16px_rgba(74,50,32,0.45)] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#f2c66d]`}
+      className={`relative min-h-0 ${className} overflow-hidden bg-[#102b43] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#f2c66d]`}
     >
       {children}
     </div>

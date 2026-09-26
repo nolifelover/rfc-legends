@@ -24,6 +24,11 @@ export function useGameControls({ address, player, bridge, onState, blocked }: {
   blocked: boolean;
 }) {
   const [feedback, setFeedback] = useState("");
+  useEffect(() => {
+    if (!feedback) return;
+    const timer = window.setTimeout(() => setFeedback(""), 2200);
+    return () => window.clearTimeout(timer);
+  }, [feedback]);
   const [busy, setBusy] = useState(false);
   const current = useRef({ address, player, bridge, onState, blocked });
   const sequence = useRef(0);

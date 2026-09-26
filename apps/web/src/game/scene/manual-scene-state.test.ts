@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeManualDirection, projectedManualX } from './manual-scene-state'
+import { activeManualDirection, nextManualCompanionPosition, projectedManualX } from './manual-scene-state'
 import type { PlayerControlState } from '../types'
 
 const control = (overrides: Partial<PlayerControlState> = {}): PlayerControlState => ({
@@ -10,6 +10,20 @@ const control = (overrides: Partial<PlayerControlState> = {}): PlayerControlStat
   moveUntil: 1_650,
   sequence: 1,
   ...overrides,
+})
+
+describe('manual companion follow', () => {
+  it('switches sides near the right bound without a one-frame jump', () => {
+    const next = nextManualCompanionPosition(1_141, 1_389, 1, 1 / 60)
+    expect(next.side).toBe(-1)
+    expect(Math.abs(next.x - 1_389)).toBeLessThanOrEqual(20)
+  })
+
+  it('stays inside the server movement bounds while catching up', () => {
+    let state: { x: number; side: -1 | 1 } = { x: 1_390, side: -1 }
+    for (let i = 0; i < 120; i++) state = nextManualCompanionPosition(1_100, state.x, state.side, 1 / 60)
+    expect(state.x).toBe(770)
+  })
 })
 
 describe('manual scene prediction', () => {

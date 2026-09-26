@@ -19,6 +19,7 @@ export class UiScene extends Phaser.Scene {
   rect: VisibleRect = { x0: 0, y0: 0, x1: L.W, y1: L.H }
   mobileProfile = false
   topInset = 0
+  bottomInset = 0
   private listeners: Array<(r: VisibleRect, mobile: boolean) => void> = []
 
   constructor() {
@@ -46,8 +47,11 @@ export class UiScene extends Phaser.Scene {
     const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
     this.mobileProfile = isMobileProfile(cssWidth, coarse)
     const frame = this.game.canvas.parentElement?.parentElement ?? this.game.canvas.parentElement
-    const insetPx = frame ? Number.parseFloat(getComputedStyle(frame).getPropertyValue('--game-top-inset')) || 0 : 0
-    this.topInset = cssInsetToStageUnits(insetPx, f)
+    const styles = frame ? getComputedStyle(frame) : null
+    const topInsetPx = styles ? Number.parseFloat(styles.getPropertyValue('--game-top-inset')) || 0 : 0
+    const bottomInsetPx = styles ? Number.parseFloat(styles.getPropertyValue('--game-bottom-inset')) || 0 : 0
+    this.topInset = cssInsetToStageUnits(topInsetPx, f)
+    this.bottomInset = cssInsetToStageUnits(bottomInsetPx, f)
     const visW = Math.min(L.W, pw / f)
     const visH = Math.min(L.H, ph / f)
     this.rect = {

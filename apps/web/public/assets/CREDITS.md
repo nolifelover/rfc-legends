@@ -37,3 +37,7 @@ were embedded or traced.
   (long stratus for wide parallax drift), `scene/cloud3.svg` (tall cotton
   cluster) are standalone transparent clouds for the engine lane; `sky.svg`
   keeps its own embedded clouds for the static backdrop.
+
+## Game audio
+
+`game/audio/riverside-night-loop.mp3` is an original instrumental generated with Google Lyria 3 Clip Preview through OpenRouter on 26 September 2026 UTC. Exact prompt and processing: `game/audio/PROMPTS.md`. Gameplay effects are original Web Audio synthesis in the application source. No reference music or existing song was supplied.

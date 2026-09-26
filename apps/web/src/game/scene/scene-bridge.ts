@@ -12,6 +12,7 @@ export type SceneEventMap = {
   drop: { dropId: string; itemId: number; rarity: Rarity }
   'boss-spawn': { name: string }
   'boss-kill': { name: string }
+  'combat-hit': { source: 'trainer' | 'rooster' | 'enemy'; critical: boolean }
 }
 
 export interface SceneMountOptions {
@@ -47,6 +48,7 @@ export class SceneBridge {
     drop: new Set(),
     'boss-spawn': new Set(),
     'boss-kill': new Set(),
+    'combat-hit': new Set(),
   }
   private handle: SceneHandle | null = null
   private destroyed = false

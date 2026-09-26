@@ -28,6 +28,9 @@ import type { SceneBridge } from "@/game/scene/scene-bridge";
 import type { GameActionResponse } from "@/game/manual-controls";
 import { GameMovementControl, GameActionControls } from "./game-input-controls";
 import { useGameControls } from "./use-game-controls";
+import { GameSiteNavigation } from "./nav-bar";
+import { useGameAudio } from "./use-game-audio";
+import { GameAudioSettings } from "./game-audio-settings";
 
 interface GameState {
   player: Player | null;
@@ -58,7 +61,8 @@ const riversideBackdrop = `
 
 function CenterCard({ children }: { children: React.ReactNode }) {
   return (
-    <div data-riverside-ui className="flex min-h-0 flex-1 items-center px-4 py-12 sm:px-6" style={{ background: riversideBackdrop }}>
+    <div data-riverside-ui className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-4 py-12 sm:px-6" style={{ background: riversideBackdrop }}>
+      <GameSiteNavigation />
       <section className="mx-auto flex w-full max-w-lg flex-col items-center justify-center gap-4 rounded-3xl border-2 border-[#c69a5b] bg-[#fffaf0] px-5 py-10 text-center shadow-[0_24px_70px_-24px_rgba(0,0,0,0.8)] sm:px-8 sm:py-12">
         {children}
       </section>
@@ -166,6 +170,7 @@ export function GameClient() {
     address, player: stateQuery.data?.player ?? null, bridge: sceneBridge,
     onState: applyControlState, blocked: controlsBlocked,
   });
+  const audio = useGameAudio(sceneBridge, Boolean(isConnected && stateQuery.data?.player && sceneBridge));
 
   function applyPlayer(player: Player) {
     queryClient.setQueryData<GameState>(stateKey, (old) => {
@@ -333,6 +338,7 @@ export function GameClient() {
   if (!state?.player) {
     return (
       <div data-riverside-ui data-riverside-create className="flex flex-1 flex-col gap-2" style={{ background: riversideBackdrop }}>
+        <GameSiteNavigation className="mx-auto mt-4" />
         <style>{`
           [data-riverside-create] > section { background-color: #fffaf0; border-color: #c69a5b; box-shadow: 0 24px 70px -28px rgba(0,0,0,.8); }
           [data-riverside-create] input { background-color: #fffdf6; }
@@ -347,21 +353,21 @@ export function GameClient() {
   // 4. Player exists → the game screen. The canvas claims the viewport;
   // profile and actions float at the corners of the scene.
   const player = state.player;
-  // Riverside-night backdrop: the letterbox around the 16:9 stage reads as
-  // part of the game, not a web page.
+  // The play surface owns the viewport; canvas and HUD share the same bounds.
   return (
     <div
       data-riverside-ui
-      className="flex min-h-0 flex-1 flex-col"
+      data-game-screen
+      className="fixed inset-0 flex h-dvh w-full min-h-0 flex-col overflow-hidden"
       style={{
         background: riversideBackdrop,
       }}
     >
       <style>{`
         [data-riverside-ui] { background: #102b43 !important; }
-        [data-riverside-ui] .aspect-video { --game-top-inset: 202px; background-color: #102b43 !important; border-color: #c69a5b !important; }
+        [data-riverside-ui] [data-game-field] { --game-top-inset: 202px; --game-bottom-inset: 172px; background-color: #102b43; }
         @media (max-width: 1023px) and (orientation: landscape) {
-          [data-riverside-ui] .aspect-video { --game-top-inset: 146px; }
+          [data-riverside-ui] [data-game-field] { --game-top-inset: 146px; --game-bottom-inset: 148px; }
         }
         [data-riverside-ui] .rounded-2xl.border-4 { border-color: #c69a5b !important; }
         [data-riverside-ui] [class*="bg-[#2b1b12]"] { background-color: rgba(40,59,99,.96) !important; }
@@ -371,12 +377,12 @@ export function GameClient() {
       <div className="mx-auto flex min-h-0 w-full max-w-none flex-1 flex-col">
         {wrongChain ? <WrongChainBanner chainId={chainId ?? 0} /> : null}
         <div className="relative flex min-h-0 flex-1 justify-center">
-          {/* Reserve room for the profile and menu without moving world actors. */}
-          <SceneFrame className="h-full w-auto max-w-full">
+          <SceneFrame className="h-full w-full">
             <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} onBridgeChange={setSceneBridge} />
           </SceneFrame>
           <GameHudOverlay
             player={player}
+            audioSettings={<GameAudioSettings backgroundEnabled={audio.backgroundEnabled} effectsEnabled={audio.effectsEnabled} onBackgroundChange={audio.setBackgroundEnabled} onEffectsChange={audio.setEffectsEnabled} />}
             movementSlot={<GameMovementControl player={player} blocked={controlsBlocked || !sceneBridge} onMove={controls.move} />}
             actionSlot={<GameActionControls player={player} blocked={controlsBlocked || !sceneBridge} busy={controls.busy} onAttack={controls.attack} onToggleAuto={controls.toggleAuto} onUsePotion={controls.potion} onOpenBag={() => setBagOpen(true)} />}
             statCta={<StatPanel player={player} onAllocate={handleAllocate} compact />}

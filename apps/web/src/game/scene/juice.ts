@@ -9,7 +9,7 @@
 //   Hit-stop on every impact, victims vibrate during the freeze, then knock back
 //   and squash. Nothing moves linearly. Durations vary with weight: 45ms for a
 //   tap, 260ms for a boss kill, ~1s of slow-mo for a card drop.
-// - Scale: effects at player scale or larger. Text slams for events. Numbers must
+// - Scale: effects support the actors without swallowing their silhouettes. Text slams for events. Numbers must
 //   stay readable at 320×180.
 // - Every reward travels to a visible counter and the counter visibly changes by
 //   exactly what the server granted. Nothing on screen invents a server number.
@@ -38,9 +38,9 @@ export const LAYOUT = {
   /** Top of the clay lane where everyone stands. */
   GROUND_Y: 660,
   /** Pest lanes (back → front): feet lines, draw scale and where each leader stops. */
-  FEET_BACK: 796,
-  FEET_MID: 838,
-  FEET_FRONT: 880,
+  FEET_BACK: 630,
+  FEET_MID: 638,
+  FEET_FRONT: 646,
   BACK_SCALE: 0.8,
   MID_SCALE: 0.9,
   ENGAGE_FRONT_X: 1150,
@@ -54,15 +54,15 @@ export const LAYOUT = {
   WALK_SPEED: 420, // px/s while advancing
   /** Heroes. */
   TRAINER_X: 290,
-  TRAINER_FEET: 862,
-  TRAINER_H: 400,
+  TRAINER_FEET: 642,
+  TRAINER_H: 320,
   ROOSTER_X: 840,
-  ROOSTER_FEET: 886,
-  ROOSTER_H: 480,
+  ROOSTER_FEET: 642,
+  ROOSTER_H: 112,
   /** Where loot icons come to rest before flying to the Harvest chip. */
-  LOOT_REST_Y: 878,
+  LOOT_REST_Y: 646,
   /** Display heights per pest id (front row). */
-  PEST_H: { 'nu-na': 260, 'takka-taen-yak': 290, 'pu-na': 230, 'raja-nu-na': 660 } as Record<string, number>,
+  PEST_H: { 'nu-na': 155, 'takka-taen-yak': 150, 'pu-na': 165, 'raja-nu-na': 380 } as Record<string, number>,
 } as const
 
 /** One display profile shared by all in-canvas mobile presentation branches. */
@@ -77,6 +77,15 @@ export function mobileCameraZoom(visibleWidth: number): number {
 }
 export function mobileWorldScale(visibleWidth: number): number {
   return Math.sqrt(LAYOUT.WORLD_ZOOM / mobileCameraZoom(visibleWidth))
+}
+export function roosterDisplayHeight(level: number, artScale = 1): number {
+  const band = Math.min(9, Math.max(0, Math.floor(level / 10)))
+  return LAYOUT.ROOSTER_H * artScale * (1 + 0.005 * band)
+}
+export function clampedWorldCenter(desiredX: number, visibleStageWidth: number, zoom: number): number {
+  const safeZoom = Number.isFinite(zoom) && zoom > 0 ? zoom : LAYOUT.WORLD_ZOOM
+  const half = Math.min(LAYOUT.W / 2, Math.max(0, visibleStageWidth) / (2 * safeZoom))
+  return Math.max(half, Math.min(LAYOUT.W - half, desiredX))
 }
 export function cssInsetToStageUnits(cssPixels: number, stageScale: number): number {
   if (!Number.isFinite(cssPixels) || !Number.isFinite(stageScale) || stageScale <= 0) return 0
@@ -228,10 +237,10 @@ export const ZONES: Record<string, ZoneSpec> = {
     treeline: 0x7fa86e,
     names: { 'nu-na': 'Field Rat', 'takka-taen-yak': 'Giant Locust', 'pu-na': 'Rice Crab', 'raja-nu-na': 'Rat King' },
     skins: {
-      'nu-na': { key: 'art-monster-nu-na', h: 260 },
-      'takka-taen-yak': { key: 'art-monster-takka-taen-yak', h: 290 },
-      'pu-na': { key: 'art-monster-pu-na', h: 230 },
-      'raja-nu-na': { key: 'art-monster-raja-nu-na', h: 660 },
+      'nu-na': { key: 'art-monster-nu-na', h: 155 },
+      'takka-taen-yak': { key: 'art-monster-takka-taen-yak', h: 150 },
+      'pu-na': { key: 'art-monster-pu-na', h: 165 },
+      'raja-nu-na': { key: 'art-monster-raja-nu-na', h: 380 },
     },
     bossId: 'raja-nu-na',
   },
@@ -257,10 +266,10 @@ export const ZONES: Record<string, ZoneSpec> = {
     },
     // the art lane's own SVGs (no tint); heights on the 1080 frame
     skins: {
-      'hoi-cherry': { key: 'art-monster-hoi-cherry', h: 250 },
-      'phak-tob-chawai-yak': { key: 'art-monster-phak-tob-chawai-yak', h: 300 },
-      'pla-chon-yak': { key: 'art-monster-pla-chon-yak', h: 300 },
-      'jorakhe-thao-bueng': { key: 'art-monster-jorakhe-thao-bueng', h: 680 },
+      'hoi-cherry': { key: 'art-monster-hoi-cherry', h: 170 },
+      'phak-tob-chawai-yak': { key: 'art-monster-phak-tob-chawai-yak', h: 155 },
+      'pla-chon-yak': { key: 'art-monster-pla-chon-yak', h: 175 },
+      'jorakhe-thao-bueng': { key: 'art-monster-jorakhe-thao-bueng', h: 480 },
     },
     bossId: 'jorakhe-thao-bueng',
   },

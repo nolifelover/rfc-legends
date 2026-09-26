@@ -187,6 +187,10 @@ export class HpBar {
 }
 
 /** Ornate top-centre boss bar: gold trim, name, compact cur/max and a pale ghost trail. */
+export const bossBarHeight = (mobile: boolean, displayScale = 1): number => mobile
+  ? Phaser.Math.Clamp(44 / Math.max(displayScale, 0.001), 56, 100)
+  : 52
+
 export class BossBar {
   readonly container: Phaser.GameObjects.Container
 
@@ -194,39 +198,46 @@ export class BossBar {
   private readonly g: Phaser.GameObjects.Graphics
   private readonly nameText: Phaser.GameObjects.Text
   private readonly hpText: Phaser.GameObjects.Text
-  private readonly width: number
-  private readonly height: number
-  private readonly restY: number
+  private readonly fullName: string
+  private width: number
+  private height: number
+  private restX: number
+  private restY: number
   private pct = 1
   private ghost = 1
   private ghostTween: Phaser.Tweens.Tween | null = null
   private shown = false
 
-  constructor(scene: Phaser.Scene, name: string, fontFamily: string, restY = 150, width = 920, mobile = false) {
+  constructor(scene: Phaser.Scene, name: string, fontFamily: string, restY = 150, width = 920, mobile = false, restX = 960, displayScale = 1) {
     this.scene = scene
     this.restY = restY
+    this.restX = restX
+    this.fullName = name
     this.width = width
-    this.height = mobile ? 72 : 64
-    this.container = scene.add.container(960, -120).setDepth(60).setAlpha(0)
+    this.height = bossBarHeight(mobile, displayScale)
+    this.container = scene.add.container(restX, -120).setDepth(60).setAlpha(0)
     this.g = scene.add.graphics()
+    const fontSize = mobile ? Phaser.Math.Clamp(13 / Math.max(displayScale, 0.001), 17, 30) : TYPE.bossName
+    const displayName = mobile ? name.replace(' · ', '\n') : name
     this.nameText = scene.add
-      .text(0, 0, name, {
+      .text(0, 0, displayName, {
         fontFamily,
-        fontSize: `${Math.round(TYPE.bossName * (mobile ? 1.12 : 1))}px`,
+        fontSize: `${fontSize}px`,
         fontStyle: 'bold',
         color: '#ffe9a8',
         stroke: INK.stroke,
-        strokeThickness: 6,
+        strokeThickness: mobile ? 3 : 6,
       })
       .setOrigin(0, 0.5)
+      .setLineSpacing(mobile ? -4 : 0)
     this.hpText = scene.add
       .text(0, 0, '', {
         fontFamily,
-        fontSize: `${Math.round(TYPE.bossName * (mobile ? 1.12 : 1))}px`,
+        fontSize: `${fontSize}px`,
         fontStyle: 'bold',
         color: '#ffffff',
         stroke: INK.stroke,
-        strokeThickness: 6,
+        strokeThickness: mobile ? 3 : 6,
       })
       .setOrigin(1, 0.5)
     this.container.add([this.g, this.nameText, this.hpText])
@@ -258,6 +269,8 @@ export class BossBar {
     g.fillRoundedRect(x + 10, -h / 2 + 10, fillW, innerH / 2.6, 8)
     this.nameText.setPosition(x + 22, -1)
     this.hpText.setPosition(x + w - 22, -1)
+    const nameRoom = Math.max(80, w - this.hpText.width - 64)
+    this.nameText.setScale(Math.max(0.78, Math.min(1, nameRoom / Math.max(1, this.nameText.width))))
   }
 
   setHp(cur: number, max: number): void {
@@ -278,6 +291,42 @@ export class BossBar {
         this.draw()
       },
     })
+  }
+
+  get boxWidth(): number {
+    return this.width
+  }
+
+  get boxHeight(): number {
+    return this.height
+  }
+
+  /** Resize for orientation/profile changes while preserving current and ghost HP. */
+  reflow(width: number, mobile: boolean, displayScale: number, x: number, y: number): void {
+    this.width = width
+    this.height = bossBarHeight(mobile, displayScale)
+    const fontSize = mobile ? Phaser.Math.Clamp(13 / Math.max(displayScale, 0.001), 17, 30) : TYPE.bossName
+    const stroke = mobile ? 3 : 6
+    this.nameText
+      .setText(mobile ? this.fullName.replace(' · ', '\n') : this.fullName)
+      .setFontSize(fontSize)
+      .setStroke(INK.stroke, stroke)
+      .setLineSpacing(mobile ? -4 : 0)
+    this.hpText.setFontSize(fontSize).setStroke(INK.stroke, stroke)
+    this.draw()
+    this.place(x, y)
+  }
+
+  /** Reflow around React corner chrome without restarting the entrance tween. */
+  place(x: number, y: number): void {
+    if (Math.abs(x - this.restX) < 0.5 && Math.abs(y - this.restY) < 0.5) return
+    this.restX = x
+    this.restY = y
+    this.container.x = x
+    if (this.shown) {
+      this.scene.tweens.killTweensOf(this.container)
+      this.container.y = y
+    }
   }
 
   show(reduced: boolean): void {

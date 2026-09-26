@@ -27,7 +27,7 @@ export interface GameActionControlsProps extends SharedInputProps {
 
 function blockingSurfaceOpen(): boolean {
   return Boolean(document.querySelector(
-    "[role='dialog'], [aria-modal='true'], [data-riverside-nav] [aria-expanded='true'], [data-game-hud-overlay] [aria-expanded='true']",
+    "[role='dialog'], [aria-modal='true'], [data-riverside-nav] [aria-expanded='true'], [data-game-menu-toggle][aria-expanded='true']",
   ));
 }
 

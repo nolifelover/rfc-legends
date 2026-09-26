@@ -1010,13 +1010,21 @@ function drawRiverWater(g: Phaser.GameObjects.Graphics): void {
   g.fillGradientStyle(0x254f60, 0x254f60, 0x132e3b, 0x132e3b, 1)
   g.fillRect(0, 0, 1536, 420)
   g.fillStyle(0xf2b45b, 0.38)
-  for (let x = 90; x < 1500; x += 186) g.fillRoundedRect(x, 62 + (x % 3) * 28, 82, 5, 3)
-  g.fillStyle(0x50372b, 1)
-  g.fillRect(0, 172, 1536, 188)
+  for (let x = 90; x < 1500; x += 186) g.fillRoundedRect(x, 92 + (x % 3) * 28, 82, 5, 3)
+  // Match the raster asset's playable bridge at its top edge. Gameplay feet use
+  // this same deck in both loaded-art and fallback rendering paths.
   g.fillStyle(0xb37a4b, 1)
-  for (let x = 12; x < 1536; x += 196) g.fillRect(x, 181, 184, 13)
+  g.fillRect(0, 36, 1536, 22)
+  g.fillStyle(0x50372b, 1)
+  g.fillRect(0, 58, 1536, 30)
   g.fillStyle(0xd0a06a, 0.76)
-  g.fillRect(0, 198, 1536, 6)
+  g.fillRect(0, 36, 1536, 4)
+  g.lineStyle(2, 0x332521, 0.8)
+  for (let x = 0; x < 1536; x += 96) g.lineBetween(x, 36, x, 58)
+  for (let x = 72; x < 1536; x += 240) {
+    g.fillStyle(0x3f2d26, 1)
+    g.fillRect(x, 0, 18, 118)
+  }
   g.fillStyle(0x688367, 0.92)
   for (const [x, y] of [[100, 92], [340, 120], [1240, 88], [1450, 140]] as const) {
     g.fillEllipse(x, y, 84, 26)

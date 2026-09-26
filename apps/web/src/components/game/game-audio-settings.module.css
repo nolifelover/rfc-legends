@@ -1,0 +1,112 @@
+.panel {
+  display: grid;
+  gap: 7px;
+  min-width: 184px;
+  padding: 10px;
+  color: #fffaf0;
+  border: 1px solid rgba(229, 181, 94, 0.78);
+  border-radius: 15px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 45%),
+    rgba(16, 43, 72, 0.96);
+  box-shadow: 0 10px 24px rgba(3, 18, 32, 0.34), inset 0 0 0 1px rgba(255, 244, 211, 0.08);
+  font-family: inherit;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 3px 3px;
+  color: #f2c66d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.soundMark {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  color: #173759;
+  background: #f2c66d;
+  font-size: 14px;
+}
+
+.switchRow {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 7px 8px 7px 10px;
+  color: inherit;
+  border: 1px solid rgba(151, 188, 211, 0.2);
+  border-radius: 11px;
+  background: rgba(8, 31, 54, 0.68);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 100ms ease;
+}
+
+.switchRow:hover,
+.switchRow:focus-visible {
+  border-color: #f2c66d;
+  background: rgba(28, 65, 98, 0.86);
+  outline: none;
+}
+
+.switchRow:active { transform: translateY(1px); }
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 22px;
+  border: 1px solid rgba(255, 248, 226, 0.28);
+  border-radius: 999px;
+  background: #3a4a5c;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.28);
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.track[data-checked="true"] {
+  border-color: #f4cb76;
+  background: #2e7e71;
+}
+
+.thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff8e6;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.38);
+  transition: transform 140ms ease;
+}
+
+.track[data-checked="true"] .thumb { transform: translateX(16px); }
+
+@media (max-width: 699px) {
+  .panel { min-width: 0; width: 100%; }
+  .switchRow { min-height: 46px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .switchRow,
+  .track,
+  .thumb { transition: none; }
+}
