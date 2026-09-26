@@ -1,0 +1,62 @@
+[
+ {
+  "id": "s01-cover",
+  "file": "s01-cover.mp3",
+  "seconds": 26.44
+ },
+ {
+  "id": "s02-origin",
+  "file": "s02-origin.mp3",
+  "seconds": 25.84
+ },
+ {
+  "id": "s03-ecosystem",
+  "file": "s03-ecosystem.mp3",
+  "seconds": 29.28
+ },
+ {
+  "id": "s04-legends",
+  "file": "s04-legends.mp3",
+  "seconds": 29.04
+ },
+ {
+  "id": "s05-architecture",
+  "file": "s05-architecture.mp3",
+  "seconds": 29.4
+ },
+ {
+  "id": "s06-demo",
+  "file": "s06-demo.mp3",
+  "seconds": 33.08
+ },
+ {
+  "id": "s07-world",
+  "file": "s07-world.mp3",
+  "seconds": 26.28
+ },
+ {
+  "id": "s08-world-feedback",
+  "file": "s08-world-feedback.mp3",
+  "seconds": 29.36
+ },
+ {
+  "id": "s09-ens",
+  "file": "s09-ens.mp3",
+  "seconds": 30.24
+ },
+ {
+  "id": "s10-curvegrid",
+  "file": "s10-curvegrid.mp3",
+  "seconds": 30.12
+ },
+ {
+  "id": "s11-built",
+  "file": "s11-built.mp3",
+  "seconds": 29.64
+ },
+ {
+  "id": "s12-thanks",
+  "file": "s12-thanks.mp3",
+  "seconds": 20.52
+ }
+]
