@@ -4,6 +4,18 @@ Beat: an MVP boss drops a rare card, the player proves they're human with World 
 
 Everything below was rehearsed end to end through the real UI on Sepolia on 2026-09-26 (see [Rehearsal evidence](#rehearsal-evidence)).
 
+## Presenter checklist (5 min before recording)
+
+- [ ] **MetaMask is on Sepolia**, in both browser profiles.
+- [ ] **Accounts imported and renamed.** Keys are in `apps/web/.data/demo-wallets.json`; import each with Import account → private key.
+  - Profile 1 (seller): **Demo A** = `prodA` `0xa29e…e5e7` (the active account when you start) and **Demo A2** = `prodA2` `0x57Dc…CdEF6`.
+  - Profile 2 (buyer/bot): **Demo B** = `buyerB` `0x3A8A…deAB` and **Demo C** = `botC` `0xB8EB…529b`.
+- [ ] **World App is open** on the presenter's phone: unlocked, up to date, signed in, with the **Orb-verified** World ID, on a good connection, notifications silenced.
+- [ ] **Demo mode badge is visible.** "⚡ Demo mode: boosted rates" shows under the nav on /game and /market.
+- [ ] **Production World ID.** Opening the verify widget shows a QR code but **no** "Testing in staging? Use the simulator" line. If that line appears, `WORLD_ENVIRONMENT` is still `staging` (see §1).
+- [ ] **Browser is 1920×1080 at 100% zoom.** Maximize on a 1920×1080 display, or open DevTools → device toolbar → Responsive 1920×1080 and then close DevTools. Reset zoom with Ctrl/Cmd + 0. Hide the bookmarks bar and close other tabs.
+- [ ] **Clean start.** Demo A has no character yet and isn't verified (see §6 if you're re-taking). Demo B holds test USDC. Demo C shows its unminted MVP Card #3001 on /market.
+
 ## 1. Environments
 
 | | Video (primary) | Rehearsal / fallback |
