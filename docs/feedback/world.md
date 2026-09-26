@@ -41,7 +41,17 @@ Mandatory feedback for the World "Best Use of IDKit" prize. Written as it happen
    the simulator is refused as a second wallet. That's correct behaviour, but it
    means staging can show the rejected path and not a fresh accepted one. The demo
    uses production with a real World App.
-5. **07:50Z — No testing page.** `docs.world.org/world-id/idkit/testing` is a 404.
+5. **11:2xZ — First real production verify hung on "Connecting…".** World App scanned
+   the QR code (IDKit reached `awaiting_confirmation`), then never answered. Our
+   request was World ID 4.0-only (`allow_legacy_proofs: false`, the default the
+   docs recommend for new apps), and the presenter's Orb World ID hadn't been
+   upgraded to a 4.0 credential yet. The migration guide says v3-only users are
+   "Rejected (must upgrade)". The widget doesn't show that: it just waits (see
+   worldcoin/idkit#204 for the same pattern). Fix: `WORLD_ALLOW_LEGACY_PROOFS=true`,
+   and accept the 3.0 `orb` response server-side. Request: have World App send
+   an explicit error such as `credential_unavailable` instead of hanging, and say
+   in the integrate guide that most production users are still on 3.0.
+6. **07:50Z — No testing page.** `docs.world.org/world-id/idkit/testing` is a 404.
    Simulator guidance is scattered across the integrate page and `SKILL.md`.
 
 ## W1 research: IDKit 4.x (primary sources)
@@ -96,7 +106,9 @@ docs.world.org (integrate, react, API reference `verify`), the official
 - Nullifiers are 256-bit field elements. We store them as normalized decimal
   strings, and they map directly to `uint256` for `HumanRegistry.markVerified`.
 - v3 and v4 nullifiers for the same human differ. With `allow_legacy_proofs: true`
-  one human could bind two wallets (one v3, one v4), so we default it to `false`.
+  one human could bind two wallets (one v3, one v4), so our default is `false`. For
+  the live demo we switched legacy on, because the presenter's World ID is still on
+  3.0 (blocker 5), and we accept that trade-off.
 
 ### Staging simulator
 

@@ -31,6 +31,7 @@ Already seeded on the recording host (2026-09-26 10:43 UTC, through its real UI)
 |---|---|---|
 | Host | **https://rfclegends.rfcclub.app** (its env is fixed to `production`) | https://rfc-legends.earn.dev.rawinlab.com (set `WORLD_ENVIRONMENT` in `apps/web/.env.local`) |
 | `WORLD_ENVIRONMENT` | `production` | `staging` |
+| `WORLD_ALLOW_LEGACY_PROOFS` | **`true`**: World IDs not yet upgraded to 4.0 answer with a 3.0 Orb proof. With `false`, World App hangs on "Connecting…". | either |
 | Who proves "human" | Presenter's real World App (phone). It needs the **Orb** proof-of-human credential and World ID 4.0. | World ID simulator in a browser tab |
 | Seller wallet | **A** (`prodA`) | **A-staging** (`walletA`) |
 | Second-wallet rejection | **A2** (`prodA2`), same phone | **A2-staging** (`walletA2`), same simulator |
