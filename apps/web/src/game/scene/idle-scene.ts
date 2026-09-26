@@ -672,6 +672,9 @@ export class IdleScene extends Phaser.Scene {
     kb.on('keydown-L', () => {
       this.playLevelUp(this.player.baseLevel, this.player.baseLevel + 1, 1)
     })
+    kb.on('keydown-M', () => {
+      this.playLevelUp(29, 30, 1) // preview the Lv 30 "Rare drops unlocked" ceremony
+    })
     kb.on('keydown-J', () => {
       this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(1001), 'monster_card')
       this.roosterWide()
@@ -1302,7 +1305,13 @@ export class IdleScene extends Phaser.Scene {
   // ------------------------------------------------------------- ceremonies
 
   private playLevelUp(from: number, to: number, n: number): void {
-    this.fx.levelUp(L.TRAINER_X, L.TRAINER_FEET, n > 1 ? `LEVEL UP ×${n}!` : 'LEVEL UP!', `Lv ${from} → ${to}`)
+    // Base Lv 10/20/30 are server milestones; 30 unlocks minting in the Rare Market
+    const crossed = [30, 20, 10].find((m) => from < m && to >= m)
+    const label =
+      crossed === 30 ? 'RARE DROPS UNLOCKED!' : crossed ? `LEVEL ${crossed}!` : n > 1 ? `LEVEL UP ×${n}!` : 'LEVEL UP!'
+    const sub = crossed === 30 ? `Lv ${from} → ${to} · mint & sell in the Rare Market` : `Lv ${from} → ${to}`
+    this.fx.levelUp(L.TRAINER_X, L.TRAINER_FEET, label, sub)
+    if (crossed === 30) this.fx.confettiBurst(L.TRAINER_X, L.TRAINER_FEET - L.TRAINER_H, 40)
     this.time.delayedCall(1300, () => this.roosterCrow()) // after the slam sub-line fades
     this.trainerBob?.remove()
     this.trainerBob = null
@@ -1436,6 +1445,17 @@ export class IdleScene extends Phaser.Scene {
       this.pinChips()
     }
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
+
+    // every 10th server-confirmed kill gets a slam (after a level-up slam, if any)
+    if (Math.floor(this.killServer / 10) > Math.floor(prevKills / 10)) {
+      const n = Math.floor(this.killServer / 10) * 10
+      const wait = player.baseLevel > prev.baseLevel ? 1700 : 0
+      this.time.delayedCall(wait, () => {
+        this.fx.slam(`${n.toLocaleString('en-US')} PESTS CLEARED!`, undefined, 300)
+        this.fx.shake(JUICE.SHAKE_KILL)
+        this.killChip.pop()
+      })
+    }
 
     // boss: follow the server's fight
     const every = this.bossEvery()
