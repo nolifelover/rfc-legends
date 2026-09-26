@@ -32,10 +32,11 @@ export function nextManualCompanionPosition(
   seconds: number,
 ): ManualCompanionPosition {
   const followDistance = 330
-  const switchGap = 250
+  const switchRight = MANUAL_MIN_X + followDistance + 50
+  const switchLeft = MANUAL_MIN_X + followDistance - 50
   let side = currentSide
-  if (side === 1 && trainerX > MANUAL_MAX_X - switchGap) side = -1
-  else if (side === -1 && trainerX < MANUAL_MIN_X + switchGap) side = 1
+  if (side === 1 && trainerX > switchRight) side = -1
+  else if (side === -1 && trainerX < switchLeft) side = 1
   const target = Math.max(MANUAL_MIN_X, Math.min(MANUAL_MAX_X, trainerX + side * followDistance))
   const maxStep = 1200 * Math.max(0, Math.min(seconds, 0.05))
   const step = Math.max(-maxStep, Math.min(maxStep, target - currentX))

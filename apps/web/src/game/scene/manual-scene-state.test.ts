@@ -19,6 +19,12 @@ describe('manual companion follow', () => {
     expect(Math.abs(next.x - 1_389)).toBeLessThanOrEqual(20)
   })
 
+  it('moves behind the trainer before the companion reaches the enemy lane', () => {
+    const next = nextManualCompanionPosition(600, 900, 1, 1 / 60)
+    expect(next.side).toBe(-1)
+    expect(next.x).toBe(880)
+  })
+
   it('stays inside the server movement bounds while catching up', () => {
     let state: { x: number; side: -1 | 1 } = { x: 1_390, side: -1 }
     for (let i = 0; i < 120; i++) state = nextManualCompanionPosition(1_100, state.x, state.side, 1 / 60)

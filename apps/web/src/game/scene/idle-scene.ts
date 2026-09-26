@@ -1490,15 +1490,15 @@ export class IdleScene extends Phaser.Scene {
   private layoutHeroLabels(): void {
     const view = this.fx.visibleWorld()
     const trainerBaseY = L.TRAINER_FEET - L.TRAINER_H - 64
-    const trainerY = trainerBaseY
-      + (this.manualMode ? 0 : this.desktopTrainerChromeOffset(trainerBaseY))
+    const trainerY = Math.max(
+      trainerBaseY + (this.manualMode ? 0 : this.desktopTrainerChromeOffset(trainerBaseY)),
+      view.top + 12,
+    )
     const roosterY = L.ROOSTER_FEET - this.roosterSprite.displayHeight - 58 + (this.manualMode ? 20 : 0)
     this.trainerPlate.container.y = Math.round(trainerY)
     this.roosterPlate.container.y = Math.round(roosterY)
     if (!this.ui.mobileProfile) {
-      this.trainerPlate.container.x = Math.round(this.manualMode
-        ? this.manualTrainerPlateX(this.trainer.x, trainerY, view)
-        : this.trainer.x)
+      this.trainerPlate.container.x = Math.round(this.trainerPlateX(this.trainer.x, trainerY, view))
       this.roosterPlate.container.x = Math.round(this.rooster.x)
       return
     }
@@ -1507,9 +1507,7 @@ export class IdleScene extends Phaser.Scene {
       view.left + this.trainerPlate.width / 2 + 12,
       view.right - this.trainerPlate.width / 2 - 12,
     )
-    this.trainerPlate.container.x = Math.round(this.manualMode
-      ? this.manualTrainerPlateX(trainerX, trainerY, view)
-      : trainerX)
+    this.trainerPlate.container.x = Math.round(this.trainerPlateX(trainerX, trainerY, view))
     this.roosterPlate.container.x = Math.round(Phaser.Math.Clamp(
       this.rooster.x,
       view.left + this.roosterPlate.width / 2 + 12,
@@ -1517,8 +1515,8 @@ export class IdleScene extends Phaser.Scene {
     ))
   }
 
-  /** Keep the manual trainer label close to the head, sliding sideways only around the React profile. */
-  private manualTrainerPlateX(baseX: number, plateY: number, view: Phaser.Geom.Rectangle): number {
+  /** Keep the trainer label close to the head, sliding sideways only around the React profile. */
+  private trainerPlateX(baseX: number, plateY: number, view: Phaser.Geom.Rectangle): number {
     if (this.time.now >= this.nextProfileBoundsAt) {
       this.nextProfileBoundsAt = this.time.now + 200
       const profile = document.querySelector<HTMLElement>('[data-game-hud-overlay] [aria-label="Player status"]')?.getBoundingClientRect()
@@ -1623,6 +1621,21 @@ export class IdleScene extends Phaser.Scene {
     const plateY = Math.min(target.feetY + 20 * ROW_SCALE[target.row], safeBottom - plateHeight)
     target.plate.container.y = Math.round(plateY)
     target.bar.container.y = Math.round(plateY - 10)
+    const camera = this.cameras.main
+    const plateCenterStageX = (target.plate.container.x - camera.worldView.x) * zoom
+    const plateTopStageY = (plateY - camera.worldView.y) * zoom
+    const plateHalfStageWidth = target.plate.width * zoom / 2
+    const plateStageHeight = plateHeight * zoom
+    const pips = this.pips.container.getBounds()
+    const overlapsPips = plateCenterStageX + plateHalfStageWidth > pips.left
+      && plateCenterStageX - plateHalfStageWidth < pips.right
+      && plateTopStageY + plateStageHeight > pips.top
+      && plateTopStageY < pips.bottom
+    if (overlapsPips) {
+      const shiftedStageX = pips.left - plateHalfStageWidth - 12
+      const shiftedWorldX = camera.worldView.x + shiftedStageX / zoom
+      target.plate.container.x = Math.round(Phaser.Math.Clamp(shiftedWorldX, view.left + halfPlate, view.right - halfPlate))
+    }
   }
 
   private showManualActionResult(result: GameActionResult): void {
@@ -1725,12 +1738,15 @@ export class IdleScene extends Phaser.Scene {
     cam.setZoom(zoom)
     const desiredCenterX = this.manualMode ? (this.manualX + MANUAL_TARGET_X) / 2 : L.W / 2
     const centerX = clampedWorldCenter(desiredCenterX, r.x1 - r.x0, zoom)
+    const parentWidth = this.scale.parentSize.width || this.scale.displaySize.width
+    const parentHeight = this.scale.parentSize.height || this.scale.displaySize.height
+    const shortWide = parentWidth > 0 && parentHeight / parentWidth < 0.52
     if (mobile) {
-      cam.centerOn(this.manualMode ? centerX : (L.TRAINER_X + L.ENGAGE_BACK_X) / 2, L.H / 2)
+      cam.centerOn(this.manualMode ? centerX : (L.TRAINER_X + L.ENGAGE_BACK_X) / 2, shortWide ? 460 : L.H / 2)
     } else {
       const top = (L.H / 2 - r.y0) / zoom
       const bottom = L.H - (r.y1 - L.H / 2) / zoom
-      cam.centerOn(centerX, Phaser.Math.Clamp(L.FOCUS_Y, top, bottom))
+      cam.centerOn(centerX, Phaser.Math.Clamp(shortWide ? 460 : L.FOCUS_Y, top, bottom))
     }
     const p = cam.getWorldPoint(r.x1 - 460, r.y0 + 270)
     this.fx.setNoSpawn(p.x, p.y)
