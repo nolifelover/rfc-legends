@@ -294,7 +294,11 @@ let listingId = 1n; // real id comes from the Listed event
     functionName: 'list',
     args: [ITEM_ID, 1n, UNIT_PRICE],
   });
-  await publicClient.waitForTransactionReceipt({ hash: listed });
+  const listedReceipt = await publicClient.waitForTransactionReceipt({ hash: listed });
+  const listedLogs = parseEventLogs({ abi: rareMarketAbi, logs: listedReceipt.logs, eventName: 'Listed' });
+  const fromEvent = (listedLogs[0]?.args as { listingId?: bigint } | undefined)?.listingId;
+  if (fromEvent == null) throw new Error('Listed event not found — cannot determine listingId');
+  listingId = fromEvent;
   ok(`A listed the card (listing #${listingId} @ ${fmtUsdc(UNIT_PRICE)})`);
 }
 {
