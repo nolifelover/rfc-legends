@@ -114,6 +114,9 @@ export function HudStrip({
   newestDropId,
   onOpenBag,
   onOpenGuild,
+  statCta,
+  syncSlot,
+  goal,
 }: {
   player: Player;
   rareDropCount?: number;
@@ -121,6 +124,10 @@ export function HudStrip({
   newestDropId?: string;
   onOpenBag?: () => void;
   onOpenGuild?: () => void;
+  /** docked slots so nothing floats in the margins (critic r3) */
+  statCta?: React.ReactNode;
+  syncSlot?: React.ReactNode;
+  goal?: React.ReactNode;
 }) {
   const info = sireLineInfo(player.sireLine);
   const hp = maxHp(player);
@@ -192,9 +199,11 @@ export function HudStrip({
               compactNumbers
             />
           </div>
-          <div className="col-span-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 md:col-span-1 md:justify-self-end">
+          <div className="col-span-3 flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1.5 md:col-span-1 md:justify-self-end">
             {/* kills & harvest totals live on the canvas chips — the HUD does
                 not repeat them (dedupe); the bag opens without a number badge */}
+            {goal ? <span className="text-xl font-bold text-bark-soft">{goal}</span> : null}
+            {statCta}
             {typeof rareDropCount === "number" ? (
               <Pill
                 title="Open the Rare Market"
@@ -214,6 +223,7 @@ export function HudStrip({
                 🛡 Guild
               </Pill>
             ) : null}
+            {syncSlot}
           </div>
         </div>
       </div>

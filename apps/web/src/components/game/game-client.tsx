@@ -16,7 +16,7 @@ import { CreateCharacter, type CreateOutcome } from "./create-character";
 import { DropToasts } from "./drop-toasts";
 import { GuildDock } from "./guild-dock";
 import { HudStrip } from "./hud-strip";
-import { NextGoalRibbon } from "./next-goal";
+import { nextGoalLine } from "./next-goal";
 import { WelcomeBack, type WelcomeBackSummary } from "./welcome-back";
 import { IdleScene } from "./idle-scene";
 import { InventoryDrawer } from "./inventory-drawer";
@@ -238,30 +238,24 @@ export function GameClient() {
           </SceneFrame>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <StatPanel player={player} onAllocate={handleAllocate} />
-          <div className="flex items-center gap-2">
-            <span className="hidden text-[11px] font-semibold text-bark-soft sm:inline">
-              auto-syncs
-            </span>
-            <button
-              type="button"
-              onClick={() => syncMutation.mutate()}
-              disabled={syncMutation.isPending}
-              aria-label="Sync now"
-              title={syncMutation.isPending ? "Syncing…" : "Sync now"}
-              className="grid h-9 w-9 place-items-center rounded-full border-2 border-clay/40 bg-cream text-base font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 disabled:cursor-wait disabled:opacity-60"
-            >
-              {syncMutation.isPending ? "…" : "⟳"}
-            </button>
-          </div>
-        </div>
       </div>
-
-      <NextGoalRibbon player={player} />
 
       <HudStrip
         player={player}
+        statCta={<StatPanel player={player} onAllocate={handleAllocate} />}
+        goal={nextGoalLine(player)}
+        syncSlot={
+          <button
+            type="button"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            aria-label="Sync now"
+            title={syncMutation.isPending ? "Syncing…" : "Sync now"}
+            className="grid h-10 w-10 place-items-center rounded-full border-2 border-clay/40 bg-cream text-xl font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 disabled:cursor-wait disabled:opacity-60"
+          >
+            {syncMutation.isPending ? "…" : "⟳"}
+          </button>
+        }
         rareDropCount={rareDropCount}
         newestDropId={newestDropId}
         bagCount={Object.values(player.inventory).reduce((a, b) => a + b, 0)}
