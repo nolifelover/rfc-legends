@@ -6,7 +6,7 @@ Project page: https://ethglobal.com/events/tokyo2026/project
 
 - [x] Project created: name "RFC Legends", category Gaming, emoji 🐓
 - [x] Public repo: https://github.com/nolifelover/rfc-legends (linked via GitHub Permissions)
-- [x] Live demo: https://rfc-legends.earn.dev.rawinlab.com (production build, `next start`, demo mode badge visible)
+- [x] Live demo (primary): https://rfclegends.rfcclub.app — production build, demo-mode badge visible. Mirror: https://rfc-legends.earn.dev.rawinlab.com
 - [ ] Demo video: record 2–4 min, ≥720p, clear voice — script follows the e2e demo beat
 - [ ] Images / screenshots
 - [ ] Final submit — only after the video and the two pending tx hashes below are in
