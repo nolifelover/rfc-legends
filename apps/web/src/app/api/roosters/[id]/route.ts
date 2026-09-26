@@ -36,7 +36,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     { trait_type: "Sire Line", value: line ? `${line.roman} ${line.thai}` : (recs.sireLine ?? "unknown") },
     { trait_type: "Ring ID", value: recs.ringId ?? "unknown" },
     { trait_type: "Rarity", value: "Mythic" },
-    { trait_type: "Type", value: "RWA — real bird" },
+    { trait_type: "Type", value: "RWA — Thai native breed" },
     { trait_type: "Custodian", value: "Ninlanee Farm (sample records)" },
     { trait_type: "Issuer", value: "RFC Club" },
   ];
