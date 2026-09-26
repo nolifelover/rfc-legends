@@ -60,3 +60,84 @@ body {
   background: var(--sun-soft);
   color: var(--bark);
 }
+
+/* --- Game-preview placeholder motion (G4 replaces with the live scene) --- */
+
+.rfcl-outline {
+  text-shadow:
+    -2px -2px 0 #3d2817, 2px -2px 0 #3d2817, -2px 2px 0 #3d2817,
+    2px 2px 0 #3d2817, -2px 0 0 #3d2817, 2px 0 0 #3d2817,
+    0 -2px 0 #3d2817, 0 2px 0 #3d2817, 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes rfcl-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes rfcl-dmg {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-16px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes rfcl-sparkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(25deg);
+  }
+}
+
+@keyframes rfcl-card {
+  0%,
+  100% {
+    transform: translateY(0) rotate(4deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(9deg);
+  }
+}
+
+.rfcl-bob {
+  animation: rfcl-bob 2.6s ease-in-out infinite;
+}
+.rfcl-dmg {
+  animation: rfcl-dmg 1.8s ease-out infinite;
+}
+.rfcl-sparkle {
+  animation: rfcl-sparkle 1.6s ease-in-out infinite;
+}
+.rfcl-card {
+  animation: rfcl-card 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rfcl-bob,
+  .rfcl-dmg,
+  .rfcl-sparkle,
+  .rfcl-card {
+    animation: none;
+  }
+}

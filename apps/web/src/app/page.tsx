@@ -1,4 +1,5 @@
 import { GamePreview } from "@/components/game/game-preview";
+import { RoosterMark } from "@/components/game/rooster-mark";
 
 const PROOFS = [
   { icon: "🐓", label: "Real rooster RWA" },
@@ -46,18 +47,15 @@ export default function Home() {
         />
 
         <div className="relative mx-auto w-full max-w-6xl px-4 pt-14 pb-10 text-center sm:px-6 sm:pt-20">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-clay/30 bg-sun-soft/50 px-4 py-1.5 text-sm font-medium text-clay-deep">
-            Idle MMORPG onchain
+          <p className="inline-flex items-center gap-2.5 text-sm font-bold uppercase tracking-[0.25em] text-clay-deep">
+            <RoosterMark size={28} />
+            RFC Legends
           </p>
 
-          <h1 className="text-5xl font-bold tracking-tight text-bark sm:text-7xl">
-            RFC <span className="text-clay">Legends</span>
-          </h1>
-
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-bark-soft sm:text-xl">
+          <h1 className="mx-auto mt-6 max-w-3xl text-balance text-3xl font-bold leading-tight tracking-tight text-bark sm:text-5xl">
             Your idle-RPG rooster is a real bird on a real Thai farm, with its
             pedigree onchain.
-          </p>
+          </h1>
 
           <ul className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
             {PROOFS.map((proof) => (

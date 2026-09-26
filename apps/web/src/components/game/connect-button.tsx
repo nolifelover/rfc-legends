@@ -57,18 +57,24 @@ export function ConnectButton({ className = "" }: { className?: string }) {
   }
 
   return (
-    <span className="inline-flex flex-col items-end gap-1">
+    <span className="group relative inline-flex flex-col items-end">
       <button
         type="button"
         disabled={isPending || !connector}
         onClick={() => connector && connect({ connector })}
+        aria-describedby={walletMissing ? "connect-wallet-hint" : undefined}
         className={`inline-flex items-center gap-2 rounded-full border-2 border-clay/40 bg-cream px-4 py-2 text-sm font-bold text-clay-deep transition hover:border-clay hover:bg-sun-soft/60 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${className}`}
       >
         {isPending ? "Connecting…" : "Connect wallet"}
       </button>
       {walletMissing ? (
-        <span className="text-xs text-bark-soft">
-          Install MetaMask or open in a browser wallet
+        <span
+          role="tooltip"
+          id="connect-wallet-hint"
+          className="pointer-events-none absolute right-0 top-full z-50 mt-2 w-60 translate-y-1 rounded-xl border border-sun/60 bg-cream px-3.5 py-2.5 text-xs leading-relaxed text-bark-soft opacity-0 shadow-lg shadow-black/10 transition duration-150 group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100"
+        >
+          <span className="font-bold text-bark">No wallet yet? </span>
+          Install MetaMask or open this page in a browser wallet to connect.
         </span>
       ) : null}
     </span>
