@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
   <g stroke-linejoin="round" stroke-linecap="round">
     <!-- boss ground shadow -->
-    <ellipse cx="72" cy="128" rx="44" ry="9" fill="#2B1B12" opacity="0.22"/>
+    <ellipse cx="72" cy="128" rx="46" ry="9.5" fill="#2B1B12" opacity="0.32"/>
     <!-- boss aura -->
     <circle cx="72" cy="76" r="64" fill="#FFD766" opacity="0.16"/>
     <circle cx="72" cy="76" r="52" fill="#FFD766" opacity="0.14"/>

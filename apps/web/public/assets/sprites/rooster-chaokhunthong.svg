@@ -29,7 +29,7 @@
     <path d="M48,17.5 Q54,14.5 60,16.5" stroke="#FFC95E" stroke-width="2.2" fill="none"/>
     <path d="M48,36.5 Q53,41.5 58,39" stroke="#D98A1F" stroke-width="2.2" fill="none"/>
     <!-- beak + wattle -->
-    <path d="M66,21 L76,26 L66,30.5 Q68.5,26 66,21 Z" fill="#C97F12" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M66,21 L76,26 L66,30.5 Q68.5,26 66,21 Z" fill="#8F5A10" stroke="#2B1B12" stroke-width="3"/>
     <path d="M67,26 L73,26" stroke="#2B1B12" stroke-width="1.4"/>
     <path d="M62,31.5 Q59,39 63.5,40 Q68,39 64.5,31.5 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="2.6"/>
     <!-- gold neck chain, signature accessory -->
