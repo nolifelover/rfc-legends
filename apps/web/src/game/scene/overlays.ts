@@ -5,9 +5,11 @@
 
 import Phaser from 'phaser'
 import { bossPipsRightAnchor, INK, TYPE, fmt } from './juice'
+import { isRiversideArtProfile } from './art'
 
 const PLATE_BG = INK.plate
 const PLATE_ALPHA = 0.86
+const RIVERSIDE_THEME = isRiversideArtProfile()
 
 export interface LabelStyle {
   fontSize?: number
@@ -79,10 +81,10 @@ export class Nameplate {
     const h = this.main.height + 12
     this.main.setPosition(0, 6)
     this.bg.clear()
-    this.bg.fillStyle(PLATE_BG, PLATE_ALPHA)
+    this.bg.fillStyle(RIVERSIDE_THEME ? 0x283b63 : PLATE_BG, PLATE_ALPHA)
     this.bg.fillRoundedRect(-w / 2, 0, w, h, 10)
     if (this.tier === null) {
-      this.bg.lineStyle(2, 0xf3dfb2, 0.35)
+      this.bg.lineStyle(2, RIVERSIDE_THEME ? 0xc69a5b : 0xf3dfb2, RIVERSIDE_THEME ? 0.82 : 0.35)
       this.bg.strokeRoundedRect(-w / 2, 0, w, h, 10)
       return
     }
@@ -137,13 +139,13 @@ export class HpBar {
     const { g, width, h, pct } = this
     const w = Math.max(3, (width - 4) * Phaser.Math.Clamp(pct, 0, 1))
     g.clear()
-    g.fillStyle(INK.outline, 0.92)
+    g.fillStyle(RIVERSIDE_THEME ? 0x102b43 : INK.outline, 0.92)
     g.fillRoundedRect(-width / 2, -h / 2, width, h, h / 2)
-    g.fillStyle(0x57301f)
+    g.fillStyle(RIVERSIDE_THEME ? 0x283b63 : 0x57301f)
     g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, width - 4, h - 4, (h - 4) / 2)
     // pale trail: what the last hit just took
     const gw = Math.max(3, (width - 4) * Phaser.Math.Clamp(this.ghost, 0, 1))
-    g.fillStyle(0xfff3d6, 0.9)
+    g.fillStyle(RIVERSIDE_THEME ? 0xc69a5b : 0xfff3d6, 0.9)
     g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, gw, h - 4, (h - 4) / 2)
     g.fillStyle(pct > 0.5 ? 0x62b04e : pct > 0.25 ? 0xe0a93e : 0xe2574c, 1)
     g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, w, h - 4, (h - 4) / 2)
@@ -237,13 +239,13 @@ export class BossBar {
     const x = -w / 2
     const g = this.g
     g.clear()
-    g.fillStyle(0xd9a441)
+    g.fillStyle(RIVERSIDE_THEME ? 0xc69a5b : 0xd9a441)
     g.fillRoundedRect(x - 6, -h / 2 - 6, w + 12, h + 12, 16)
-    g.fillStyle(INK.outline, 0.94)
+    g.fillStyle(RIVERSIDE_THEME ? 0x102b43 : INK.outline, 0.94)
     g.fillRoundedRect(x, -h / 2, w, h, 12)
     const inner = w - 20
     const innerH = h - 20
-    g.fillStyle(0x57301f)
+    g.fillStyle(RIVERSIDE_THEME ? 0x283b63 : 0x57301f)
     g.fillRoundedRect(x + 10, -h / 2 + 10, inner, innerH, 8)
     // ghost trail (what was just lost), then the live red fill on top
     const ghostW = Math.max(4, inner * Phaser.Math.Clamp(this.ghost, 0, 1))
@@ -388,7 +390,7 @@ export class Chip {
     const w = this.boxWidth
     const h = this.boxHeight
     this.g.clear()
-    this.g.fillStyle(PLATE_BG, PLATE_ALPHA)
+    this.g.fillStyle(RIVERSIDE_THEME ? 0x283b63 : PLATE_BG, PLATE_ALPHA)
     this.g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
     this.g.lineStyle(3, this.accent, 0.9)
     this.g.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2)
@@ -503,6 +505,8 @@ export class Ribbon {
   constructor(scene: Phaser.Scene, text: string, fontFamily: string, y = 250, color: number = INK.warn) {
     this.scene = scene
     this.container = scene.add.container(-1200, y).setDepth(66)
+    const mobile = isRiversideArtProfile()
+    const maxTextWidth = mobile ? Math.max(180, scene.cameras.main.worldView.width - 96) : Number.POSITIVE_INFINITY
     const g = scene.add.graphics()
     g.fillStyle(color, 0.94)
     g.fillRect(-560, -44, 1120, 88)
@@ -519,6 +523,7 @@ export class Ribbon {
         strokeThickness: 6,
       })
       .setOrigin(0.5, 0.5)
+    if (mobile) t.setScale(Math.min(1, maxTextWidth / Math.max(1, t.width)))
     this.container.add([g, t])
   }
 

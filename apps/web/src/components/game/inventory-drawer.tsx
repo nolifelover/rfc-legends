@@ -8,6 +8,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { Drop, Player } from "@/game/types";
 import { getItem, MINTABLE_RARITIES } from "@/game/data/items";
 import { RARITY_META } from "./rarity-meta";
+import { GameItemIcon } from "./game-item-icon";
+import { GameChromeIcon } from "./game-chrome-icon";
 
 type Tab = "bag" | "drops";
 
@@ -122,14 +124,7 @@ export function InventoryDrawer({
                       style={{ borderColor: `${meta.hex}66` }}
                       title={item?.desc ?? undefined}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item?.image ?? `/assets/items/${idStr}.svg`}
-                        alt=""
-                        width={44}
-                        height={44}
-                        className="h-11 w-11"
-                      />
+                      <GameItemIcon id={Number(idStr)} src={item?.image ?? `/assets/items/${idStr}.svg`} width={44} height={44} className="h-11 w-11" />
                       <span className="w-full truncate text-[11px] font-bold text-bark" lang="th">
                         {item?.name ?? `#${idStr}`}
                       </span>
@@ -158,14 +153,7 @@ export function InventoryDrawer({
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 bg-sun-soft/50"
                       style={{ borderColor: meta.hex }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item?.image ?? `/assets/items/${drop.itemId}.svg`}
-                        alt=""
-                        width={36}
-                        height={36}
-                        className="h-9 w-9"
-                      />
+                      <GameItemIcon id={drop.itemId} src={item?.image ?? `/assets/items/${drop.itemId}.svg`} width={36} height={36} className="h-9 w-9" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-black text-bark" lang="th">
@@ -224,9 +212,7 @@ function TabButton({
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 px-6 text-center">
-      <span aria-hidden className="text-3xl">
-        🎒
-      </span>
+      <GameChromeIcon name="bag" className="h-9 w-9 text-[#b68649]" />
       <p className="text-sm font-semibold text-bark-soft">{text}</p>
     </div>
   );

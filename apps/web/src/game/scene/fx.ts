@@ -6,7 +6,7 @@
 // particles, hit-stop at half duration with no jitter.
 
 import Phaser from 'phaser'
-import { FX, RARITY_COLORS, tintedTexture } from './art'
+import { FX, RARITY_COLORS, tintedTexture, isRiversideArtProfile } from './art'
 import { INK, JUICE, LAYOUT as L, TYPE, fmt } from './juice'
 import type { Rarity } from '../types'
 
@@ -16,6 +16,7 @@ type Emitter = Phaser.GameObjects.Particles.ParticleEmitter
 
 const TEXT_POOL = 16
 const AFTERIMAGES = 2
+const RIVERSIDE_THEME = isRiversideArtProfile()
 
 export class Fx {
   private readonly scene: Phaser.Scene
@@ -28,6 +29,8 @@ export class Fx {
   private dmgStack = 0
   private lastDmgAt = -99999
   private lastExp: { text: Phaser.GameObjects.Text; value: number; at: number; y: number } | null = null
+  private slamActive = false
+  private readonly slamQueue: Array<{ text: string; sub?: string; y: number; color: string }> = []
   private readonly ghosts: Phaser.GameObjects.Image[] = []
   private ghostIdx = 0
   private readonly slashG: Phaser.GameObjects.Graphics
@@ -247,25 +250,30 @@ export class Fx {
     const crit = kind === 'crit'
     const miss = value <= 0
     const size = this.mobileSize(crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster)
-    const color = miss ? '#d9d2cc' : crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
+    const color = miss ? '#aebec4' : crit ? (RIVERSIDE_THEME ? '#ffd58a' : INK.crit) : RIVERSIDE_THEME ? (kind === 'trainer' ? '#f4e6c7' : '#f2b45b') : kind === 'trainer' ? INK.trainer : INK.rooster
     const now = performance.now()
     this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
     this.lastDmgAt = now
     const t = this.acquire()
-    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 10 : 8 })
+    t.setStyle({ fontSize: `${size}px`, color, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: crit ? 10 : 8 })
     t.setShadow(3, 4, '#000000', 6, true, true)
     t.setText(miss ? 'MISS' : crit ? `★ ${fmt(value)}` : fmt(value))
+    const view = this.scene.cameras.main.worldView
+    const maxTextWidth = Math.max(32, view.width - 64)
+    const fit = Math.min(1, maxTextWidth / Math.max(1, t.width))
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
     let sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
     let sy = y - this.dmgStack * Math.round(size * 0.85)
+    const initialScale = Math.min(fit * (crit ? 1.8 : 1), maxTextWidth / Math.max(1, t.width))
+    const halfText = (t.width * initialScale) / 2
+    sx = Phaser.Math.Clamp(sx, view.x + 32 + halfText, view.x + view.width - 32 - halfText)
     if (sx > this.noSpawnX - 80 && sy - rise - size < this.noSpawnY) {
       sx = Math.min(sx, this.noSpawnX - 80)
       sy = Math.max(sy, this.noSpawnY + rise + size)
     }
-    t.setPosition(sx, sy).setDepth(52)
+    t.setPosition(sx, sy).setDepth(52).setScale(initialScale)
     if (crit) {
-      t.setScale(1.8)
-      this.scene.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
+      this.scene.tweens.add({ targets: t, scale: fit, duration: 160, ease: 'Back.easeOut' })
       this.shake(JUICE.SHAKE_CRIT)
       this.stars.setParticleTint(INK.gold)
       this.stars.explode(this.count(6), x, y)
@@ -304,7 +312,7 @@ export class Fx {
       return
     }
     const t = this.acquire()
-    t.setStyle({ fontSize: `${this.mobileSize(TYPE.exp)}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 10 })
+    t.setStyle({ fontSize: `${this.mobileSize(TYPE.exp)}px`, color: RIVERSIDE_THEME ? '#f2b45b' : INK.exp, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: 10 })
     t.setShadow(3, 5, '#000000', 6, true, true)
     t.setText(`+${fmt(exp)} EXP`)
     const sy = y + Phaser.Math.Between(-20, 20)
@@ -325,7 +333,7 @@ export class Fx {
   /** Small floating label, e.g. "+1 Paddy Rice" next to the Harvest chip. */
   tick(x: number, y: number, label: string, color: string, size: number = TYPE.lootTick): void {
     const t = this.acquire()
-    t.setStyle({ fontSize: `${this.mobileSize(size)}px`, color, stroke: INK.stroke, strokeThickness: 5 })
+    t.setStyle({ fontSize: `${this.mobileSize(size)}px`, color, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: 5 })
     t.setText(label)
     t.setPosition(x, y).setDepth(56).setScale(0.8)
     this.scene.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' })
@@ -341,24 +349,44 @@ export class Fx {
 
   /** Big centred text slam: scale 2.4 → 1 (Back), hold, then fade while rising. */
   slam(text: string, sub?: string, y = 320, color: string = INK.cream): void {
+    if (this.slamActive) {
+      this.slamQueue.push({ text, sub, y, color })
+      return
+    }
+    this.showSlam(text, sub, y, color)
+  }
+
+  private showSlam(text: string, sub: string | undefined, y: number, color: string): void {
+    this.slamActive = true
     const t = this.acquire()
-    t.setStyle({ fontSize: `${this.mobileSize(TYPE.slam)}px`, color, stroke: INK.stroke, strokeThickness: 12 })
+    t.setStyle({ fontSize: `${this.mobileSize(RIVERSIDE_THEME ? 60 : TYPE.slam)}px`, color: RIVERSIDE_THEME && color === INK.crit ? '#ffd58a' : color, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: RIVERSIDE_THEME ? 8 : 12 })
     t.setText(text)
-    t.setPosition(960, y).setDepth(70).setScale(this.reduced ? 1 : 2.4)
+    const maxWidth = Math.max(180, this.scene.cameras.main.worldView.width - 96)
+    const fit = Math.min(1, maxWidth / Math.max(1, t.width))
+    // Keep the overshoot inside the same viewport fit at every animation frame;
+    // scaling only the resting state still clips long labels at the first pop.
+    const startScale = this.reduced ? fit : Math.min(fit * 2.4, maxWidth / Math.max(1, t.width))
+    t.setPosition(960, y).setDepth(70).setScale(startScale)
     this.scene.tweens.chain({
       targets: t,
       tweens: [
-        { scale: 1, duration: 280, ease: 'Back.easeOut' },
+        { scale: fit, duration: 280, ease: 'Back.easeOut' },
         { y: y - 6, duration: 700 },
         { alpha: 0, y: y - 30, duration: 320 },
       ],
-      onComplete: () => t.setVisible(false),
+      onComplete: () => {
+        t.setVisible(false)
+        const next = this.slamQueue.shift()
+        if (next) this.scene.time.delayedCall(100, () => this.showSlam(next.text, next.sub, next.y, next.color))
+        else this.slamActive = false
+      },
     })
     if (sub) {
       const s = this.acquire()
-      s.setStyle({ fontSize: `${this.mobileSize(TYPE.slamSub)}px`, color: '#fff8ec', stroke: INK.stroke, strokeThickness: 7 })
+      s.setStyle({ fontSize: `${this.mobileSize(RIVERSIDE_THEME ? 28 : TYPE.slamSub)}px`, color: '#fff8ec', stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: RIVERSIDE_THEME ? 5 : 7 })
       s.setText(sub)
-      s.setPosition(960, y + 58).setDepth(70).setAlpha(0)
+      const subFit = Math.min(1, maxWidth / Math.max(1, s.width))
+      s.setPosition(960, y + 58).setDepth(70).setAlpha(0).setScale(subFit)
       this.scene.tweens.chain({
         targets: s,
         tweens: [
@@ -378,6 +406,7 @@ export class Fx {
    * Graphics object; a new swing restarts it. `dir` 1 = swings to the right.
    */
   slash(x: number, y: number, dir = 1, scale = 1, edge = 0xff8a2a): void {
+    const slashEdge = RIVERSIDE_THEME ? 0xf2b45b : edge
     this.slashTween?.remove()
     const g = this.slashG
     const half = Phaser.Math.DegToRad(JUICE.SLASH_ARC_DEG / 2)
@@ -394,7 +423,7 @@ export class Fx {
         const lw = Phaser.Math.Linear(22, 4, t) * scale
         const alpha = 1 - t * 0.85
         g.clear()
-        g.lineStyle(lw + 10, edge, alpha * 0.9)
+        g.lineStyle(lw + 10, slashEdge, alpha * 0.9)
         g.beginPath()
         g.arc(x, y, r, a0, a1)
         g.strokePath()
@@ -402,7 +431,7 @@ export class Fx {
         g.beginPath()
         g.arc(x, y, r, a0, a1)
         g.strokePath()
-        g.lineStyle(Math.max(2, lw * 0.4), 0xffd24a, alpha * 0.8)
+        g.lineStyle(Math.max(2, lw * 0.4), RIVERSIDE_THEME ? 0xb8d4d4 : 0xffd24a, alpha * 0.8)
         g.beginPath()
         g.arc(x, y, r * 0.72, a0 * 0.8, a1 * 0.8)
         g.strokePath()
@@ -595,7 +624,7 @@ export class Fx {
   /** Emote glyph (♪ ! ♥ ✦) that pops above a head, holds, then fades. */
   emote(x: number, y: number, glyph: string, color: string = INK.cream): void {
     const t = this.acquire()
-    t.setStyle({ fontSize: '64px', color, stroke: INK.stroke, strokeThickness: 8 })
+    t.setStyle({ fontSize: '64px', color, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: 8 })
     t.setText(glyph)
     t.setPosition(x, y).setDepth(53).setScale(0)
     this.scene.tweens.chain({

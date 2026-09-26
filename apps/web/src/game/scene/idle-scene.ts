@@ -30,10 +30,14 @@ import {
   TRAINER_KEY,
   TRAINER_WALK_KEY,
   PENDING_SVG,
+  RIVERSIDE_ENVIRONMENT,
+  RIVERSIDE_ENVIRONMENT_READY,
+  RIVERSIDE_READY_KEYS,
   ensureFallbacks,
   itemKey,
   makeFxTextures,
   tintedTexture,
+  isRiversideArtProfile,
 } from './art'
 import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './overlays'
 import type { Tier } from './overlays'
@@ -97,6 +101,7 @@ export class IdleScene extends Phaser.Scene {
   private fx!: Fx
   private font = 'Arial'
   private reduced = false
+  private riversideProfile = false
 
   private player!: Player
   private dropIds = new Set<string>()
@@ -115,7 +120,7 @@ export class IdleScene extends Phaser.Scene {
     walkway: Phaser.GameObjects.Image[]
     shimmers: Phaser.GameObjects.Image[]
   } = { lotus: [], walkway: [], shimmers: [] }
-  private mobileBackdrop: Phaser.GameObjects.Rectangle[] = []
+  private mobileBackdrop: Array<Phaser.GameObjects.Rectangle | Phaser.GameObjects.Graphics> = []
 
   // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
@@ -154,6 +159,7 @@ export class IdleScene extends Phaser.Scene {
   private rooster!: Phaser.GameObjects.Container
   private roosterBody!: Phaser.GameObjects.Container
   private roosterSprite!: Phaser.GameObjects.Image
+  private roosterArtScale = 1
   private roosterKey = ROOSTER_KEYS.thepbut
   private roosterPlate!: Nameplate
   private roosterAura!: Phaser.GameObjects.Image
@@ -213,12 +219,25 @@ export class IdleScene extends Phaser.Scene {
   init(data: { bridge: SceneBridge; opts: SceneMountOptions }): void {
     this.bridge = data.bridge
     this.opts = data.opts
+    this.riversideProfile = isRiversideArtProfile()
   }
 
   preload(): void {
     for (const spec of ART) {
+      if (this.riversideProfile && spec.riverside && RIVERSIDE_READY_KEYS.has(spec.key)) {
+        this.load.image(spec.key, spec.riverside.url)
+        continue
+      }
+      // The riverside scene is a complete replacement pass. Do not request the
+      // old textures alongside it; missing riverside art uses its draw fallback.
+      if (this.riversideProfile) continue
       if (PENDING_SVG.has(spec.key)) continue // drawn fallback, no 404 in the console
       this.load.svg(spec.key, spec.url, { width: spec.w, height: spec.h })
+    }
+    if (this.riversideProfile) {
+      for (const spec of RIVERSIDE_ENVIRONMENT) {
+        if (RIVERSIDE_ENVIRONMENT_READY.has(spec.key)) this.load.image(spec.key, spec.url)
+      }
     }
   }
 
@@ -237,6 +256,7 @@ export class IdleScene extends Phaser.Scene {
     this.harvestShown = this.countInventory(this.player)
 
     ensureFallbacks(this)
+    if (this.riversideProfile) this.ensureRiversideEnvironmentFallbacks()
     makeFxTextures(this) // before Fx: its emitters bind these textures
     this.fx = new Fx(this, this.font, this.reduced, this.ui.mobileProfile)
     this.buildBackground()
@@ -268,6 +288,10 @@ export class IdleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- background
 
   private buildBackground(): void {
+    if (this.riversideProfile) {
+      this.buildRiversideBackground()
+      return
+    }
     // Portrait framing can extend beyond the 1920×1080 art bounds. Keep its
     // letterbox on the field palette; desktop cameras remain clamped to the art.
     const mobileSky = this.add.rectangle(-5000, -5000, 10000, 7000, 0xbddbd4).setOrigin(0, 0).setDepth(-1).setVisible(false)
@@ -356,8 +380,76 @@ export class IdleScene extends Phaser.Scene {
     this.add.image(1800, L.H - 32, 'art-prop-water-jar').setOrigin(0.5, 1).setDepth(13).setScale(1.1)
   }
 
+  private ensureRiversideEnvironmentFallbacks(): void {
+    for (const spec of RIVERSIDE_ENVIRONMENT) {
+      if (this.textures.exists(spec.key)) continue
+      const g = this.add.graphics()
+      spec.draw(g)
+      g.generateTexture(spec.key, spec.w, spec.h)
+      g.destroy()
+    }
+  }
+
+  private buildRiversideBackground(): void {
+    const skyExtension = this.add.rectangle(-5000, -5000, 10000, 7000, 0x102b43).setOrigin(0, 0).setDepth(-1)
+    const waterExtension = this.add.rectangle(-5000, L.H - 46, 10000, 3000, 0x132e3b).setOrigin(0, 0).setDepth(9.8)
+    const waterRipples = this.add.graphics().setDepth(9.9)
+    waterRipples.lineStyle(3, 0x8bb6b2, 0.15)
+    for (let y = L.H + 56; y < L.H + 1800; y += 54) {
+      for (let x = 34 + ((y / 54) % 2) * 78; x < L.W; x += 156) {
+        waterRipples.beginPath()
+        waterRipples.moveTo(x, y)
+        waterRipples.lineTo(x + 48, y - 2)
+        waterRipples.strokePath()
+      }
+    }
+    waterRipples.fillStyle(0x567e75, 0.4)
+    for (const [x, y] of [[88, 1180], [1780, 1320], [210, 1510], [1660, 1600]] as const) {
+      waterRipples.fillEllipse(x, y, 54, 14)
+      waterRipples.fillEllipse(x + 36, y + 8, 42, 11)
+    }
+    this.mobileBackdrop = [skyExtension, waterExtension, waterRipples]
+    this.add.image(0, -720, 'river-sky').setOrigin(0, 0).setDisplaySize(L.W, L.H).setDepth(-0.5)
+    this.add.image(0, 0, 'river-sky').setOrigin(0, 0).setDisplaySize(L.W, L.H).setDepth(0)
+    this.add.image(0, 684, 'river-houses-left').setOrigin(0, 1).setDisplaySize(735, 490).setDepth(1)
+    this.add.image(L.W, 684, 'river-houses-right').setOrigin(1, 1).setDisplaySize(735, 490).setDepth(1)
+    this.add.image(0, 410, 'river-corridor').setOrigin(0, 0).setDisplaySize(L.W, 400).setAlpha(0.92).setDepth(2)
+    this.add.image(0, 580, 'river-water-boardwalk').setOrigin(0, 0).setDisplaySize(L.W, 500).setDepth(4)
+    // Keep the legacy farm props out of this scene, but retain their visual
+    // storytelling as small shoreline details at the far edges of the lane.
+    this.add.image(128, 826, 'art-prop-scarecrow').setOrigin(0.5, 1).setDisplaySize(108, 128).setDepth(5)
+    this.add.image(208, 874, 'art-prop-rice-bundle').setOrigin(0.5, 1).setDisplaySize(54, 70).setDepth(5)
+    this.add.image(1792, 870, 'art-prop-hay-bale').setOrigin(0.5, 1).setDisplaySize(88, 62).setDepth(5)
+    this.add.image(1872, 866, 'art-prop-water-jar').setOrigin(0.5, 1).setDisplaySize(64, 74).setDepth(5)
+    this.add.image(1810, 780, 'art-prop-fence').setOrigin(0.5, 1).setDisplaySize(180, 110).setDepth(3)
+
+    // The two maps keep their identity through a light temperature wash; actors
+    // and all combat information stay above it and retain their original colors.
+    const lotusMap = this.zone.lotus
+    this.zoneArt.grade = this.add.rectangle(0, 0, L.W, L.H, lotusMap ? 0x263c58 : 0x173645, lotusMap ? 0.08 : 0.035)
+      .setOrigin(0, 0)
+      .setDepth(10)
+    this.bossDim = this.add.rectangle(0, 0, L.W, L.H, 0x0a1526, 1).setOrigin(0, 0).setDepth(12).setAlpha(0)
+    this.dayTint = this.add.rectangle(0, 0, L.W, L.H, 0x0a1526, 0.06).setOrigin(0, 0).setDepth(11)
+  }
+
   /** Ambient life in the dead band: swaying rice, bird flocks, pollen. */
   private buildAmbient(): void {
+    if (this.riversideProfile) {
+      this.add.particles(0, 0, FX.glow, {
+        x: { min: 30, max: L.W - 30 },
+        y: { min: 420, max: 780 },
+        lifespan: 5000,
+        speedX: { min: -9, max: 9 },
+        speedY: { min: -10, max: -3 },
+        scale: { start: 0.32, end: 0.12 },
+        alpha: { start: 0, end: 0.72, ease: 'Sine.easeInOut' },
+        tint: [0xf2b45b, 0xc7dfc9],
+        frequency: this.reduced ? 1100 : 800,
+        maxAliveParticles: this.reduced ? 5 : 9,
+      }).setDepth(16)
+      return
+    }
     for (let i = 0; i < 14; i++) {
       const x = 40 + i * 140 + Phaser.Math.Between(-30, 30)
       const tuft = this.add
@@ -433,6 +525,10 @@ export class IdleScene extends Phaser.Scene {
   private applyZone(): void {
     const z = this.zone
     const a = this.zoneArt
+    if (this.riversideProfile) {
+      a.grade?.setFillStyle(z.lotus ? 0x263c58 : 0x173645, z.lotus ? 0.08 : 0.035)
+      return
+    }
     // baked tints (not setTint) so the palette shows on the Canvas renderer too
     a.sky?.setTexture(tintedTexture(this, 'art-sky', z.skyTint))
     a.hills?.setTexture(tintedTexture(this, 'art-hills', z.hillsTint)).setDisplaySize(L.W, 480)
@@ -637,6 +733,7 @@ export class IdleScene extends Phaser.Scene {
 
     // rooster: the hero — 1.2× the trainer, bloodline aura, in front
     this.roosterKey = ROOSTER_KEYS[this.player.rooster.sireLine] ?? ROOSTER_KEYS.thepbut
+    this.roosterArtScale = this.riversideProfile ? 0.78 : 1
     this.roosterAura = this.add
       .image(L.ROOSTER_X, L.ROOSTER_FEET - 4, FX.aura)
       .setTint(SIRE_TINT[this.player.rooster.sireLine] ?? INK.gold)
@@ -653,7 +750,8 @@ export class IdleScene extends Phaser.Scene {
     })
     this.rooster = this.add.container(L.ROOSTER_X, L.ROOSTER_FEET).setDepth(25)
     this.roosterBody = this.add.container(0, 0)
-    this.roosterSprite = this.add.image(0, 0, this.roosterKey).setOrigin(0.5, 1).setDisplaySize(L.ROOSTER_H, L.ROOSTER_H)
+    const roosterH = L.ROOSTER_H * this.roosterArtScale
+    this.roosterSprite = this.add.image(0, 0, this.roosterKey).setOrigin(0.5, 1).setDisplaySize(roosterH, roosterH)
     this.roosterBody.add(this.roosterSprite)
     this.rooster.add(this.roosterBody)
     this.tweens.add({ targets: this.rooster, scaleY: 1.03, scaleX: 0.985, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 300 })
@@ -664,7 +762,7 @@ export class IdleScene extends Phaser.Scene {
       worldScale,
       color: '#ffe9a8',
     })
-    this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H - 58)
+    this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - roosterH - 58)
     this.startRoosterBob()
     this.updateRoosterPulse()
     this.applyPowerTiers()
@@ -714,7 +812,7 @@ export class IdleScene extends Phaser.Scene {
       }
       this.roosterPower = []
       // continuous growth: +3% size per 10 levels, on top of the tier gear
-      const H = L.ROOSTER_H * (1 + 0.03 * band)
+      const H = L.ROOSTER_H * this.roosterArtScale * (1 + 0.03 * band)
       this.roosterSprite.setDisplaySize(H, H)
       this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - H - 58)
       const keep = (o: Phaser.GameObjects.GameObject): void => {
@@ -839,7 +937,7 @@ export class IdleScene extends Phaser.Scene {
         break
       case 2: // feather ruffle
         this.roosterIdle = this.tweens.add({ targets: body, scaleX: 0.92, duration: 90, yoyo: true, repeat: 2 })
-        this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 2)
+        this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - this.roosterSprite.displayHeight * 0.6, 2)
         break
       default: // look back at the trainer (mirror the whole body, gear included)
         body.setScale(-1, 1)
@@ -852,8 +950,8 @@ export class IdleScene extends Phaser.Scene {
   /** A kill makes the rooster hop and chirp (about one kill in four). */
   private roosterReactKill(): void {
     if (Math.random() > 0.25 || this.roosterChain?.isPlaying()) return
-    this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - L.ROOSTER_H - 20, Phaser.Utils.Array.GetRandom(['♪', '!', '♥', '✦']))
-    this.fx.sparkle(L.ROOSTER_X + 40, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 4)
+    this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 20, Phaser.Utils.Array.GetRandom(['♪', '!', '♥', '✦']))
+    this.fx.sparkle(L.ROOSTER_X + 40, L.ROOSTER_FEET - this.roosterSprite.displayHeight * 0.6, 4)
     this.roosterBob?.remove()
     this.roosterBob = null
     this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
@@ -871,8 +969,8 @@ export class IdleScene extends Phaser.Scene {
   private roosterCrow(): void {
     this.resetRoosterPose()
     this.roosterIdle = this.tweens.add({ targets: this.roosterBody, scaleX: 1.14, scaleY: 0.94, duration: 90, yoyo: true, repeat: 3 })
-    this.fx.speech(L.ROOSTER_X + 120, L.ROOSTER_FEET - L.ROOSTER_H - 10, 'Cock-a-doodle-doo!')
-    this.fx.sparkle(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 10)
+    this.fx.speech(L.ROOSTER_X + 120, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 10, 'Cock-a-doodle-doo!')
+    this.fx.sparkle(L.ROOSTER_X, L.ROOSTER_FEET - this.roosterSprite.displayHeight * 0.6, 10)
     this.roosterCheer()
   }
 
@@ -880,7 +978,7 @@ export class IdleScene extends Phaser.Scene {
   private cheerTap(): void {
     const now = this.time.now
     if (now < this.cheerReadyAt) {
-      this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - L.ROOSTER_H - 20, '♥')
+      this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 20, '♥')
       return
     }
     this.cheerReadyAt = now + 20000
@@ -2184,7 +2282,7 @@ export function createIdleGame(
     parent: container,
     width: L.W,
     height: L.H,
-    backgroundColor: '#fbe6b3',
+    backgroundColor: isRiversideArtProfile() ? '#102b43' : '#fbe6b3',
     banner: false,
     roundPixels: true,
     scale: {

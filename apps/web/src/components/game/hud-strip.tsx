@@ -12,6 +12,7 @@ import { expToNext, maxHp, maxSp } from "@/server/game/stats";
 import { SireLineArt } from "./sire-line-art";
 import { sireLineInfo } from "./sire-lines";
 import { RoosterMark } from "./rooster-mark";
+import { GameChromeIcon } from "./game-chrome-icon";
 
 /** 1,234,567 → "1.2M" — suffixes keep the compact bars readable. */
 function compact(n: number): string {
@@ -27,6 +28,7 @@ function Bar({
   gradient,
   showPercent = false,
   compactNumbers = false,
+  wideValueOnly = false,
 }: {
   label: string;
   value: number;
@@ -34,6 +36,7 @@ function Bar({
   gradient: string;
   showPercent?: boolean;
   compactNumbers?: boolean;
+  wideValueOnly?: boolean;
 }) {
   const pct = Math.max(0, Math.min(100, max > 0 ? (value / max) * 100 : 0));
   const curMax = compactNumbers
@@ -67,14 +70,14 @@ function Bar({
           className={`h-full rounded-full ${gradient} transition-[width] duration-500`}
           style={{ width: `${pct}%` }}
         />
-        <span className="absolute inset-y-0 left-2.5 hidden items-center text-xl font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] md:flex">
+        <span className={`absolute inset-y-0 left-2.5 hidden items-center font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] ${wideValueOnly ? "text-sm 2xl:flex" : showPercent ? "text-sm md:flex" : "text-xl md:flex"}`}>
           {curMax}
         </span>
         {/* mobile: % only — a raw value beside the % overlapped it in
             narrow rows (worst case: high-level rooster EXP at 390px) */}
 
         {showPercent ? (
-          <span className="absolute inset-y-0 right-2.5 flex items-center text-xl font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)]">
+          <span className="absolute inset-y-0 right-2 flex items-center text-sm font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] md:right-2.5">
             {pct.toFixed(1)}%
           </span>
         ) : null}
@@ -166,7 +169,7 @@ export function HudStrip({
           HP/SP/EXP minis, icon pills. The full band below renders only outside it. */}
       <div data-mobscape="strip" className="hidden items-center gap-2 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-2 py-1 text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur">
         <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-sun-soft bg-cream">
-          <RoosterMark size={24} />
+          <RoosterMark size={24} riverside />
           <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-bark/40 bg-sun px-1 text-xs font-black leading-tight text-bark">
             {player.baseLevel}
           </span>
@@ -186,11 +189,11 @@ export function HudStrip({
         <div className="flex shrink-0 items-center gap-1.5">
           {typeof rareDropCount === "number" && rareDropCount > 0 ? (
             <Pill title="Open the Rare Market" href={rareDropCount > 0 && newestDropId ? `/market?dropId=${newestDropId}` : "/market"} active={rareDropCount > 0}>
-              &#10022;{rareDropCount}
+              <GameChromeIcon name="sparkle" className="h-4 w-4" />{rareDropCount}
             </Pill>
           ) : null}
-          {onOpenBag ? <Pill title={`Bag & drops (${bagCount ?? 0} items)`} onClick={onOpenBag}>&#127890;</Pill> : null}
-          {onOpenGuild ? <Pill title="Guild chat & boss" onClick={onOpenGuild}>&#128737;</Pill> : null}
+          {onOpenBag ? <Pill title={`Bag & drops (${bagCount ?? 0} items)`} onClick={onOpenBag}><GameChromeIcon name="bag" className="h-4 w-4" /></Pill> : null}
+          {onOpenGuild ? <Pill title="Guild chat & boss" onClick={onOpenGuild}><GameChromeIcon name="guild" className="h-4 w-4" /></Pill> : null}
           {syncSlot}
         </div>
       </div>
@@ -201,7 +204,7 @@ export function HudStrip({
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
             <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-sun-soft bg-cream">
-              <RoosterMark size={30} />
+              <RoosterMark size={30} riverside />
               <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border-2 border-bark/40 bg-sun px-1.5 text-sm font-black leading-tight text-bark">
                 {player.baseLevel}
               </span>
@@ -264,6 +267,7 @@ export function HudStrip({
               gradient="bg-gradient-to-r from-sun to-clay"
               showPercent
               compactNumbers
+              wideValueOnly
             />
           </div>
           <div className="col-span-3 flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1.5 md:col-span-1 md:justify-self-end">
@@ -277,17 +281,17 @@ export function HudStrip({
                 href={rareDropCount > 0 && newestDropId ? `/market?dropId=${newestDropId}` : "/market"}
                 active={rareDropCount > 0}
               >
-                ✨ Rare drops ({rareDropCount})
+                <GameChromeIcon name="sparkle" className="h-4 w-4" /> Rare drops ({rareDropCount})
               </Pill>
             ) : null}
             {onOpenBag ? (
               <Pill title={`Bag & drops (${bagCount ?? 0} items)`} onClick={onOpenBag}>
-                🎒
+                <GameChromeIcon name="bag" className="h-5 w-5" />
               </Pill>
             ) : null}
             {onOpenGuild ? (
               <Pill title="Guild chat & boss" onClick={onOpenGuild}>
-                🛡 Guild
+                <GameChromeIcon name="guild" className="h-5 w-5" /> Guild
               </Pill>
             ) : null}
             {syncSlot}

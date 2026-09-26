@@ -6,6 +6,7 @@
 
 import { useMemo } from "react";
 import nextDynamic from "next/dynamic";
+import { GameChromeIcon } from "./game-chrome-icon";
 
 const GuildPanel = nextDynamic(() => import("@/components/guild/GuildPanel").then((m) => m.default), {
   ssr: false,
@@ -49,7 +50,7 @@ export function GuildDock({
         <style>{`@keyframes rfcl-guild-in { from { transform: translateX(28px); opacity: 0; } to { transform: none; opacity: 1; } }`}</style>
         <header className="flex items-center justify-between gap-3 border-b border-clay/15 px-4 py-3">
           <p className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-bark">
-            <span aria-hidden>🛡</span> Guild · <span lang="th">หอคอยพญาไก่</span>
+            <GameChromeIcon name="guild" className="h-4 w-4" /> Guild · <span lang="th">หอคอยพญาไก่</span>
           </p>
           <button
             type="button"

@@ -45,11 +45,23 @@ async function postGame(path: string, body: unknown): Promise<{ ok: boolean; sta
   return { ok: res.ok, status: res.status, data };
 }
 
+const riversideBackdrop = `
+  radial-gradient(120% 90% at 50% 108%, rgba(28,78,94,0.50) 0%, rgba(28,78,94,0) 46%),
+  radial-gradient(140% 110% at 50% -30%, rgba(242,180,91,0.12) 0%, rgba(242,180,91,0) 40%),
+  repeating-linear-gradient(135deg, rgba(255,253,246,0.018) 0 2px, rgba(0,0,0,0) 2px 26px),
+  linear-gradient(180deg, #102b43 0%, #183946 58%, #102b43 100%)`;
+
 function CenterCard({ children }: { children: React.ReactNode }) {
   return (
-    <section className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center sm:px-6">
-      {children}
-    </section>
+    <div data-riverside-ui className="flex min-h-0 flex-1 flex-col" style={{ background: riversideBackdrop }}>
+      <style>{`
+        [data-riverside-ui] h1 { color: #fffdf6; }
+        [data-riverside-ui] p { color: rgba(255,253,246,.78); }
+      `}</style>
+      <section className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center sm:px-6">
+        {children}
+      </section>
+    </div>
   );
 }
 
@@ -299,7 +311,15 @@ export function GameClient() {
   // 3. Wallet, no player yet → character creation.
   if (!state?.player) {
     return (
-      <div className="flex flex-1 flex-col gap-2">
+      <div data-riverside-ui data-riverside-create className="flex flex-1 flex-col gap-2" style={{ background: riversideBackdrop }}>
+        <style>{`
+          [data-riverside-ui] h1 { color: #fffdf6; }
+          [data-riverside-ui] p { color: rgba(255,253,246,.78); }
+          [data-riverside-create] > section { background-color: rgba(40,59,99,.96); border-color: #c69a5b; }
+          [data-riverside-create] label, [data-riverside-create] legend { color: #f2d59d; }
+          [data-riverside-create] input { background-color: #fffdf6; }
+          [data-riverside-create] button.group { background-color: #fffdf6; }
+        `}</style>
         {wrongChain ? <WrongChainBanner chainId={chainId ?? 0} /> : null}
         <CreateCharacter onCreate={handleCreate} />
       </div>
@@ -309,19 +329,24 @@ export function GameClient() {
   // 4. Player exists → the game screen. The canvas claims the viewport;
   // stat allocation and sync collapse into a single slim control row.
   const player = state.player;
-  // paddy-night backdrop: the letterbox around the 16:9 stage reads as
-  // part of the game, not a web page (critic r6 #1)
+  // Riverside-night backdrop: the letterbox around the 16:9 stage reads as
+  // part of the game, not a web page.
   return (
     <div
+      data-riverside-ui
       className="flex min-h-0 flex-1 flex-col"
       style={{
-        background: `
-          radial-gradient(120% 90% at 50% 108%, rgba(85,128,60,0.28) 0%, rgba(85,128,60,0) 46%),
-          radial-gradient(140% 110% at 50% -30%, rgba(237,166,20,0.10) 0%, rgba(237,166,20,0) 40%),
-          repeating-linear-gradient(135deg, rgba(255,253,246,0.022) 0 2px, rgba(0,0,0,0) 2px 26px),
-          linear-gradient(180deg, #241708 0%, #2b1b12 58%, #1d130c 100%)`.trim(),
+        background: riversideBackdrop,
       }}
     >
+      <style>{`
+        [data-riverside-ui] { background: #102b43 !important; }
+        [data-riverside-ui] .aspect-video { background-color: #102b43 !important; border-color: #c69a5b !important; }
+        [data-riverside-ui] .rounded-2xl.border-4 { border-color: #c69a5b !important; }
+        [data-riverside-ui] [class*="bg-[#2b1b12]"] { background-color: rgba(40,59,99,.96) !important; }
+        [data-riverside-ui] [class*="border-sun"] { border-color: #c69a5b !important; }
+        [data-riverside-ui] [class*="bg-sun"] { background-color: #f2b45b !important; }
+      `}</style>
       <div className="mx-auto flex w-full max-w-none flex-1 flex-col gap-1 px-1.5 py-1 sm:px-2 sm:py-1.5">
         {wrongChain ? <WrongChainBanner chainId={chainId ?? 0} /> : null}
         <div className="relative flex min-h-0 flex-1 justify-center">

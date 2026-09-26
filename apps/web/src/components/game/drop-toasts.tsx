@@ -12,6 +12,7 @@ import type { Drop } from "@/game/types";
 import { getItem, MINTABLE_RARITIES } from "@/game/data/items";
 import { MAPS } from "@/game/data/maps";
 import { isJackpotRarity, RARITY_META } from "./rarity-meta";
+import { GameItemIcon } from "./game-item-icon";
 
 const isToastable = (d: Drop): boolean =>
   d.status === "unminted" && (MINTABLE_RARITIES as readonly string[]).includes(d.rarity)
@@ -132,10 +133,11 @@ function JackpotMoment({ drop }: { drop: Drop }) {
         }}
       />
       <div ref={cardRef} className="relative" style={{ animation: "rfcl-jp-rise 480ms cubic-bezier(.2,1.2,.4,1) both" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <GameItemIcon
+          id={drop.itemId}
           src={item?.image ?? `/assets/items/${drop.itemId}.svg`}
-          alt=""
+          width={384}
+          height={384}
           className="h-[38vh] w-auto rounded-2xl border-4 bg-cream/95 p-3 drop-shadow-[0_24px_48px_rgba(0,0,0,0.55)]"
           style={{ borderColor: meta.hex }}
         />
@@ -202,14 +204,7 @@ function DropToast({ toast, onDismiss }: { toast: ActiveToast; onDismiss: () => 
           className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 bg-sun-soft/60"
           style={{ borderColor: meta.hex }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={item?.image ?? `/assets/items/${toast.drop.itemId}.svg`}
-            alt=""
-            width={48}
-            height={48}
-            className="h-11 w-11 object-contain"
-          />
+          <GameItemIcon id={toast.drop.itemId} src={item?.image ?? `/assets/items/${toast.drop.itemId}.svg`} width={48} height={48} className="h-11 w-11 object-contain" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider" style={{ color: meta.hex }}>

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useConnection } from "wagmi";
 import { ConnectButton } from "./connect-button";
 import { RoosterMark } from "./rooster-mark";
+import { GameChromeIcon } from "./game-chrome-icon";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -54,13 +55,17 @@ export function NavBar() {
   // button so the canvas keeps the viewport.
   if (pathname?.startsWith("/game")) {
     return (
-      <header className="static z-40 flex items-center gap-2 px-3 py-1.5 lg:pointer-events-none lg:fixed lg:left-3 lg:top-2 lg:px-0 lg:py-0">
+      <header data-riverside-nav className="static z-40 flex w-full items-center gap-2 bg-[#102b43] px-3 py-1.5 lg:pointer-events-none lg:fixed lg:left-3 lg:top-2 lg:w-auto lg:bg-transparent lg:px-0 lg:py-0">
+        <style>{`
+          [data-riverside-nav] [class*="bg-bark"] { background-color: #283b63 !important; }
+          [data-riverside-nav] [class*="border-sun"] { border-color: #c69a5b !important; }
+        `}</style>
         <Link
           href="/"
           className="pointer-events-auto flex items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
           aria-label="RFC Legends home"
         >
-          <RoosterMark size={22} />
+          <RoosterMark size={22} riverside />
         </Link>
         <button
           type="button"
@@ -89,7 +94,7 @@ export function NavBar() {
               }}
               className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 text-lg font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
             >
-              👛
+              <GameChromeIcon name="wallet" className="h-5 w-5" />
               <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </span>
             <span className="pointer-events-none absolute right-0 top-full z-50 mt-1 hidden whitespace-nowrap rounded-md border border-sun/60 bg-[#1d130c] px-2 py-1 text-xs font-bold text-cream/90 shadow-lg group-hover:block">

@@ -1,10 +1,9 @@
 // Art pipeline for the idle scene.
 //
-// Every asset is an SVG in /public/assets (committed by the art lane) loaded
-// with `load.svg(key, url, { width, height })`. Every asset ALSO has a
-// code-drawn fallback (Phaser Graphics → generateTexture): if the SVG is
-// missing or fails to load, the scene swaps in the fallback so it never looks
-// broken. FX textures (stars, glows, clouds, birds…) are always generated.
+// Legacy art remains SVG in /public/assets; riverside replacements are raster
+// images loaded by the same scene registry. Every registry entry has a
+// code-drawn fallback (Phaser Graphics → generateTexture), and FX textures are
+// generated at runtime.
 
 import Phaser from 'phaser'
 import type { Rarity } from '../types'
@@ -40,6 +39,16 @@ export interface ArtSpec {
   fb?: [number, number]
   /** Code-drawn stand-in with dark outlines, used only when the SVG is gone. */
   draw: (g: Phaser.GameObjects.Graphics) => void
+  /** Riverside replacement for every viewport, with a category-specific fallback texture. */
+  riverside?: { url: string; w: number; h: number; draw: (g: Phaser.GameObjects.Graphics) => void; fb?: [number, number] }
+}
+
+/** Asset selection shares the same profile rule as camera and HUD layout. */
+export function isRiversideArtProfile(): boolean {
+  // This is the art direction switch, not the responsive layout switch. The
+  // riverside theme is shared by desktop and mobile; camera/UI sizing continues
+  // to use isMobileProfile() independently.
+  return true
 }
 
 // --- shared draw helpers (fallback style: flat cartoon shapes + dark outline) ---
@@ -443,7 +452,50 @@ function drawCloudTower(g: Phaser.GameObjects.Graphics): void {
 // --- the catalog ---
 
 const A = (key: string, url: string, w: number, h: number, draw: (g: Phaser.GameObjects.Graphics) => void, fb?: [number, number]): ArtSpec =>
-  ({ key, url, w, h, draw, fb })
+  ({ key, url, w, h, draw, fb, riverside: riversideSpec(key, url, w, h, draw, fb) })
+
+export const RIVERSIDE_READY_KEYS = new Set<string>()
+
+function riversideUrl(key: string, sourceUrl: string): string | null {
+  if (sourceUrl.includes('/assets/scene/props/')) {
+    return `/assets/game/riverside/props/${sourceUrl.split('/').at(-1)!.replace('.svg', '.png')}`
+  }
+  if (sourceUrl.includes('/assets/sprites/')) {
+    const sourceFile = sourceUrl.split('/').at(-1)!
+    const file = sourceFile.replace('.svg', '.webp')
+    const name = sourceFile === 'trainer.svg' ? 'trainer-idle.webp' : sourceFile === 'trainer-walk.svg' ? 'trainer-walk.webp' : file
+    return `/assets/game/riverside/characters/${name}`
+  }
+  if (sourceUrl.includes('/assets/monsters/')) return `/assets/game/riverside/creatures/${key.replace('art-monster-', '')}.png`
+  if (sourceUrl.includes('/assets/items/')) return `/assets/game/riverside/items/${sourceUrl.split('/').at(-1)!.replace('.svg', '.png')}`
+  if (sourceUrl.includes('/assets/scene/')) return null
+  return null
+}
+
+function riversideSpec(
+  key: string,
+  sourceUrl: string,
+  w: number,
+  h: number,
+  legacyDraw: (g: Phaser.GameObjects.Graphics) => void,
+  legacyFb?: [number, number],
+): ArtSpec['riverside'] {
+  const url = riversideUrl(key, sourceUrl)
+  if (!url) return undefined
+  const [rw, rh] = sourceUrl.includes('/assets/sprites/')
+    ? sourceUrl.includes('trainer') ? [240, 240] : [280, 280]
+    : sourceUrl.includes('/assets/monsters/')
+      ? w > 500 ? [360, 360] : [192, 192]
+      : sourceUrl.includes('/assets/scene/props/')
+        ? [128, 128]
+        : sourceUrl.includes('/assets/items/')
+          ? Number(sourceUrl.split('/').at(-1)!.split('.')[0]) >= 1001 ? [256, 256] : [128, 128]
+          : [w, h]
+  // If a replacement image fails, retain the existing category-specific art for
+  // that key. A trainer still reads as a trainer, each rooster keeps its palette,
+  // and pests retain their distinct silhouettes instead of becoming generic blobs.
+  return { url, w: rw, h: rh, draw: legacyDraw, fb: legacyFb ?? [w, h] }
+}
 
 export const TRAINER_KEY = 'art-trainer'
 export const TRAINER_WALK_KEY = 'art-trainer-walk'
@@ -465,9 +517,75 @@ export const MONSTER_KEYS: Record<string, string> = {
   'pla-chon-yak': 'art-monster-pla-chon-yak',
   'jorakhe-thao-bueng': 'art-monster-jorakhe-thao-bueng',
 }
+
+for (const key of [TRAINER_KEY, TRAINER_WALK_KEY, ...Object.values(ROOSTER_KEYS), ...Object.values(MONSTER_KEYS), 'art-prop-hay-bale', 'art-prop-scarecrow', 'art-prop-water-jar', 'art-prop-fence', 'art-prop-rice-bundle']) {
+  RIVERSIDE_READY_KEYS.add(key)
+}
 export const itemKey = (id: number): string => `art-item-${id}`
 
+for (const id of [101, 102, 103, 104, 201, 202, 203, 204, 205, 206, 207, 208, 1001, 1002, 1003, 1004, 1005, 1006, 2001, 2002, 2003, 3001, 3002]) {
+  RIVERSIDE_READY_KEYS.add(itemKey(id))
+}
+
 export const CLOUD_KEYS = { puffy: 'art-cloud-1', stratus: 'art-cloud-2', tower: 'art-cloud-3' } as const
+
+export const RIVERSIDE_ENVIRONMENT = [
+  { key: 'river-sky', url: '/assets/game/riverside/environment/sky-temple-night.webp', w: 1536, h: 864, draw: drawRiverSky },
+  { key: 'river-houses-left', url: '/assets/game/riverside/environment/stilt-houses-left.webp', w: 700, h: 560, draw: drawRiverHouse },
+  { key: 'river-houses-right', url: '/assets/game/riverside/environment/stilt-houses-right.webp', w: 700, h: 560, draw: drawRiverHouse },
+  { key: 'river-corridor', url: '/assets/game/riverside/environment/quiet-central-corridor.webp', w: 1536, h: 320, draw: drawRiverCorridor },
+  { key: 'river-water-boardwalk', url: '/assets/game/riverside/environment/water-lotus-boardwalk.webp', w: 1536, h: 420, draw: drawRiverWater },
+] as const
+export const RIVERSIDE_ENVIRONMENT_READY = new Set(['river-sky', 'river-houses-left', 'river-houses-right', 'river-corridor', 'river-water-boardwalk'])
+
+function drawRiverSky(g: Phaser.GameObjects.Graphics): void {
+  g.fillGradientStyle(0x102b43, 0x102b43, 0x345a69, 0x345a69, 1)
+  g.fillRect(0, 0, 1536, 864)
+  g.fillStyle(0xf3d295, 0.68)
+  g.fillCircle(1190, 190, 82)
+  g.fillStyle(0xf3d295, 0.16)
+  g.fillCircle(1190, 190, 124)
+  g.fillStyle(0x183946, 0.84)
+  g.fillTriangle(940, 510, 1080, 340, 1220, 510)
+  g.fillTriangle(1135, 510, 1270, 370, 1410, 510)
+}
+function drawRiverHouse(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(0x50372b, 0.96)
+  g.fillPoints([{ x: 30, y: 210 }, { x: 350, y: 55 }, { x: 670, y: 210 }], true)
+  g.fillStyle(0x78523b, 0.98)
+  g.fillRect(86, 200, 528, 258)
+  g.fillStyle(0x293b50, 0.95)
+  for (const x of [145, 280, 415, 550]) g.fillRect(x, 248, 34, 210)
+  g.fillStyle(0xf2b45b, 0.82)
+  for (const x of [174, 310, 446, 580]) g.fillRoundedRect(x, 263, 18, 45, 6)
+  g.fillStyle(0x50372b, 0.96)
+  for (const x of [115, 545]) g.fillRect(x, 442, 18, 118)
+}
+function drawRiverCorridor(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(0x284659, 0.24)
+  g.fillRoundedRect(0, 48, 1536, 224, 72)
+  g.fillStyle(0xc1a77c, 0.09)
+  g.fillRoundedRect(180, 78, 1176, 170, 68)
+}
+function drawRiverWater(g: Phaser.GameObjects.Graphics): void {
+  g.fillGradientStyle(0x254f60, 0x254f60, 0x132e3b, 0x132e3b, 1)
+  g.fillRect(0, 0, 1536, 420)
+  g.fillStyle(0xf2b45b, 0.38)
+  for (let x = 90; x < 1500; x += 186) g.fillRoundedRect(x, 62 + (x % 3) * 28, 82, 5, 3)
+  g.fillStyle(0x50372b, 1)
+  g.fillRect(0, 172, 1536, 188)
+  g.fillStyle(0xb37a4b, 1)
+  for (let x = 12; x < 1536; x += 196) g.fillRect(x, 181, 184, 13)
+  g.fillStyle(0xd0a06a, 0.76)
+  g.fillRect(0, 198, 1536, 6)
+  g.fillStyle(0x688367, 0.92)
+  for (const [x, y] of [[100, 92], [340, 120], [1240, 88], [1450, 140]] as const) {
+    g.fillEllipse(x, y, 84, 26)
+    g.fillStyle(0x92a174, 0.9)
+    g.fillCircle(x + 26, y - 4, 3)
+    g.fillStyle(0x688367, 0.92)
+  }
+}
 
 export const ART: ArtSpec[] = [
   // Backgrounds are rasterized at the 1920×1080 stage size (the canvas renders 1:1
@@ -551,11 +669,17 @@ export const PENDING_SVG: ReadonlySet<string> = new Set([])
 
 /** Generate the code-drawn stand-in for every asset whose SVG never arrived. */
 export function ensureFallbacks(scene: Phaser.Scene): void {
+  const riverside = isRiversideArtProfile()
   for (const spec of ART) {
     if (scene.textures.exists(spec.key)) continue // SVG loaded fine
+    // The riverside renderer builds its environment from RIVERSIDE_ENVIRONMENT.
+    // Avoid allocating legacy background and cloud textures that no live object
+    // will reference. Props are still used by the riverside scene and must remain.
+    if (riverside && spec.url.includes('/assets/scene/') && !spec.url.includes('/assets/scene/props/')) continue
     const g = scene.add.graphics()
-    spec.draw(g)
-    const [w, h] = spec.fb ?? [spec.w, spec.h]
+    const riversideReplacement = riverside && spec.riverside && RIVERSIDE_READY_KEYS.has(spec.key) ? spec.riverside : undefined
+    ;(riversideReplacement?.draw ?? spec.draw)(g)
+    const [w, h] = riversideReplacement?.fb ?? spec.fb ?? [spec.w, spec.h]
     g.generateTexture(spec.key, w, h)
     g.destroy()
   }
