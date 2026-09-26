@@ -79,13 +79,13 @@ Expected on-screen text is quoted exactly as rehearsed.
 2. Type a trainer name (for example "Khun Gai"), pick a sire line (for example **Thep**), and click **Begin the journey**.
    Expected: the live scene starts. The HUD shows the trainer's title and "Lv 1", HP/SP/EXP bars, the rooster, and the goal line "Next: Base Lv 30 → unlock minting rare drops (N to go)". Its buttons are **✦ 48 points to spend ▸**, 🎒, **🛡 Guild** and ⟳. In-canvas chips count kills and harvest/coins and show "BOSS IN n".
 3. Click **✦ 48 points to spend ▸**. In the dialog, press **+** on **STR** ×8, **AGI** ×6 and **DEX** ×6, then close it with **×**.
-4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. On the recording host (13:58 UTC rehearsal), **Lv 1 to Lv 30 took 1.1 minutes.**
+4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. On the recording host, **Lv 1 to Lv 30 took 1.1–1.3 minutes** (13:58 and 15:24 UTC rehearsals).
 5. *(Optional, shows rejection c)* before Lv 30, open **☰ → Market** in a separate window and press **Mint as NFT** on any drop. Expected: "⛔ Rejected `base_level_too_low` Base Lv N: reach Base Lv 30 to mint rare drops." Toasts before Lv 30 are real drops too, but they hit this same level rejection.
 
 > **Don't navigate the /game tab away while leveling.** To show /roosters (or anything else) during this segment, open it in a **separate window**, and never open /game there. When the /game tab comes back, the toast component treats drops that arrived meanwhile as already seen, so the Lv-30 toast never shows.
 
 ### Scene 2: the Lv-30 boss beat, the toast, then Mint & sell
-6. At Lv 30 the scene plays a short ceremony: level-up banners plus "MVP DEFEATED!" / "RARE DROP UNLOCKED!", and loot flies to the harvest chip. A Monster Card is guaranteed at the Lv-30 kill, and an MVP Card drops at 55% per boss kill. **About 7 seconds after Lv 30**, rare-drop toasts slide in at the bottom right: "MVP CARD การ์ดราชาหนูนา" and/or "MONSTER CARD การ์ดหนูนา", each with **Mint & sell →** and an "auto-hides" hint. The HUD pill becomes **✨ Rare drops (N)**. *(A second zone may unlock at Lv 30 and change the backdrop. The toasts are what matter.)*
+6. At Lv 30 the scene plays a short ceremony: level-up banners plus "MVP DEFEATED!" / "RARE DROP UNLOCKED!", and loot flies to the harvest chip. A Monster Card is guaranteed at the Lv-30 kill, and an MVP Card drops at 55% per boss kill. **About 3–7 seconds after Lv 30**, rare-drop toasts slide in on the right: "MVP CARD การ์ดราชาหนูนา" and/or "MONSTER CARD การ์ดหนูนา", each with **Mint & sell →** and an "auto-hides" hint. The HUD pill becomes **✨ Rare drops (N)**. At the same moment, the zone switches to **บึงบัวหลวง** (the HUD's zone label changes) and a catch-up line such as "Lv 17 → 30 · +3.3M EXP · mint & sell in the Rare Market" can appear. The toasts are what matter; the backdrop may differ.
 7. Click **Mint & sell →** on the **MVP Card** toast (red border), or on the Monster Card toast if no MVP dropped. **Toasts auto-hide after a few seconds.** If you miss one, click **✨ Rare drops (N)**: it opens /market, where every drop is listed (without the highlight).
    Expected: `/market?dropId=0x…` with the card highlighted in yellow ("MVP Card #3001 การ์ดราชาหนูนา" or "Monster Card #1001 การ์ดหนูนา"), "From your latest boss drop", and **Mint as NFT**.
 
@@ -157,6 +157,17 @@ Rehearsed through the real UI with an injected wallet in headless Chromium, on s
 | (a) C mints MVP Card #3001 | 403 `not_verified_human` | 09:05:26Z |
 | (a) B (unverified) tries to resell | contract `NotVerifiedHuman`, no wallet prompt | 09:05:46Z |
 | (b) A2-staging verifies | 409 `nullifier_bound_to_other_wallet` | 08:40:27Z |
+
+**W15 post-deploy rehearsal (recording host, freeze candidate 7a902cd, 15:23 UTC).** Fresh throwaway `0x4fc9…cb7d`, no World ID verify:
+
+| Beat (elapsed) | Result |
+|---|---|
+| Create + STR 8 / AGI 6 / DEX 6 (0:07–0:44) | ok |
+| Base Lv 30 (1:25, i.e. **1.3 min** after create) | Zone label switches to บึงบัวหลวง; catch-up line "Lv 17 → 30 · +3.3M EXP" |
+| Toasts (1:28, **3 s** after Lv 30) | Monster Card การ์ดปูนา (pity) + MVP Card การ์ดราชาหนูนา + Monster Card การ์ดหนูนา |
+| **Mint & sell →** | `/market?dropId=0x81ed…f657`, Monster Card #1003 highlighted; Mint as unverified gives 403 `not_verified_human` |
+| Market path (rehearsal wallets) | A-staging listed Monster Card #1004 as #10 at 3 USDC ([`0x5f9cd2d4…b2f8`](https://sepolia.etherscan.io/tx/0x5f9cd2d411c7befaac11f4ca6594ce86eee4631023911c18eb63873f4353b2f8)); B bought it ([`0x7d376a38…6c63`](https://sepolia.etherscan.io/tx/0x7d376a380ee0a096004b53b748dd08f6e04310084e8a73d25c7f0f05a3ea6c63)), 90% 2.70 / 10% 0.30, MultiBaas indexed in 6 s |
+| Bot C, MVP Card #3001 | still 403 `not_verified_human` |
 
 **W13 prod re-rehearsal (recording host, D4 build, 13:57 UTC).** Fresh unverified wallet `0x27a6…f0c9`, no World ID verify anywhere:
 
