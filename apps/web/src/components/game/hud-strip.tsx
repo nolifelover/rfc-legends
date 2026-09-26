@@ -150,8 +150,10 @@ export function HudStrip({
   return (
     // flows below the scene (no sticky): the frame above gets all the space
     // we don't use, and the pests' HP bars stay visible
-    <div className="mt-auto w-full border-t-4 border-bark/25 bg-cream/95 shadow-[0_-8px_24px_-12px_rgba(74,50,32,0.4)] backdrop-blur">
-      <div className="mx-auto flex w-full max-w-none flex-col gap-1.5 px-1.5 py-1.5 sm:px-2">
+    <div className="mt-auto w-full px-1 pb-1 sm:px-1.5 sm:pb-1.5">
+      {/* a game panel in the canvas' thick-outline style, docked flush under
+          the scene rather than a full-width web strip */}
+      <div className="mx-auto flex w-full max-w-none flex-col gap-1.5 rounded-2xl border-4 border-bark/30 bg-cream/95 px-3 py-2 shadow-[0_10px_36px_-12px_rgba(43,27,18,0.55)] backdrop-blur sm:px-4">
         {/* Row A — trainer card + the HP/SP/EXP trio */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
