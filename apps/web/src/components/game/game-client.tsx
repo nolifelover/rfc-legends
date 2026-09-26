@@ -229,7 +229,7 @@ export function GameClient() {
   const player = state.player;
   return (
     <div className="flex flex-1 flex-col">
-      <div className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex w-full max-w-none flex-1 flex-col gap-1 px-1.5 py-1 sm:px-2 sm:py-1.5">
         <div className="relative flex min-h-0 flex-1 justify-center">
           {/* height = whatever the nav/banner/HUD leave free; the aspect-video
               box derives width from that height, clamped by the viewport */}
