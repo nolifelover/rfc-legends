@@ -671,11 +671,23 @@ export class Fx {
     this.scene.cameras.main.shake(spec[0], spec[1])
   }
 
+  /**
+   * Camera zoom punch as a yoyo tween on camera.zoom. (A zoomTo whose callback
+   * nested a second zoomTo left the camera stuck at 1.08 — the outer effect's
+   * completion reset the inner one — which cropped every edge of the stage.)
+   */
   zoomPunch(zoom = 1.06, inMs = 180, outMs = 420): void {
     if (this.reduced) return
     const cam = this.scene.cameras.main
-    cam.zoomTo(zoom, inMs, 'Sine.easeOut', true, (_c: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-      if (progress >= 1) cam.zoomTo(1, outMs, 'Sine.easeInOut', true)
+    this.scene.tweens.killTweensOf(cam)
+    cam.setZoom(1)
+    this.scene.tweens.chain({
+      targets: cam,
+      tweens: [
+        { zoom, duration: inMs, ease: 'Sine.easeOut' },
+        { zoom: 1, duration: outMs, ease: 'Sine.easeInOut' },
+      ],
+      onComplete: () => cam.setZoom(1),
     })
   }
 
