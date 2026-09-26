@@ -82,6 +82,8 @@ Attestation round-trip (E3) on theprawang (token 4):
   [0x817204cd…819c1acd4](https://sepolia.etherscan.io/tx/0x817204cde17e2cefb6696f4f1958518dab9edd3553b9ea69a1f11eb819c1acd4)
 - contract + ENS agree: 4350 g / health 98 / nonce 2. Forged-signature and
   third-party-write paths both revert (verified in the same run).
+- chick01 (token 6) attested too (850 g / 99, nonce 1):
+  [0x04c2ca71…b84b2f9](https://sepolia.etherscan.io/tx/0x04c2ca71d640ed8635714439922d5e669b0db42c008348e6cd6ffd22db84b2f9)
 
 Live read (what the UI renders):
 `https://rfclegends.rfcclub.app/api/ens/records?name=theprawang.rfclegends.eth`
