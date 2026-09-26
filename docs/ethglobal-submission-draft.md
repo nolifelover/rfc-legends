@@ -26,18 +26,18 @@ Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC). Do not claim anything n
 **Project name**
 RFC Legends
 
-**Short description** (97 chars)
-Idle MMORPG: level up with your rooster companion. Real roosters live onchain as verifiable RWAs.
+**Short description** (90 chars)
+Idle rooster RPG with farm-signed records: onchain health attestations and ENS bloodlines.
 
 **Description** (trim to what's live — paste-ready)
 
-RFC Legends is an idle MMORPG with classic job/stat/card progression, themed around Thai native rooster breeds. You play as a trainer adventuring with a rooster companion; both level up automatically, even offline (demo mode boosts rates for the video — always badged).
+RFC Legends is an idle RPG with classic job/stat/card progression, live guild chat and a shared guild boss, themed around Thai native rooster breeds. You play as a trainer adventuring with a rooster companion; both level up automatically, even while you are offline.
 
-The game is backed by real animals. Each real rooster at Ninlanee Farm is an onchain RWA: the farm co-signs every mint (ring id, bloodline, hatch date), one ring id can only ever be one token, and the farm signs weekly health attestations anyone can relay onchain. Each bird gets an ENSv2 name; offspring are subnames of their sire, so a bloodline is verifiable by anyone.
+Your rooster belongs to one of five sire lines, and the rooster explorer shows the farm-registered birds of those lines — currently sample records with placeholder leg-ring IDs — each minted onchain with a farm-co-signed registration (leg-ring ID, bloodline, hatch date) that the farm key alone can issue. One leg-ring ID can only ever be one token, and the farm signs health and weight attestations anyone can relay onchain. Each bird carries an ENSv2 name; offspring are subnames of their sire, resolved through a permissioned resolver where only the farm key can write health records, so a bloodline is verifiable by anyone.
 
-Rare drops are the heart of the economy. Legendary items and monster cards mint from gameplay only — with a server-signed EIP-712 voucher and only to a World ID-verified wallet — and trade in an onchain Rare Market that splits every sale 90% seller / 10% platform inside the contract. One human, one account: a second wallet replaying the same World ID nullifier is rejected onchain.
+Rare drops are the heart of the economy. Legendary items and monster cards mint from gameplay only — with a server-signed EIP-712 voucher and only to a World ID-verified wallet — and trade in an onchain Rare Market that splits every sale 90% seller / 10% RFC Club treasury inside the contract. One human, one account: a second wallet replaying the same World ID nullifier is rejected onchain, and every sale is indexed by Curvegrid MultiBaas, so the 90/10 split is readable straight from onchain events.
 
-No gambling, no betting, no real-world fight results. Everything is cartoon-art breeding, collecting and community.
+Cartoon collectible art; premium items come only from gameplay drops, never a shop.
 
 **How it's made** (paste-ready for the showcase form)
 
