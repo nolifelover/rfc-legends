@@ -459,6 +459,11 @@ export const MONSTER_KEYS: Record<string, string> = {
   'takka-taen-yak': 'art-monster-takka-taen-yak',
   'pu-na': 'art-monster-pu-na',
   'raja-nu-na': 'art-monster-raja-nu-na',
+  // บึงบัวหลวง (zone 2)
+  'hoi-cherry': 'art-monster-hoi-cherry',
+  'phak-tob-chawai-yak': 'art-monster-phak-tob-chawai-yak',
+  'pla-chon-yak': 'art-monster-pla-chon-yak',
+  'jorakhe-thao-bueng': 'art-monster-jorakhe-thao-bueng',
 }
 export const itemKey = (id: number): string => `art-item-${id}`
 
@@ -491,6 +496,11 @@ export const ART: ArtSpec[] = [
   A(MONSTER_KEYS['takka-taen-yak'], '/assets/monsters/takkaek-yak.svg', 320, 320, drawLocust, [88, 88]),
   A(MONSTER_KEYS['pu-na'], '/assets/monsters/pu-na.svg', 280, 280, drawCrab, [80, 80]),
   A(MONSTER_KEYS['raja-nu-na'], '/assets/monsters/racha-nu-na.svg', 720, 720, drawRaja, [144, 144]),
+  // zone 2 pests (fallbacks reuse the zone-1 shapes until the SVGs load)
+  A(MONSTER_KEYS['hoi-cherry'], '/assets/monsters/hoi-cherry.svg', 280, 280, drawCrab, [80, 80]),
+  A(MONSTER_KEYS['phak-tob-chawai-yak'], '/assets/monsters/phak-tob-chawai-yak.svg', 320, 320, drawNuNa, [88, 88]),
+  A(MONSTER_KEYS['pla-chon-yak'], '/assets/monsters/pla-chon-yak.svg', 320, 320, drawLocust, [88, 88]),
+  A(MONSTER_KEYS['jorakhe-thao-bueng'], '/assets/monsters/jorakhe-thao-bueng.svg', 720, 720, drawRaja, [144, 144]),
 
   A('art-prop-hay-bale', '/assets/scene/props/hay-bale.svg', 200, 200, drawHayBale, [64, 64]),
   A('art-prop-scarecrow', '/assets/scene/props/scarecrow.svg', 200, 200, drawScarecrow, [64, 64]),
@@ -537,7 +547,7 @@ export function tintedTexture(scene: Phaser.Scene, baseKey: string, tint: number
  * missing network request, so the only quiet option is not to ask for the file.
  * Remove an entry when its SVG lands in /public/assets.
  */
-export const PENDING_SVG: ReadonlySet<string> = new Set([itemKey(1004), itemKey(1005), itemKey(1006), itemKey(3002)])
+export const PENDING_SVG: ReadonlySet<string> = new Set([])
 
 /** Generate the code-drawn stand-in for every asset whose SVG never arrived. */
 export function ensureFallbacks(scene: Phaser.Scene): void {

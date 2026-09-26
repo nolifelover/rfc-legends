@@ -218,11 +218,12 @@ export const ZONES: Record<string, ZoneSpec> = {
       'pla-chon-yak': 'Giant Snakehead',
       'jorakhe-thao-bueng': 'Old Pond Crocodile',
     },
+    // the art lane's own SVGs (no tint); heights on the 1080 frame
     skins: {
-      'hoi-cherry': { key: 'art-monster-pu-na', tint: 0xe0b34a, h: 250 },
-      'phak-tob-chawai-yak': { key: 'art-monster-nu-na', tint: 0xb48cd9, h: 290 },
-      'pla-chon-yak': { key: 'art-monster-takka-taen-yak', tint: 0x4f9fb8, h: 300 },
-      'jorakhe-thao-bueng': { key: 'art-monster-raja-nu-na', tint: 0x6f9a52, h: 680 },
+      'hoi-cherry': { key: 'art-monster-hoi-cherry', h: 250 },
+      'phak-tob-chawai-yak': { key: 'art-monster-phak-tob-chawai-yak', h: 300 },
+      'pla-chon-yak': { key: 'art-monster-pla-chon-yak', h: 300 },
+      'jorakhe-thao-bueng': { key: 'art-monster-jorakhe-thao-bueng', h: 680 },
     },
     bossId: 'jorakhe-thao-bueng',
   },
