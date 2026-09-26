@@ -1463,7 +1463,6 @@ export class IdleScene extends Phaser.Scene {
     this.forceBoss = false
     this.updateBossShadow()
     new Ribbon(this, 'BOSS APPROACHING', this.font).play(700, this.reduced)
-    this.tweens.add({ targets: this.bossDim, alpha: 0.24, duration: 400 })
     if (!this.reduced) {
       const vig = this.cameras.main.postFX?.addVignette(0.5, 0.5, 0.9, 0)
       if (vig) {
@@ -1518,7 +1517,7 @@ export class IdleScene extends Phaser.Scene {
         this.fx.groundRing(boss.baseX, boss.feetY, 0xcaa273, 1100, 380)
         this.fx.dustKick(boss.baseX, boss.feetY, 14)
         this.fx.zoomPunch(1.08, 180, 420)
-        this.fx.slam('RAT KING', `MVP · Lv.${def.level}`, 300, '#ffe9a8')
+        // one boss label only: the top bar plus the plate under its feet
         this.engage(boss)
         // heroes recoil a step
         this.tweens.add({ targets: [this.trainer, this.rooster], x: '-=30', duration: 120, yoyo: true, ease: 'Quad.easeOut' })
