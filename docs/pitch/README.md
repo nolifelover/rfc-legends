@@ -4,6 +4,7 @@ A 12-slide narrated presentation for the World, ENS and Curvegrid judges.
 
 **Files**
 - `rfc-legends-pitch.mp4`: the whole deck as a video with English narration, 1920×1080, 4:22.
+- `rfc-legends-submission.mp4`: the ETHGlobal submission cut, English narration, 3:56 (slide 8, World feedback, is dropped to stay under 4 minutes; that feedback is in the form).
 - `rfc-legends-pitch-th.mp4`: the same video with Thai narration, 1920×1080, 4:56.
 - `index.html`: the self-playing presentation. Open it in a browser and press **Play narration**; the slides advance on their own. Arrow keys also work. **Voice: EN / ไทย** switches the narration language (or open `index.html?lang=th`).
 - `narration.json` / `narration-th.json`: the English and Thai narration scripts, one entry per slide.
