@@ -34,9 +34,9 @@ WEB="$STAGE/web"
 PORT="${RFC_PROD_PORT:-3100}"
 PB_PORT="${POCKETBASE_HTTP:-127.0.0.1:8091}"
 
-echo "==> building from a clean HEAD worktree (dirty trees never ship)"
+echo "==> building from a clean worktree of ${RFC_DEPLOY_REF:-HEAD} (dirty trees never ship)"
 WT=$(mktemp -d /tmp/rfc-deploy-XXXXXX)
-git worktree add --detach "$WT" HEAD >/dev/null
+git worktree add --detach "$WT" "${RFC_DEPLOY_REF:-HEAD}" >/dev/null
 trap 'git worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"' EXIT
 cp apps/web/.env.production.local "$WT/apps/web/.env.production.local"
 if [ ! -d "$WT/apps/web/node_modules" ]; then
