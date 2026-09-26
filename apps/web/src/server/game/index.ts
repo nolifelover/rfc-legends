@@ -272,7 +272,9 @@ export async function syncPlayer(address: string, nowMs: number = Date.now()): P
       })
     if (persisted.length > 0) await store.saveDrops(a, persisted)
 
-    player.lastSyncedAt = nowMs
+    // advance only by the whole seconds actually simulated — the sub-second remainder carries
+    // to the next poll, so frequent pollers (two tabs) don't shave progress every cycle
+    player.lastSyncedAt += elapsedSec * 1000
     await store.savePlayer(player)
     return { player, live, offline, demoMode }
   })

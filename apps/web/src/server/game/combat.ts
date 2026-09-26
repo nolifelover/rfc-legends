@@ -181,13 +181,23 @@ export function simulateLive(
       monsterHp = resume.monsterHp
     }
   }
-  let spawnAt = 0
-  let reviveAt = -1
-  let hp = maxHp(p)
+  // Cadence: EVERY piece of in-progress state carries across windows — monster HP, attack
+  // cooldowns, player HP, pending death-respawn and pending monster-respawn. Without this,
+  // each window boundary is a free full heal / instant revive / skipped respawn, so a judge
+  // polling every second (or two tabs = double poll rate) progresses differently from a slow
+  // poller. With it, N short windows simulate exactly like one long one.
+  let spawnAt = resume?.spawnIn ?? 0
+  let reviveAt = resume?.reviveIn !== undefined ? resume.reviveIn : -1
+  let hp = resume?.hp !== undefined ? resume.hp : maxHp(p)
+  if (reviveAt < 0 && hp <= 0) hp = maxHp(p) // defensive: dead without a timer shouldn't stick
   let roosterHp = roosterMaxHp(p.rooster)
-  let nextPlayerAtk = 1 / aspdOf(p)
-  let nextRoosterAtk = 1 / roosterAspd(p.rooster)
-  let nextMonsterAtk = MONSTER_ATTACK_INTERVAL
+  // Attack cooldowns: fresh spawn starts at full cooldown; a resumed fight carries the cooldowns
+  // that were left when the last window ended, so cadence never resets progress.
+  const fullPlayerCd = 1 / aspdOf(p)
+  const fullRoosterCd = 1 / roosterAspd(p.rooster)
+  let nextPlayerAtk = monster !== null ? Math.max(0, resume?.playerAtkIn ?? fullPlayerCd) : fullPlayerCd
+  let nextRoosterAtk = monster !== null ? Math.max(0, resume?.roosterAtkIn ?? fullRoosterCd) : fullRoosterCd
+  let nextMonsterAtk = monster !== null ? Math.max(0, resume?.monsterAtkIn ?? MONSTER_ATTACK_INTERVAL) : MONSTER_ATTACK_INTERVAL
 
   const pickMonster = (): MonsterDef => {
     // the upcoming kill number decides whether an MVP spawns
@@ -312,8 +322,35 @@ export function simulateLive(
   // rooster hp is tracked for future targeting; not persisted on Player in v1
   void roosterHp
 
-  // carry the in-progress fight (if any) to the next sync window
-  p.combat = monster !== null && monsterHp > 0 ? { monsterId: monster.id, monsterHp } : undefined
+  // carry ALL in-progress state to the next sync window (relative seconds, so the next
+  // window resumes exactly where this one stopped regardless of poll cadence)
+  const rem = (at: number) => Math.max(0, at - ticks)
+  if (monster !== null && monsterHp > 0) {
+    p.combat = {
+      monsterId: monster.id,
+      monsterHp,
+      playerAtkIn: rem(nextPlayerAtk),
+      roosterAtkIn: rem(nextRoosterAtk),
+      monsterAtkIn: rem(nextMonsterAtk),
+      hp: Math.max(0, hp),
+      ...(reviveAt >= 0 ? { reviveIn: rem(reviveAt) } : {}),
+    }
+  } else if (spawnAt > ticks) {
+    // no monster engaged, but a respawn is still pending — remember it (and the cooldowns,
+    // which are typically already elapsed, matching one long simulation's immediate hit)
+    p.combat = {
+      monsterId: '',
+      monsterHp: 0,
+      playerAtkIn: rem(nextPlayerAtk),
+      roosterAtkIn: rem(nextRoosterAtk),
+      monsterAtkIn: rem(nextMonsterAtk),
+      hp: Math.max(0, hp),
+      spawnIn: rem(spawnAt),
+      ...(reviveAt >= 0 ? { reviveIn: rem(reviveAt) } : {}),
+    }
+  } else {
+    p.combat = undefined
+  }
 
   return { player: p, aggregates: agg }
 }
