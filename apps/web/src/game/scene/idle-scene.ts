@@ -1111,14 +1111,17 @@ export class IdleScene extends Phaser.Scene {
     const s0 = this.trainerS0
     const sp = this.trainerSprite
     this.killTween(this.trainerChain)
-    sp.setPosition(0, 0).setScale(s0).setFlipX(false)
+    sp.setPosition(0, 0).setScale(s0).setAngle(0).setFlipX(false)
     this.trainerLook = false
-    // anticipation → strike → held impact pose → overshoot recovery; the hit lands at the end of the strike
+    // four distinct poses (the sprite pivots at the feet): wind-up leaning back on
+    // the stride texture → swing forward → held impact → follow-through → overshoot
+    // recovery. The hit lands at the end of the swing.
     this.trainerChain = this.tweens.chain({
       targets: sp,
       tweens: [
         {
           x: -24,
+          angle: -14,
           scaleX: s0 * 1.06,
           scaleY: s0 * 0.94,
           duration: JUICE.WINDUP,
@@ -1127,10 +1130,12 @@ export class IdleScene extends Phaser.Scene {
         },
         {
           x: JUICE.STRIKE_DX,
+          angle: 22,
           scaleX: s0 * 0.94,
           scaleY: s0 * 1.06,
           duration: JUICE.STRIKE,
           ease: 'Expo.easeIn',
+          onStart: () => sp.setTexture(TRAINER_KEY),
           onComplete: () => {
             if (target.dead) return
             const tx = target.container.x
@@ -1141,15 +1146,9 @@ export class IdleScene extends Phaser.Scene {
             this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
           },
         },
-        { x: JUICE.STRIKE_DX + 6, scaleX: s0 * 0.94, scaleY: s0 * 1.06, duration: JUICE.HOLD },
-        {
-          x: 0,
-          scaleX: s0,
-          scaleY: s0,
-          duration: JUICE.RECOVER,
-          ease: 'Back.easeOut',
-          onStart: () => sp.setTexture(TRAINER_KEY),
-        },
+        { x: JUICE.STRIKE_DX + 6, angle: 26, scaleX: s0 * 0.94, scaleY: s0 * 1.06, duration: JUICE.HOLD },
+        { x: JUICE.STRIKE_DX - 50, angle: 8, scaleX: s0, scaleY: s0, duration: 130, ease: 'Sine.easeOut' },
+        { x: 0, angle: 0, scaleX: s0, scaleY: s0, duration: JUICE.RECOVER, ease: 'Back.easeOut' },
       ],
     })
   }
