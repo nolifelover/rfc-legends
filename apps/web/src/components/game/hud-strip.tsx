@@ -139,7 +139,7 @@ export function HudStrip({
               />
             </div>
             <p className="mt-1 flex items-center gap-2 text-xs font-bold text-bark-soft">
-              <span title="Monsters defeated">Kills {player.killCount.toLocaleString()}</span>
+              <span title="Monsters defeated">Defeated {player.killCount.toLocaleString()}</span>
               <span aria-hidden>·</span>
               <span title="Rare drops found">Drops {player.dropCounter.toLocaleString()}</span>
             </p>
