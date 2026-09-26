@@ -23,7 +23,7 @@ const registryAbi = parseAbi([
 
 // TODO: switch to the exported roosterRwaAbi when eth-dev1 lands it in lib/contracts/abis.
 export const roosterRwaAbi = parseAbi([
-  "function roosters(uint256 tokenId) view returns ((string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName))",
+  "function getRooster(uint256 tokenId) view returns ((string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName))",
   "function latestAttestation(uint256 tokenId) view returns ((uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce))",
   "function farmSigner() view returns (address)",
 ]);
@@ -182,7 +182,7 @@ export async function getRoosterByTokenId(
   client: ReturnType<typeof ensClient>, rwa: Hex, tokenId: bigint,
 ): Promise<{ ensName: string } | null> {
   try {
-    const r = await client.readContract({ address: rwa, abi: roosterRwaAbi, functionName: "roosters", args: [tokenId] });
+    const r = await client.readContract({ address: rwa, abi: roosterRwaAbi, functionName: "getRooster", args: [tokenId] });
     const ensName = r.ensName;
     return ensName ? { ensName } : null;
   } catch { return null; }
