@@ -39,7 +39,7 @@ import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './ove
 import type { Tier } from './overlays'
 import { Fx } from './fx'
 import type { DamageKind } from './fx'
-import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, fmt, zoneOf } from './juice'
+import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, fmt, mobileCameraZoom, mobileWorldScale, zoneOf } from './juice'
 import type { ZoneSpec } from './juice'
 import type { SceneBridge, SceneMountOptions } from './scene-bridge'
 import { UiScene } from './ui-scene'
@@ -237,12 +237,13 @@ export class IdleScene extends Phaser.Scene {
 
     ensureFallbacks(this)
     makeFxTextures(this) // before Fx: its emitters bind these textures
-    this.fx = new Fx(this, this.font, this.reduced)
+    this.fx = new Fx(this, this.font, this.reduced, this.ui.mobileProfile)
     this.buildBackground()
     this.buildAmbient()
     this.buildActors()
     this.buildChips()
-    this.ui.onLayout(() => {
+    this.ui.onLayout((_rect, mobile) => {
+      this.fx.setMobileProfile(mobile)
       this.pinChips()
       this.frameWorld()
     })
@@ -620,7 +621,8 @@ export class IdleScene extends Phaser.Scene {
     this.trainerSprite = this.add.image(0, 0, TRAINER_KEY).setOrigin(0.5, 1).setDisplaySize(L.TRAINER_H, L.TRAINER_H)
     this.trainerBody.add(this.trainerSprite)
     this.trainer.add(this.trainerBody)
-    this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font, fontSize: TYPE.plateTrainer })
+    const worldScale = this.ui.mobileProfile ? mobileWorldScale(this.ui.rect.x1 - this.ui.rect.x0) : 1
+    this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font, fontSize: TYPE.plateTrainer, mobile: this.ui.mobileProfile, worldScale })
     this.trainerPlate.place(L.TRAINER_X, L.TRAINER_FEET - L.TRAINER_H - 64)
     this.startTrainerBob()
     // breathing on the container (origin at the feet) never fights the sprite's attack tweens
@@ -652,6 +654,8 @@ export class IdleScene extends Phaser.Scene {
     this.roosterPlate = new Nameplate(this, this.roosterLabel(), {
       fontFamily: this.font,
       fontSize: TYPE.plateRooster,
+      mobile: this.ui.mobileProfile,
+      worldScale,
       color: '#ffe9a8',
     })
     this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H - 58)
@@ -906,17 +910,17 @@ export class IdleScene extends Phaser.Scene {
 
   private buildChips(): void {
     // zone pill: the HUD shows the zone too, so this one fades out after 3s
-    const mapChip = new Chip(this.ui, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24 })
-    mapChip.container.setDepth(54).setPosition(this.ui.rect.x0 + L.SAFE + mapChip.boxWidth / 2, this.ui.rect.y0 + L.SAFE)
+    const mapChip = new Chip(this.ui, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24, mobile: this.ui.mobileProfile })
+    mapChip.container.setDepth(54).setPosition(this.ui.rect.x0 + L.SAFE + mapChip.boxWidth / 2, this.ui.rect.y0 + L.SAFE + this.ui.topInset)
     this.tweens.add({ targets: mapChip.container, alpha: 0, delay: 3000, duration: 600, onComplete: () => mapChip.destroy() })
 
-    this.killChip = new Chip(this.ui, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e })
+    this.killChip = new Chip(this.ui, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e, mobile: this.ui.mobileProfile })
     this.killChip.container.setDepth(54)
-    this.harvestChip = new Chip(this.ui, this.harvestLabel(), { fontFamily: this.font, accent: 0x9ccc65, iconKey: itemKey(102) })
+    this.harvestChip = new Chip(this.ui, this.harvestLabel(), { fontFamily: this.font, accent: 0x9ccc65, iconKey: itemKey(102), mobile: this.ui.mobileProfile })
     this.harvestChip.container.setDepth(54)
-    this.coinChip = new Chip(this.ui, '0', { fontFamily: this.font, accent: 0xf2c14e, iconKey: FX.coin })
+    this.coinChip = new Chip(this.ui, '0', { fontFamily: this.font, accent: 0xf2c14e, iconKey: FX.coin, mobile: this.ui.mobileProfile })
     this.coinChip.container.setDepth(54).setVisible(false)
-    this.pips = new BossPips(this.ui, this.bossEvery(), this.font)
+    this.pips = new BossPips(this.ui, this.bossEvery(), this.font, this.ui.mobileProfile)
     this.readCoins(this.player)
     this.pinChips()
   }
@@ -939,12 +943,13 @@ export class IdleScene extends Phaser.Scene {
   private pinChips(): void {
     const r = this.ui.rect
     const right = r.x1 - L.SAFE
-    const top = r.y0 + L.SAFE
+    const top = r.y0 + L.SAFE + this.ui.topInset
     this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, top)
     this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, top + 70)
     const coinRow = this.coinsKnown ? 70 : 0
     this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, top + 140)
-    this.pips.place(right, top + 132 + coinRow)
+    if (this.ui.mobileProfile) this.pips.place(r.x0 + L.SAFE, top + 72, 'left')
+    else this.pips.place(right, top + 132 + coinRow)
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
   }
 
@@ -987,12 +992,17 @@ export class IdleScene extends Phaser.Scene {
   private frameWorld(): void {
     const r = this.ui.rect
     const cam = this.cameras.main
-    const zoom = L.WORLD_ZOOM
+    const mobile = this.ui.mobileProfile
+    const zoom = mobile ? mobileCameraZoom(r.x1 - r.x0) : L.WORLD_ZOOM
     this.fx.setBaseZoom(zoom)
     cam.setZoom(zoom)
-    const top = (L.H / 2 - r.y0) / zoom
-    const bottom = L.H - (r.y1 - L.H / 2) / zoom
-    cam.centerOn(L.W / 2, Phaser.Math.Clamp(L.FOCUS_Y, top, bottom))
+    if (mobile) {
+      cam.centerOn((L.TRAINER_X + L.ENGAGE_BACK_X) / 2, L.H / 2)
+    } else {
+      const top = (L.H / 2 - r.y0) / zoom
+      const bottom = L.H - (r.y1 - L.H / 2) / zoom
+      cam.centerOn(L.W / 2, Phaser.Math.Clamp(L.FOCUS_Y, top, bottom))
+    }
     const p = cam.getWorldPoint(r.x1 - 460, r.y0 + 270)
     this.fx.setNoSpawn(p.x, p.y)
   }
@@ -1008,7 +1018,7 @@ export class IdleScene extends Phaser.Scene {
     if (weak) this.hintUntil = now + 4000
     const show = now < this.hintUntil
     if (show && !this.hintChip) {
-      this.hintChip = new Chip(this.ui, '✦ Spend stat points to hit harder', { fontFamily: this.font, fontSize: 24, accent: 0xffd24a })
+      this.hintChip = new Chip(this.ui, '✦ Spend stat points to hit harder', { fontFamily: this.font, fontSize: 24, accent: 0xffd24a, mobile: this.ui.mobileProfile })
       this.hintChip.container.setDepth(55).setAlpha(0)
       this.ui.tweens.add({ targets: this.hintChip.container, alpha: 1, duration: 300 })
       this.ui.tweens.add({ targets: this.hintChip.container, scale: 1.04, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -1173,13 +1183,19 @@ export class IdleScene extends Phaser.Scene {
     const sprite = this.add.image(0, 0, key).setOrigin(0.5, 1).setDisplaySize(h, h)
     container.add(sprite)
     const en = this.zone.names[def.id] ?? def.id
+    const mobile = this.ui.mobileProfile
+    const worldScale = mobile ? mobileWorldScale(this.ui.rect.x1 - this.ui.rect.x0) : 1
     const plate = new Nameplate(this, `${en} · Lv.${def.level}`, {
       fontFamily: this.font,
       fontSize: TYPE.platePest,
+      mobile,
+      worldScale,
       color: boss ? '#ffe9a8' : '#fff8ec',
       depth: ROW_DEPTH[row] + 0.5,
     })
-    const bar = new HpBar(this, boss ? 220 : 160, 12, ROW_DEPTH[row] + 0.5)
+    const baseBarWidth = boss ? 220 : 160
+    const barScale = mobile ? worldScale * 1.12 : 1
+    const bar = new HpBar(this, mobile ? baseBarWidth * barScale : baseBarWidth, mobile ? 12 * barScale : 12, ROW_DEPTH[row] + 0.5)
     const maxHp = def.stats.hp // the server's monster HP, boss included
     const pest: Pest = {
       def,
@@ -1701,7 +1717,10 @@ export class IdleScene extends Phaser.Scene {
         this.engage(boss)
         // heroes recoil a step
         this.tweens.add({ targets: [this.trainer, this.rooster], x: '-=30', duration: 120, yoyo: true, ease: 'Quad.easeOut' })
-        this.bossBar = new BossBar(this.ui, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font, this.ui.rect.y0 + 150)
+        const mobile = this.ui.mobileProfile
+        const visibleWidth = this.ui.rect.x1 - this.ui.rect.x0
+        const bossBarWidth = mobile ? Math.max(300, visibleWidth - L.SAFE * 2) : 920
+        this.bossBar = new BossBar(this.ui, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font, this.ui.rect.y0 + this.ui.topInset + 150, bossBarWidth, mobile)
         this.bossBar.setHp(boss.maxHp, boss.maxHp)
         this.bossBar.show(this.reduced)
         this.nextBossAt = this.time.now + 2000

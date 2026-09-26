@@ -4,7 +4,7 @@
 // frame. The bottom HUD is React-only — nothing here draws near the bottom edge.
 
 import Phaser from 'phaser'
-import { INK, TYPE, fmt } from './juice'
+import { bossPipsRightAnchor, INK, TYPE, fmt } from './juice'
 
 const PLATE_BG = INK.plate
 const PLATE_ALPHA = 0.86
@@ -14,6 +14,8 @@ export interface LabelStyle {
   color?: string
   fontFamily?: string
   depth?: number
+  mobile?: boolean
+  worldScale?: number
 }
 
 /** Dark pill with one bold line, e.g. "Verify Guy · Lv.5" or "Field Rat · Lv.2". */
@@ -40,7 +42,7 @@ export class Nameplate {
     this.main = scene.add
       .text(0, 0, main, {
         fontFamily: style.fontFamily ?? 'Arial',
-        fontSize: `${style.fontSize ?? 26}px`,
+        fontSize: `${Math.round((style.fontSize ?? 26) * (style.mobile ? 1.12 * (style.worldScale ?? 1) : 1))}px`,
         fontStyle: 'bold',
         color: style.color ?? '#fff8ec',
       })
@@ -190,23 +192,25 @@ export class BossBar {
   private readonly g: Phaser.GameObjects.Graphics
   private readonly nameText: Phaser.GameObjects.Text
   private readonly hpText: Phaser.GameObjects.Text
-  private readonly width = 920
-  private readonly height = 64
+  private readonly width: number
+  private readonly height: number
   private readonly restY: number
   private pct = 1
   private ghost = 1
   private ghostTween: Phaser.Tweens.Tween | null = null
   private shown = false
 
-  constructor(scene: Phaser.Scene, name: string, fontFamily: string, restY = 150) {
+  constructor(scene: Phaser.Scene, name: string, fontFamily: string, restY = 150, width = 920, mobile = false) {
     this.scene = scene
     this.restY = restY
+    this.width = width
+    this.height = mobile ? 72 : 64
     this.container = scene.add.container(960, -120).setDepth(60).setAlpha(0)
     this.g = scene.add.graphics()
     this.nameText = scene.add
       .text(0, 0, name, {
         fontFamily,
-        fontSize: `${TYPE.bossName}px`,
+        fontSize: `${Math.round(TYPE.bossName * (mobile ? 1.12 : 1))}px`,
         fontStyle: 'bold',
         color: '#ffe9a8',
         stroke: INK.stroke,
@@ -216,7 +220,7 @@ export class BossBar {
     this.hpText = scene.add
       .text(0, 0, '', {
         fontFamily,
-        fontSize: `${TYPE.bossName}px`,
+        fontSize: `${Math.round(TYPE.bossName * (mobile ? 1.12 : 1))}px`,
         fontStyle: 'bold',
         color: '#ffffff',
         stroke: INK.stroke,
@@ -316,21 +320,22 @@ export class Chip {
   private readonly text: Phaser.GameObjects.Text
   private readonly icon: Phaser.GameObjects.Image | null
   private readonly accent: number
-  private readonly iconSize = 44
+  private readonly iconSize: number
 
   constructor(
     scene: Phaser.Scene,
     label: string,
-    opts: { fontSize?: number; accent?: number; fontFamily?: string; iconKey?: string } = {},
+    opts: { fontSize?: number; accent?: number; fontFamily?: string; iconKey?: string; mobile?: boolean } = {},
   ) {
     this.scene = scene
     this.accent = opts.accent ?? 0xd9a441
+    this.iconSize = opts.mobile ? 52 : 44
     this.container = scene.add.container(0, 0)
     this.g = scene.add.graphics()
     this.text = scene.add
       .text(0, 0, label, {
         fontFamily: opts.fontFamily ?? 'Arial',
-        fontSize: `${opts.fontSize ?? TYPE.chip}px`,
+        fontSize: `${Math.round((opts.fontSize ?? TYPE.chip) * (opts.mobile ? 1.12 : 1))}px`,
         fontStyle: 'bold',
         color: '#fff8ec',
       })
@@ -410,17 +415,19 @@ export class BossPips {
   private total: number
   private filled = 0
   private pulse: Phaser.Tweens.Tween | null = null
+  private readonly mobile: boolean
 
-  constructor(scene: Phaser.Scene, total: number, fontFamily: string) {
+  constructor(scene: Phaser.Scene, total: number, fontFamily: string, mobile = false) {
     this.scene = scene
     this.total = total
+    this.mobile = mobile
     this.container = scene.add.container(0, 0).setDepth(54)
     this.g = scene.add.graphics()
     // 26px with letter spacing: at 20px the FIT-scaled label misread as "MOOB INFO"
     this.label = scene.add
       .text(0, 0, '', {
         fontFamily,
-        fontSize: '26px',
+        fontSize: `${mobile ? 30 : 26}px`,
         fontStyle: 'bold',
         color: '#ffe9a8',
         stroke: INK.stroke,
@@ -432,8 +439,11 @@ export class BossPips {
     this.draw()
   }
 
-  /** Right-aligned at (rightX, y). */
-  place(rightX: number, y: number): void {
+  /** Align the pips and label within the visible lane. */
+  place(x: number, y: number, align: 'left' | 'right' = 'right'): void {
+    const pipW = this.mobile ? 24 : 22
+    const count = Math.min(this.total, 12)
+    const rightX = align === 'left' ? bossPipsRightAnchor(x, pipW, count, this.label.width) : x
     this.container.setPosition(rightX, y)
   }
 
@@ -460,7 +470,7 @@ export class BossPips {
   private draw(): void {
     const g = this.g
     g.clear()
-    const pipW = 22
+    const pipW = this.mobile ? 24 : 22
     const gap = 8
     const n = Math.min(this.total, 12)
     const totalW = n * pipW + (n - 1) * gap

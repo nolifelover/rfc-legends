@@ -21,6 +21,7 @@ export class Fx {
   private readonly scene: Phaser.Scene
   private readonly font: string
   readonly reduced: boolean
+  private mobileProfile: boolean
 
   private readonly pool: Phaser.GameObjects.Text[] = []
   private poolIdx = 0
@@ -53,10 +54,11 @@ export class Fx {
   private noSpawnY: number = L.NO_SPAWN_Y
   private baseZoom = 1
 
-  constructor(scene: Phaser.Scene, font: string, reduced: boolean) {
+  constructor(scene: Phaser.Scene, font: string, reduced: boolean, mobile = false) {
     this.scene = scene
     this.font = font
     this.reduced = reduced
+    this.mobileProfile = mobile
 
     for (let i = 0; i < TEXT_POOL; i++) {
       const t = scene.add
@@ -153,6 +155,14 @@ export class Fx {
     this.noSpawnY = y
   }
 
+  setMobileProfile(mobile: boolean): void {
+    this.mobileProfile = mobile
+  }
+
+  private mobileSize(size: number): number {
+    return this.mobileProfile ? Math.round(size * Math.sqrt(L.WORLD_ZOOM / this.baseZoom)) : size
+  }
+
   setBaseZoom(z: number): void {
     this.baseZoom = z
   }
@@ -236,7 +246,7 @@ export class Fx {
   damage(x: number, y: number, value: number, kind: DamageKind): void {
     const crit = kind === 'crit'
     const miss = value <= 0
-    const size = crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster
+    const size = this.mobileSize(crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster)
     const color = miss ? '#d9d2cc' : crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
     const now = performance.now()
     this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
@@ -247,7 +257,7 @@ export class Fx {
     t.setText(miss ? 'MISS' : crit ? `★ ${fmt(value)}` : fmt(value))
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
     let sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
-    let sy = y - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
+    let sy = y - this.dmgStack * Math.round(size * 0.85)
     if (sx > this.noSpawnX - 80 && sy - rise - size < this.noSpawnY) {
       sx = Math.min(sx, this.noSpawnX - 80)
       sy = Math.max(sy, this.noSpawnY + rise + size)
@@ -294,7 +304,7 @@ export class Fx {
       return
     }
     const t = this.acquire()
-    t.setStyle({ fontSize: `${TYPE.exp}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 10 })
+    t.setStyle({ fontSize: `${this.mobileSize(TYPE.exp)}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 10 })
     t.setShadow(3, 5, '#000000', 6, true, true)
     t.setText(`+${fmt(exp)} EXP`)
     const sy = y + Phaser.Math.Between(-20, 20)
@@ -315,7 +325,7 @@ export class Fx {
   /** Small floating label, e.g. "+1 Paddy Rice" next to the Harvest chip. */
   tick(x: number, y: number, label: string, color: string, size: number = TYPE.lootTick): void {
     const t = this.acquire()
-    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: 5 })
+    t.setStyle({ fontSize: `${this.mobileSize(size)}px`, color, stroke: INK.stroke, strokeThickness: 5 })
     t.setText(label)
     t.setPosition(x, y).setDepth(56).setScale(0.8)
     this.scene.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' })
@@ -332,7 +342,7 @@ export class Fx {
   /** Big centred text slam: scale 2.4 → 1 (Back), hold, then fade while rising. */
   slam(text: string, sub?: string, y = 320, color: string = INK.cream): void {
     const t = this.acquire()
-    t.setStyle({ fontSize: `${TYPE.slam}px`, color, stroke: INK.stroke, strokeThickness: 12 })
+    t.setStyle({ fontSize: `${this.mobileSize(TYPE.slam)}px`, color, stroke: INK.stroke, strokeThickness: 12 })
     t.setText(text)
     t.setPosition(960, y).setDepth(70).setScale(this.reduced ? 1 : 2.4)
     this.scene.tweens.chain({
@@ -346,7 +356,7 @@ export class Fx {
     })
     if (sub) {
       const s = this.acquire()
-      s.setStyle({ fontSize: `${TYPE.slamSub}px`, color: '#fff8ec', stroke: INK.stroke, strokeThickness: 7 })
+      s.setStyle({ fontSize: `${this.mobileSize(TYPE.slamSub)}px`, color: '#fff8ec', stroke: INK.stroke, strokeThickness: 7 })
       s.setText(sub)
       s.setPosition(960, y + 58).setDepth(70).setAlpha(0)
       this.scene.tweens.chain({

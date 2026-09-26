@@ -5,7 +5,7 @@
 // the visible edges rather than the stage edges.
 
 import Phaser from 'phaser'
-import { LAYOUT as L } from './juice'
+import { cssInsetToStageUnits, isMobileProfile, LAYOUT as L } from './juice'
 
 export interface VisibleRect {
   x0: number
@@ -17,7 +17,9 @@ export interface VisibleRect {
 export class UiScene extends Phaser.Scene {
   /** Visible part of the stage in stage units (full stage until measured). */
   rect: VisibleRect = { x0: 0, y0: 0, x1: L.W, y1: L.H }
-  private listeners: Array<(r: VisibleRect) => void> = []
+  mobileProfile = false
+  topInset = 0
+  private listeners: Array<(r: VisibleRect, mobile: boolean) => void> = []
 
   constructor() {
     super('ui')
@@ -30,9 +32,9 @@ export class UiScene extends Phaser.Scene {
   }
 
   /** Called with the visible rect now and after every re-fit. */
-  onLayout(fn: (r: VisibleRect) => void): void {
+  onLayout(fn: (r: VisibleRect, mobile: boolean) => void): void {
     this.listeners.push(fn)
-    fn(this.rect)
+    fn(this.rect, this.mobileProfile)
   }
 
   private measure(): void {
@@ -40,6 +42,12 @@ export class UiScene extends Phaser.Scene {
     const f = sc.displaySize.width > 0 ? sc.displaySize.width / L.W : 1
     const pw = sc.parentSize.width > 0 ? sc.parentSize.width : sc.displaySize.width
     const ph = sc.parentSize.height > 0 ? sc.parentSize.height : sc.displaySize.height
+    const cssWidth = typeof window !== 'undefined' ? window.innerWidth : pw
+    const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+    this.mobileProfile = isMobileProfile(cssWidth, coarse)
+    const frame = this.game.canvas.parentElement?.parentElement ?? this.game.canvas.parentElement
+    const insetPx = frame ? Number.parseFloat(getComputedStyle(frame).getPropertyValue('--game-top-inset')) || 0 : 0
+    this.topInset = this.mobileProfile ? cssInsetToStageUnits(insetPx, f) : 0
     const visW = Math.min(L.W, pw / f)
     const visH = Math.min(L.H, ph / f)
     this.rect = {
@@ -48,6 +56,6 @@ export class UiScene extends Phaser.Scene {
       x1: Math.round((L.W + visW) / 2),
       y1: Math.round((L.H + visH) / 2),
     }
-    for (const fn of this.listeners) fn(this.rect)
+    for (const fn of this.listeners) fn(this.rect, this.mobileProfile)
   }
 }

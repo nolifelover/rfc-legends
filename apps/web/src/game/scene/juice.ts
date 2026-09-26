@@ -65,6 +65,29 @@ export const LAYOUT = {
   PEST_H: { 'nu-na': 260, 'takka-taen-yak': 290, 'pu-na': 230, 'raja-nu-na': 660 } as Record<string, number>,
 } as const
 
+/** One display profile shared by all in-canvas mobile presentation branches. */
+export const MOBILE_PROFILE_MAX_WIDTH = 700
+const MOBILE_COMBAT_LANE_WIDTH = 1480
+export function isMobileProfile(cssWidth: number, pointerCoarse: boolean): boolean {
+  return cssWidth < MOBILE_PROFILE_MAX_WIDTH || pointerCoarse
+}
+export function mobileCameraZoom(visibleWidth: number): number {
+  if (!Number.isFinite(visibleWidth) || visibleWidth <= 0) return LAYOUT.WORLD_ZOOM
+  return Math.min(LAYOUT.WORLD_ZOOM, visibleWidth / MOBILE_COMBAT_LANE_WIDTH)
+}
+export function mobileWorldScale(visibleWidth: number): number {
+  return Math.sqrt(LAYOUT.WORLD_ZOOM / mobileCameraZoom(visibleWidth))
+}
+export function cssInsetToStageUnits(cssPixels: number, stageScale: number): number {
+  if (!Number.isFinite(cssPixels) || !Number.isFinite(stageScale) || stageScale <= 0) return 0
+  return cssPixels / stageScale
+}
+export function bossPipsRightAnchor(leftX: number, pipWidth: number, count: number, labelWidth: number): number {
+  const n = Math.max(0, Math.min(Math.floor(count), 12))
+  const totalW = n > 0 ? n * pipWidth + (n - 1) * 8 : 0
+  return leftX + totalW + 16 + labelWidth
+}
+
 /** Timings in ms, shake tuples as [duration, intensity], distances in px. */
 export const JUICE = {
   // hit-stop (near-freeze). Juicy Breakout's slider range is 0–320.
