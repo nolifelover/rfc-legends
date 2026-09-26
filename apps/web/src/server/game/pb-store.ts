@@ -35,6 +35,12 @@ function notFound(err: unknown, code: 'PLAYER_NOT_FOUND' | 'DROP_NOT_FOUND'): ne
   throw err
 }
 
+/** PB answers 403 "Batch requests are not allowed." when the batch API is disabled server-side. */
+function isBatchDisabled(err: unknown): boolean {
+  const e = err as { status?: number; response?: { message?: string } }
+  return e?.status === 403 && /batch/i.test(e?.response?.message ?? '')
+}
+
 export class PbGameStore implements GameStore {
   async getPlayer(address: string): Promise<Player | null> {
     const client = await pb()
@@ -79,13 +85,22 @@ export class PbGameStore implements GameStore {
       .collection('players')
       .getFirstListItem(`address = "${address}"`)
       .catch((err: unknown) => notFound(err, 'PLAYER_NOT_FOUND'))
-    // one batch transaction for the whole sync (D1) instead of N sequential creates
-    const batch = client.createBatch()
-    for (const drop of drops) {
+    const rows = drops.map((drop) => {
       const dropId = normDropId(drop.dropId)
-      batch.collection('drops').create({ address, dropId, data: { ...drop, dropId } })
+      return { address, dropId, data: { ...drop, dropId } }
+    })
+    try {
+      // one batch transaction for the whole sync (D1) instead of N sequential creates
+      const batch = client.createBatch()
+      for (const row of rows) batch.collection('drops').create(row)
+      await batch.send()
+    } catch (err) {
+      if (!isBatchDisabled(err)) throw err
+      // Batch API disabled on this PB instance (403 "Batch requests are not allowed") — PB
+      // batches are all-or-nothing so nothing was applied; fall back to parallel creates.
+      // Bounded by MAX_DROPS_PER_SYNC (≤100 rows) per sync.
+      await Promise.all(rows.map((row) => client.collection('drops').create(row)))
     }
-    await batch.send()
   }
 
   async updateDropStatus(
