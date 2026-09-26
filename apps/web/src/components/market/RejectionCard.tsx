@@ -28,7 +28,7 @@ export function RejectionCard({
         </p>
         {code ? <code className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 font-mono text-[11px]">{code}</code> : null}
       </div>
-      <p className="mt-1 leading-relaxed text-bark">{reason}</p>
+      <p className="mt-1 leading-relaxed break-words [overflow-wrap:anywhere] text-bark">{reason}</p>
       <div className="mt-2 flex items-center justify-between gap-2 text-xs text-bark-soft">
         <span>{by}</span>
         {onDismiss ? (

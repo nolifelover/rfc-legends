@@ -205,13 +205,13 @@ function ListForm({
         />
       ) : null}
       <form
-        className="flex items-center gap-2"
+        className="flex flex-wrap items-center gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           void list();
         }}
       >
-        <label className="flex flex-1 items-center gap-1 rounded-full border-2 border-clay/20 bg-cream px-3 py-1.5 text-sm">
+        <label className="flex min-w-[7rem] flex-1 items-center gap-1 rounded-full border-2 border-clay/20 bg-cream px-3 py-1.5 text-sm">
           <span className="sr-only">Price per unit in USDC</span>
           <input
             inputMode="decimal"
