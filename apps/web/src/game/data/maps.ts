@@ -68,7 +68,7 @@ const pondPest = (id: string, name: string, emoji: string, level: number, cardId
   return { ...m, stats: { ...m.stats, atk: MONSTER_ATK(Math.round(level / 2)) } }
 }
 const tukTong = pondPest('tuk-tong', 'ตัวเงินตัวทอง', '🐌', 24, 1004, 104)
-const nokKrachang = pondPest('nok-krachang', 'นกกระยาง', '🦆', 28, 1005, 102)
+const phakTobChawai = pondPest('phak-tob-chawai-yak', 'ผักตบชวายักษ์', '🌿', 28, 1005, 102)
 const plaChonYak = pondPest('pla-chon-yak', 'ปลาช่อนยักษ์', '🐟', 32, 1006, 103)
 
 export const BUENG_BUA: MapDef = {
@@ -78,7 +78,7 @@ export const BUENG_BUA: MapDef = {
   element: 'water',
   monsters: [
     { monster: tukTong, weight: 40 },
-    { monster: nokKrachang, weight: 35 },
+    { monster: phakTobChawai, weight: 35 },
     { monster: plaChonYak, weight: 25 },
   ] satisfies MonsterSpawn[],
   // same idea for the pond MVP: boss HP/exp of its level, ATK of a Lv-18 boss
