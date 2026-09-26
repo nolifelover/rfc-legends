@@ -19,6 +19,7 @@ import {
   txUrl,
   useHumanStatus,
 } from "@/lib/worldid/client";
+import { createInFlight } from "@/components/market/errors";
 import { ownershipMessage } from "@/lib/worldid/ownership";
 import type { HumanStatusResponse, OwnershipProof, RpContextResponse, VerifyResponse } from "@/lib/worldid/types";
 
@@ -52,6 +53,8 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
   const rejection = useRef<Rejection | null>(null);
   const accepted = useRef<Extract<VerifyResponse, { verified: true }> | null>(null);
   const ownership = useRef<OwnershipProof | null>(null);
+  // A double click on "Verify" must not open two requests (two nonces, two signatures).
+  const [flight] = useState(createInFlight);
 
   // Reset when the wallet changes (derived-state pattern, no effect needed).
   const [seenAddress, setSeenAddress] = useState(address);
@@ -61,7 +64,9 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
     setOpen(false);
   }
 
-  async function start() {
+  const start = () => flight.run(doStart);
+
+  async function doStart() {
     if (!address) return;
     rejection.current = null;
     accepted.current = null;
