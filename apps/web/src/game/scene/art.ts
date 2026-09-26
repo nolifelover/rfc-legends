@@ -519,6 +519,7 @@ export const FX = {
   bird: 'fx-bird',
   shimmer: 'fx-shimmer',
   card: 'fx-card',
+  coin: 'fx-coin',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -584,5 +585,17 @@ export function makeFxTextures(scene: Phaser.Scene): void {
     g.strokeRoundedRect(4, 4, 48, 64, 6)
     g.lineStyle(3, OUTLINE)
     g.strokeRoundedRect(1.5, 1.5, 53, 69, 7)
+  })
+
+  // gold coin (kill-reward litter)
+  make(FX.coin, 28, 28, (g) => {
+    g.fillStyle(0xf2c14e)
+    g.fillCircle(14, 14, 12)
+    g.lineStyle(3, OUTLINE)
+    g.strokeCircle(14, 14, 12)
+    g.lineStyle(2, 0xb8860b)
+    g.strokeCircle(14, 14, 7.5)
+    g.fillStyle(0xfff3c9, 0.9)
+    g.fillCircle(10, 10, 3)
   })
 }

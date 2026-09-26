@@ -3,10 +3,20 @@
  *
  * G4 replaces the placeholder *contents* passed as children with the Phaser
  * canvas — keep the frame itself stable so the HUD below never shifts.
+ * `className` overrides sizing (default `w-full`; the game screen passes a
+ * height-fit variant so the canvas can claim most of the viewport).
  */
-export function SceneFrame({ children }: { children?: React.ReactNode }) {
+export function SceneFrame({
+  children,
+  className = "w-full",
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-2xl border-2 border-bark/30 bg-cream shadow-[0_16px_48px_-16px_rgba(74,50,32,0.45)]">
+    <div
+      className={`relative aspect-video ${className} overflow-hidden rounded-2xl border-2 border-bark/30 bg-cream shadow-[0_16px_48px_-16px_rgba(74,50,32,0.45)]`}
+    >
       {children}
     </div>
   );

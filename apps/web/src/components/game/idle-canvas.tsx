@@ -48,5 +48,7 @@ export default function IdleCanvas({ player, drops, demoMode }: IdleCanvasProps)
     bridgeRef.current?.updateState(player, drops, demoMode);
   }, [player, drops, demoMode]);
 
-  return <div ref={hostRef} className="absolute inset-0 [&>canvas]:!h-full [&>canvas]:!w-full" aria-hidden />;
+  // No forced canvas sizing — Phaser's Scale.FIT letterboxes correctly if the
+  // frame is ever width-clamped away from exact 16:9.
+  return <div ref={hostRef} className="absolute inset-0" aria-hidden />;
 }

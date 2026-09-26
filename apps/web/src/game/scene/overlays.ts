@@ -98,7 +98,7 @@ export class MiniHpBar {
 
   private readonly bg: Phaser.GameObjects.Graphics
   private readonly width: number
-  private readonly h = 12
+  private readonly h = 14
 
   constructor(scene: Phaser.Scene, width = 58) {
     this.container = scene.add.container(0, 0).setDepth(50)

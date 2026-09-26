@@ -37,7 +37,9 @@ export function StatPanel({
   player: Player;
   onAllocate: (stat: StatKey) => Promise<AllocateResult>;
 }) {
-  const [open, setOpen] = useState(true);
+  // Collapsed by default: the game screen stays scene-first; the allocation
+  // UI opens as an overlay drawer (same pattern as the bag).
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<StatKey | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,32 +52,58 @@ export function StatPanel({
   }
 
   return (
-    <section className="rounded-2xl border border-clay/25 bg-cream shadow-sm">
+    <>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(true)}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay sm:px-5"
+        className="inline-flex items-center gap-2 rounded-full border-2 border-clay/40 bg-cream px-4 py-2 text-sm font-black text-clay-deep shadow-sm transition hover:border-clay hover:bg-sun-soft/50"
       >
-        <span className="flex items-center gap-3">
-          <span className="text-sm font-black uppercase tracking-wide text-bark">
-            Spend stat points
-          </span>
-          {player.statPoints > 0 ? (
-            <span className="rounded-full bg-sun px-2.5 py-0.5 text-sm font-black text-bark">
-              {player.statPoints} left
-            </span>
-          ) : (
-            <span className="text-xs font-semibold text-bark-soft">all spent — level up for more</span>
-          )}
-        </span>
+        <span aria-hidden>✦</span>
+        Stat points: {player.statPoints.toLocaleString()}
         <span aria-hidden className="text-bark-soft">
-          {open ? "▾" : "▸"}
+          ▸
         </span>
       </button>
 
       {open ? (
-        <div className="border-t border-clay/15 px-4 py-4 sm:px-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close stat allocation"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 cursor-default bg-bark/45 backdrop-blur-sm"
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Stat allocation"
+            className="relative max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-clay/25 bg-cream shadow-[0_24px_64px_-16px_rgba(43,27,18,0.6)]"
+          >
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-clay/15 bg-cream/95 px-4 py-3 backdrop-blur sm:px-5">
+            <span className="flex items-center gap-3">
+              <span className="text-sm font-black uppercase tracking-wide text-bark">
+                Spend stat points
+              </span>
+              {player.statPoints > 0 ? (
+                <span className="rounded-full bg-sun px-2.5 py-0.5 text-sm font-black text-bark">
+                  {player.statPoints} left
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-bark-soft">all spent — level up for more</span>
+              )}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+              className="grid h-8 w-8 place-items-center rounded-full border border-bark/20 text-bark-soft transition hover:bg-sun-soft/60"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="px-4 py-4 sm:px-5">
           <div className="mb-3 flex items-baseline gap-2">
             <span className="text-3xl font-black leading-none text-clay">
               {player.statPoints}
@@ -139,8 +167,10 @@ export function StatPanel({
               {reasonText(error)}
             </p>
           ) : null}
+          </div>
+          </section>
         </div>
       ) : null}
-    </section>
+    </>
   );
 }

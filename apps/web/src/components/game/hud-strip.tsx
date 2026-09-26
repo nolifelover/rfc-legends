@@ -10,22 +10,31 @@ import { expToNext, maxHp, maxSp } from "@/server/game/stats";
 import { SireLineArt } from "./sire-line-art";
 import { sireLineInfo } from "./sire-lines";
 
+/** 1,234,567 → "1.2M" — Idleon-style suffixes for narrow bars. */
+function compact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
+}
+
 function Bar({
   label,
   value,
   max,
   gradient,
   showPercent = false,
+  compactNumbers = false,
 }: {
   label: string;
   value: number;
   max: number;
   gradient: string;
   showPercent?: boolean;
+  compactNumbers?: boolean;
 }) {
   const pct = Math.max(0, Math.min(100, max > 0 ? (value / max) * 100 : 0));
-  const text = showPercent
-    ? `${value.toLocaleString()} / ${max.toLocaleString()} (${pct.toFixed(1)}%)`
+  const curMax = compactNumbers
+    ? `${compact(value)} / ${compact(max)}`
     : `${value.toLocaleString()} / ${max.toLocaleString()}`;
 
   return (
@@ -37,15 +46,20 @@ function Bar({
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={max}
-        aria-label={`${label}: ${text}`}
+        aria-label={`${label}: ${curMax}${showPercent ? ` (${pct.toFixed(1)}%)` : ""}`}
       >
         <div
           className={`h-full rounded-full ${gradient} transition-[width] duration-500`}
           style={{ width: `${pct}%` }}
         />
-        <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">
-          {text}
+        <span className="absolute inset-y-0 left-2 flex items-center text-[12px] font-bold text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.65)]">
+          {curMax}
         </span>
+        {showPercent ? (
+          <span className="absolute inset-y-0 right-2 flex items-center text-[14px] font-black text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.75)]">
+            ({pct.toFixed(1)}%)
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -102,24 +116,20 @@ export function HudStrip({ player, rareDropCount }: { player: Player; rareDropCo
             <p className="text-xs font-semibold text-bark-soft">
               Rooster Lv <span className="font-black text-clay">{player.rooster.level}</span>
             </p>
-            <div
-              className="mt-1 h-1.5 overflow-hidden rounded-full bg-bark/15"
-              role="meter"
-              aria-label="Rooster EXP"
-              aria-valuenow={player.rooster.exp}
-              aria-valuemin={0}
-              aria-valuemax={expToNext(player.rooster.level)}
-            >
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-sun to-clay"
-                style={{
-                  width: `${Math.min(100, (player.rooster.exp / expToNext(player.rooster.level)) * 100)}%`,
-                }}
+            <div className="mt-1">
+              <Bar
+                label="EXP"
+                value={player.rooster.exp}
+                max={expToNext(player.rooster.level)}
+                gradient="bg-gradient-to-r from-sun to-clay"
+                showPercent
+                compactNumbers
               />
             </div>
-            <p className="mt-1 flex items-center gap-3 text-xs font-bold text-bark-soft">
-              <span title="Monsters defeated">⚔ {player.killCount.toLocaleString()}</span>
-              <span title="Rare drops found">✨ {player.dropCounter.toLocaleString()}</span>
+            <p className="mt-1 flex items-center gap-2 text-xs font-bold text-bark-soft">
+              <span title="Monsters defeated">Kills {player.killCount.toLocaleString()}</span>
+              <span aria-hidden>·</span>
+              <span title="Rare drops found">Drops {player.dropCounter.toLocaleString()}</span>
             </p>
             {typeof rareDropCount === "number" ? (
               <a

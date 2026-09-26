@@ -190,32 +190,36 @@ export function GameClient() {
     return <CreateCharacter onCreate={handleCreate} />;
   }
 
-  // 4. Player exists → the game screen (pre-Phaser).
+  // 4. Player exists → the game screen. The canvas claims the viewport;
+  // stat allocation and sync collapse into a single slim control row.
   const player = state.player;
   return (
     <div className="flex flex-1 flex-col">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-bark-soft">
-              auto-syncs every few seconds
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            className="rounded-full border-2 border-clay/40 bg-cream px-4 py-1.5 text-sm font-bold text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 disabled:cursor-wait disabled:opacity-60"
-          >
-            {syncMutation.isPending ? "Syncing…" : "Sync now"}
-          </button>
+      <div className="mx-auto flex w-full max-w-[1700px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6">
+        <div className="relative flex min-h-0 flex-1 justify-center">
+          <SceneFrame className="h-[min(74vh,calc((100vw-3.5rem)*9/16))] w-auto max-w-full">
+            <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
+          </SceneFrame>
         </div>
 
-        <SceneFrame>
-          <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
-        </SceneFrame>
-
-        <StatPanel player={player} onAllocate={handleAllocate} />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <StatPanel player={player} onAllocate={handleAllocate} />
+          <div className="flex items-center gap-2">
+            <span className="hidden text-[11px] font-semibold text-bark-soft sm:inline">
+              auto-syncs
+            </span>
+            <button
+              type="button"
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              aria-label="Sync now"
+              title={syncMutation.isPending ? "Syncing…" : "Sync now"}
+              className="grid h-9 w-9 place-items-center rounded-full border-2 border-clay/40 bg-cream text-base font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 disabled:cursor-wait disabled:opacity-60"
+            >
+              {syncMutation.isPending ? "…" : "⟳"}
+            </button>
+          </div>
+        </div>
       </div>
 
       <HudStrip player={player} rareDropCount={rareDropCount} />

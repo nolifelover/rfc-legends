@@ -27,11 +27,11 @@ import { aspdOf, atkOf, critChance, roosterAspd, roosterAtk, roosterCrit } from 
 
 const W = 960
 const H = 540
-const FEET_Y = 486 // actors' feet line (inside the warm ground lane)
-const TRAINER_X = 282
-const ROOSTER_X = 362
-const MONSTER_X = 664
-const LOOT_Y = 508 // where dropped icons come to rest
+const FEET_Y = 492 // actors' feet line (inside the warm ground lane)
+const TRAINER_X = 244
+const ROOSTER_X = 384
+const MONSTER_X = 648
+const LOOT_Y = 516 // where dropped icons come to rest
 
 const EN_NAMES: Record<string, string> = {
   'nu-na': 'Field Rat',
@@ -40,12 +40,12 @@ const EN_NAMES: Record<string, string> = {
   'raja-nu-na': 'Rat King',
 }
 
-/** Display heights on the 960×540 stage (boss ≈ 1.8× a regular mob). */
+/** Display heights on the 960×540 stage (boss ≈ 1.7× a regular mob). */
 const DISPLAY_H: Record<string, number> = {
-  'nu-na': 84,
-  'takka-taen-yak': 94,
-  'pu-na': 74,
-  'raja-nu-na': 152,
+  'nu-na': 128,
+  'takka-taen-yak': 142,
+  'pu-na': 112,
+  'raja-nu-na': 218,
 }
 
 const MINTABLE: readonly Rarity[] = ['legendary', 'monster_card', 'mvp_card']
@@ -101,7 +101,7 @@ export class IdleScene extends Phaser.Scene {
   private visualDps = 40
   private lastMeteorAt = -99999
 
-  private groundLoot: Phaser.GameObjects.Image[] = []
+  private groundLoot: Array<{ icon: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }> = []
   private motes: Array<{ img: Phaser.GameObjects.Image; ax: number; ay: number; phase: number; speed: number }> = []
 
   constructor() {
@@ -167,16 +167,17 @@ export class IdleScene extends Phaser.Scene {
       })
     }
 
-    // hills → paddy → ground bands, back to front (art-QA verified composite)
-    this.add.image(0, 240, 'art-hills').setOrigin(0, 0).setDepth(4)
-    this.add.image(0, 360, 'art-paddy').setOrigin(0, 0).setDepth(6)
+    // hills → paddy → ground bands, back to front. Sky is cropped hard
+    // (hills high) so the fight fills the frame.
+    this.add.image(0, 150, 'art-hills').setOrigin(0, 0).setDepth(4)
+    this.add.image(0, 295, 'art-paddy').setOrigin(0, 0).setDepth(6)
 
     // water shimmer: alternating alpha tweens on soft highlight rects
     const shimmers: Array<[number, number, number, number]> = [
-      [130, 376, 1.4, 0],
-      [420, 392, 1.1, 400],
-      [700, 372, 1.6, 800],
-      [250, 404, 1.2, 200],
+      [130, 316, 1.4, 0],
+      [420, 342, 1.1, 400],
+      [700, 312, 1.6, 800],
+      [250, 368, 1.2, 200],
     ]
     for (const [x, y, s, delay] of shimmers) {
       const sh = this.add.image(x, y, FX.shimmer).setDepth(7).setScale(s, s * 0.9).setAlpha(0)
@@ -244,9 +245,9 @@ export class IdleScene extends Phaser.Scene {
   // ------------------------------------------------------------------- actors
 
   private buildActors(): void {
-    this.trainer = this.add.image(TRAINER_X, FEET_Y, TRAINER_KEY).setOrigin(0.5, 1).setDepth(20).setDisplaySize(116, 116)
-    this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font })
-    this.trainerPlate.placeAbove(TRAINER_X, FEET_Y - 116 - 34)
+    this.trainer = this.add.image(TRAINER_X, FEET_Y, TRAINER_KEY).setOrigin(0.5, 1).setDepth(20).setDisplaySize(176, 176)
+    this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font, fontSize: 17 })
+    this.trainerPlate.placeAbove(TRAINER_X, FEET_Y - 176 - 40)
     this.tweens.add({
       targets: this.trainer,
       y: FEET_Y - 5,
@@ -257,9 +258,9 @@ export class IdleScene extends Phaser.Scene {
     })
 
     const roosterKey = ROOSTER_KEYS[this.player.rooster.sireLine] ?? ROOSTER_KEYS.thepbut
-    this.rooster = this.add.image(ROOSTER_X, FEET_Y, roosterKey).setOrigin(0.5, 1).setDepth(21).setDisplaySize(88, 88)
-    this.roosterPlate = new Nameplate(this, this.roosterLabel(), { fontFamily: this.font, fontSize: 13 })
-    this.roosterPlate.placeAbove(ROOSTER_X, FEET_Y - 88 - 30)
+    this.rooster = this.add.image(ROOSTER_X, FEET_Y, roosterKey).setOrigin(0.5, 1).setDepth(21).setDisplaySize(132, 132)
+    this.roosterPlate = new Nameplate(this, this.roosterLabel(), { fontFamily: this.font, fontSize: 14 })
+    this.roosterPlate.placeAbove(ROOSTER_X, FEET_Y - 132 - 34)
     this.tweens.add({
       targets: this.rooster,
       y: FEET_Y - 4,
@@ -354,7 +355,7 @@ export class IdleScene extends Phaser.Scene {
     this.tweens.add({ targets: container, x: baseX, duration: 460, ease: 'Sine.easeOut' })
     this.tweens.add({
       targets: container,
-      y: FEET_Y - (isBoss ? 30 : 18),
+      y: FEET_Y - (isBoss ? 44 : 24),
       duration: 210,
       yoyo: true,
       ease: 'Quad.easeOut',
@@ -363,15 +364,15 @@ export class IdleScene extends Phaser.Scene {
     const en = EN_NAMES[def.id] ?? def.id
     const plate = new Nameplate(
       this,
-      `${en} (${def.name})`,
+      en,
       {
         fontFamily: this.font,
-        fontSize: isBoss ? 16 : 14,
+        fontSize: isBoss ? 18 : 16,
         color: isBoss ? '#ffe9a8' : '#fff8ec',
         sub: isBoss ? `MVP · Lv.${def.level}` : `Lv.${def.level}`,
       },
     )
-    const bar = new MiniHpBar(this, isBoss ? 72 : 58)
+    const bar = new MiniHpBar(this, isBoss ? 86 : 70)
     const topY = FEET_Y - displayH
 
     const hp = this.visualHp(def)
@@ -390,7 +391,7 @@ export class IdleScene extends Phaser.Scene {
     this.time.delayedCall(540, () => {
       if (this.monster?.container !== container) return
       this.monster.ready = true
-      plate.placeAbove(baseX, topY - 60)
+      plate.placeAbove(baseX, topY - 72)
       bar.placeAbove(baseX, topY - 16)
     })
 
@@ -419,7 +420,7 @@ export class IdleScene extends Phaser.Scene {
     const hp = this.monster?.maxHp ?? this.visualHp(def)
     this.bossBar.setHp(hp, hp)
     this.bossBar.show(this.reduced)
-    this.fx.burst(MONSTER_X, FEET_Y - 80, 0xffd24a, this.reduced ? 4 : 8, 70)
+    this.fx.burst(MONSTER_X, FEET_Y - 120, 0xffd24a, this.reduced ? 4 : 8, 90)
     this.nextBossAt = time + 2000
     this.bridge.emit('boss-spawn', { name: def.name })
   }
@@ -432,7 +433,7 @@ export class IdleScene extends Phaser.Scene {
     this.trainer.x = TRAINER_X
     this.trainerLunge = this.tweens.add({
       targets: this.trainer,
-      x: TRAINER_X + 24,
+      x: TRAINER_X + 34,
       duration: 110,
       yoyo: true,
       ease: 'Quad.easeOut',
@@ -445,8 +446,8 @@ export class IdleScene extends Phaser.Scene {
     const value = Math.max(4, Math.round(atk * (0.95 + Math.random() * 0.1) * (crit ? 1.5 : 1)))
     this.time.delayedCall(90, () => {
       if (this.monster !== m || m.hp <= 0) return
-      this.fx.slash(m.container.x - 34, m.container.y - m.sprite.displayHeight * 0.55)
-      this.fx.impactStar(m.container.x - 8, m.container.y - 34)
+      this.fx.slash(m.container.x - 52, m.container.y - m.sprite.displayHeight * 0.55)
+      this.fx.impactStar(m.container.x - 10, m.container.y - 46, 1.2)
       this.hitMonster(m, value, crit ? 'crit' : 'trainer', time)
     })
   }
@@ -459,18 +460,26 @@ export class IdleScene extends Phaser.Scene {
     this.rooster.x = ROOSTER_X
     this.roosterLunge = this.tweens.add({
       targets: this.rooster,
-      x: ROOSTER_X + 32,
+      x: ROOSTER_X + 40,
       duration: 130,
       yoyo: true,
       ease: 'Quad.easeOut',
     })
+    // motion streak trailing the dash
+    const streak = this.add
+      .image(ROOSTER_X + 52, FEET_Y - 58, FX.glow)
+      .setTint(0xfff3d6)
+      .setAlpha(0.55)
+      .setScale(2.6, 0.5)
+      .setDepth(19)
+    this.tweens.add({ targets: streak, alpha: 0, scaleX: 1.4, duration: 170, onComplete: () => streak.destroy() })
 
     const atk = roosterAtk(this.player.rooster) + this.player.rooster.level * 1.5
     const crit = Math.random() < roosterCrit(this.player.rooster)
     const value = Math.max(3, Math.round(atk * (0.95 + Math.random() * 0.1) * (crit ? 1.5 : 1)))
     this.time.delayedCall(100, () => {
       if (this.monster !== m || m.hp <= 0) return
-      this.fx.impactStar(m.container.x - 20, m.container.y - 26, 0.8, 0xfff3d6)
+      this.fx.impactStar(m.container.x - 28, m.container.y - 38, 1, 0xfff3d6)
       this.hitMonster(m, value, crit ? 'crit' : 'rooster', time)
     })
   }
@@ -478,15 +487,15 @@ export class IdleScene extends Phaser.Scene {
   private hitMonster(m: ActiveMonster, value: number, kind: 'trainer' | 'crit' | 'rooster', time: number): void {
     if (m.hp <= 0) return
     m.hp = Math.max(0, m.hp - value)
-    // damage column rises beside the nameplate/bar, not through them
-    this.fx.damage(m.container.x + 26, m.topY - 4, value, kind)
+    // damage column anchors over the monster's head
+    this.fx.damage(m.container.x, m.topY - 4, value, kind)
     this.fx.dustKick(m.container.x, FEET_Y - 4)
     m.bar.setPct(m.hp / m.maxHp)
     this.bossBar?.setHp(m.hp, m.maxHp)
 
     // white flash + knockback + squash
     m.sprite.setTintFill(0xffffff)
-    this.time.delayedCall(70, () => m.sprite.clearTint())
+    this.time.delayedCall(80, () => m.sprite.clearTint())
     this.tweens.killTweensOf(m.container)
     m.container.x = m.baseX
     this.tweens.add({ targets: m.container, x: m.baseX + 8, duration: 70, yoyo: true, ease: 'Quad.easeOut' })
@@ -509,11 +518,11 @@ export class IdleScene extends Phaser.Scene {
     this.killChip.pop()
 
     const boss = !!m.def.isMvp
-    this.fx.poof(m.container.x, m.container.y - (boss ? 70 : 40), boss)
-    this.fx.expPop(m.container.x + 4, m.topY - 30, m.def.exp)
-
-    // loot: ~35% of kills leave the monster's material on the ground
-    if (m.def.materialItemId && Math.random() < 0.35) {
+    this.fx.poof(m.container.x, m.container.y - (boss ? 100 : 56), boss)
+    this.fx.expPop(m.container.x + 4, m.topY - 34, m.def.exp)
+    // every kill pays out visibly: gold coins arc out and litter the lane
+    this.fx.coinBurst(m.container.x, m.container.y - (boss ? 110 : 60), LOOT_Y - 6)
+    if (m.def.materialItemId && Math.random() < 0.4) {
       this.dropGroundLoot(itemKey(m.def.materialItemId), m.container.x)
     }
 
@@ -534,7 +543,7 @@ export class IdleScene extends Phaser.Scene {
     this.bossBar = null
 
     // framed card flies out toward the camera — the demo's money shot
-    const card = this.add.container(m.container.x, m.container.y - 70).setDepth(46).setScale(0.5)
+    const card = this.add.container(m.container.x, m.container.y - 110).setDepth(46).setScale(0.5)
     const rays = this.add.image(0, 0, FX.glow).setTint(0xffd24a).setAlpha(0.7).setScale(2.6)
     const frame = this.add.image(0, 0, FX.card).setScale(0.8)
     const icon = this.add.image(0, 2, itemKey(m.def.cardId ?? 3001)).setDisplaySize(30, 30)
@@ -564,29 +573,62 @@ export class IdleScene extends Phaser.Scene {
     })
   }
 
+  /** Icon bounces onto the ground lane, glows gently, fades after ~20s. Cap 14. */
   private dropGroundLoot(key: string, nearX: number): void {
-    const x = Phaser.Math.Clamp(nearX + Phaser.Math.Between(-44, 30), 420, 940)
+    const x = Phaser.Math.Clamp(nearX + Phaser.Math.Between(-48, 34), 440, 940)
+    const restY = LOOT_Y + Phaser.Math.Between(-6, 6)
+    const glow = this.add
+      .image(x, restY - 4, FX.glow)
+      .setTint(0xffe9a8)
+      .setAlpha(0.35)
+      .setScale(0.8)
+      .setDepth(13)
     const icon = this.add
-      .image(x, LOOT_Y - 110, key)
+      .image(x, restY - 110, key)
       .setDepth(14)
-      .setDisplaySize(38, 38)
+      .setDisplaySize(40, 40)
       .setAngle(Phaser.Math.Between(-14, 14))
-    this.groundLoot.push(icon)
-    this.tweens.add({ targets: icon, y: LOOT_Y, duration: 520, ease: 'Bounce.easeOut' })
-    // gentle shine so ground loot reads as loot, not scenery
+    this.tweens.add({ targets: icon, y: restY, duration: 560, ease: 'Bounce.easeOut' })
     this.tweens.add({
-      targets: icon,
-      alpha: { from: 1, to: 0.72 },
-      duration: 800,
+      targets: glow,
+      alpha: { from: 0.26, to: 0.5 },
+      duration: 760,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     })
-    if (this.groundLoot.length > 12) {
+
+    const entry = { icon, glow }
+    this.groundLoot.push(entry)
+    const fadeOut = (): void => {
+      this.tweens.killTweensOf(icon)
+      this.tweens.killTweensOf(glow)
+      this.tweens.add({
+        targets: [icon, glow],
+        alpha: 0,
+        duration: 600,
+        onComplete: () => {
+          icon.destroy()
+          glow.destroy()
+        },
+      })
+      this.groundLoot = this.groundLoot.filter((e) => e !== entry)
+    }
+    this.time.delayedCall(20000, fadeOut)
+    if (this.groundLoot.length > 14) {
       const oldest = this.groundLoot.shift()
       if (oldest) {
-        this.tweens.killTweensOf(oldest)
-        this.tweens.add({ targets: oldest, alpha: 0, duration: 600, onComplete: () => oldest.destroy() })
+        this.tweens.killTweensOf(oldest.icon)
+        this.tweens.killTweensOf(oldest.glow)
+        this.tweens.add({
+          targets: [oldest.icon, oldest.glow],
+          alpha: 0,
+          duration: 500,
+          onComplete: () => {
+            oldest.icon.destroy()
+            oldest.glow.destroy()
+          },
+        })
       }
     }
   }

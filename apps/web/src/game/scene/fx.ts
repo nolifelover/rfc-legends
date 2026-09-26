@@ -23,26 +23,26 @@ export class Fx {
     this.reduced = reduced
   }
 
-  // --- damage numbers: large, stacked, pop-in + rise + fade (~0.9s) ---
+  // --- damage numbers: big, solid, gold; stack 2-3 over the monster's head ---
 
   damage(x: number, y: number, value: number, kind: DamageKind): void {
     const crit = kind === 'crit'
-    const size = crit ? 38 : kind === 'trainer' ? 30 : 28
-    const color = crit ? '#ffd24a' : kind === 'trainer' ? '#ffffff' : '#fff3d6'
-    const tint = crit ? 0xffd24a : kind === 'trainer' ? 0xffffff : 0xfff3d6
+    const size = crit ? 60 : kind === 'trainer' ? 48 : 38
+    const color = crit ? '#ffd24a' : kind === 'trainer' ? '#ffcc4d' : '#ffffff'
+    const tint = crit ? 0xffd24a : kind === 'trainer' ? 0xffcc4d : 0xffffff
     const label = crit ? `CRIT! ${value.toLocaleString('en-US')}` : value.toLocaleString('en-US')
-    const stack = this.activeDamage % 5
+    const stack = this.activeDamage % 3
     this.activeDamage += 1
-    const spawnX = x + Phaser.Math.Between(-8, 8)
-    const spawnY = y - stack * 34
+    const spawnX = x + Phaser.Math.Between(-14, 14)
+    const spawnY = y - stack * (size + 6)
 
     // soft glow halo so the number reads as an effect, not text, in stills
     const halo = this.scene.add
       .image(spawnX, spawnY - size * 0.5, FX.glow)
       .setTint(tint)
       .setAlpha(crit ? 0.5 : 0.32)
-      .setDepth(39)
-      .setScale(crit ? 1.3 : 1.05)
+      .setDepth(51)
+      .setScale(crit ? 1.5 : 1.2)
 
     const text = this.scene.add
       .text(spawnX, spawnY, label, {
@@ -51,59 +51,95 @@ export class Fx {
         fontStyle: 'bold',
         color,
         stroke: '#2b1b12',
-        strokeThickness: crit ? 6 : 5,
+        strokeThickness: crit ? 6 : 4,
       })
       .setResolution(2)
       .setOrigin(0.5, 1)
-      .setDepth(40)
-      .setScale(1.3)
+      .setDepth(52) // above nameplates — Idleon numbers float over everything
+      .setScale(1.25)
     text.setShadow(1, 2, '#1b100a', 3, false, true)
 
-    const rise = (targets: Phaser.GameObjects.GameObject, delay: number) =>
+    // solid pop → hold → quick fade: readable in ANY frame of its life
+    const rise = (targets: Phaser.GameObjects.GameObject, hold: number) =>
       this.scene.tweens.chain({
         targets,
         tweens: [
-          { y: spawnY - 16, duration: 420 + delay, ease: 'Sine.easeOut' },
-          { y: spawnY - 34, alpha: 0, duration: 420, ease: 'Sine.easeIn' },
+          { y: spawnY - 10, duration: hold, ease: 'Sine.easeOut' },
+          { y: spawnY - 26, alpha: 0, duration: 300, ease: 'Sine.easeIn' },
         ],
       })
-    this.scene.tweens.add({ targets: text, scale: 1, duration: 150, ease: 'Back.easeOut' })
-    rise(text, 0)
-    this.scene.tweens.add({ targets: halo, scale: halo.scale * 0.72, duration: 150 })
-    rise(halo, 60)
+    this.scene.tweens.add({ targets: text, scale: 1, duration: 140, ease: 'Back.easeOut' })
+    rise(text, 620)
+    this.scene.tweens.add({ targets: halo, scale: halo.scale * 0.75, duration: 140 })
+    rise(halo, 680)
 
-    this.scene.time.delayedCall(1000, () => {
+    this.scene.time.delayedCall(1150, () => {
       this.activeDamage = Math.max(0, this.activeDamage - 1)
       text.destroy()
       halo.destroy()
     })
 
     if (crit) {
-      this.burst(x, y - stack * 34 - 12, 0xffe28a, this.reduced ? 2 : 3, 34)
+      this.burst(x, y - 30, 0xffe28a, this.reduced ? 2 : 3, 40)
       this.shake(0.0016, 90)
     }
   }
 
-  /** Gold "+N EXP" drift on a kill — reward feedback that lingers in stills. */
+  /** Gold coins arc out of a killed monster and litter the ground. */
+  coinBurst(x: number, y: number, groundY: number): void {
+    const n = this.reduced ? 3 : Phaser.Math.Between(6, 8)
+    for (let i = 0; i < n; i++) {
+      const dir = i % 2 === 0 ? -1 : 1
+      const dx = dir * Phaser.Math.Between(26, 92)
+      const coin = this.scene.add
+        .image(x, y, FX.coin)
+        .setDepth(15)
+        .setScale(0.9)
+        .setAngle(Phaser.Math.Between(-30, 30))
+      this.scene.tweens.chain({
+        targets: coin,
+        tweens: [
+          { y: y - Phaser.Math.Between(26, 54), x: x + dx * 0.55, duration: 200, ease: 'Quad.easeOut' },
+          { y: groundY, x: x + dx, duration: 280, ease: 'Quad.easeIn' },
+        ],
+        onComplete: () => {
+          coin.setAngle(Phaser.Math.Between(-16, 16))
+          this.scene.time.delayedCall(2200, () => {
+            this.scene.tweens.add({
+              targets: coin,
+              alpha: 0,
+              y: coin.y - 6,
+              duration: 500,
+              onComplete: () => coin.destroy(),
+            })
+          })
+        },
+      })
+    }
+  }
+
+  /** Gold "+N EXP" drift on a kill — solid long enough to survive any still. */
   expPop(x: number, y: number, exp: number): void {
     const text = this.scene.add
       .text(x + Phaser.Math.Between(-14, 14), y, `+${exp.toLocaleString('en-US')} EXP`, {
         fontFamily: this.font,
-        fontSize: '17px',
+        fontSize: '21px',
         fontStyle: 'bold',
         color: '#ffe28a',
         stroke: '#2b1b12',
-        strokeThickness: 4,
+        strokeThickness: 5,
       })
       .setResolution(2)
       .setOrigin(0.5, 1)
-      .setDepth(41)
+      .setDepth(53)
+    this.scene.tweens.add({ targets: text, y: y - 26, duration: 900, ease: 'Sine.easeOut' })
     this.scene.tweens.add({
       targets: text,
-      y: y - 44,
+      y: y - 40,
       alpha: 0,
-      duration: 1100,
-      ease: 'Sine.easeOut',
+      delay: 700,
+      duration: 450,
+      ease: 'Sine.easeIn',
       onComplete: () => text.destroy(),
     })
   }
