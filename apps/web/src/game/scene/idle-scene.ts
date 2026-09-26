@@ -122,6 +122,7 @@ export class IdleScene extends Phaser.Scene {
   private trainerPlate!: Nameplate
   private trainerBob: Phaser.Tweens.Tween | null = null
   private trainerChain: Phaser.Tweens.TweenChain | null = null
+  private trainerLook = false
   private rooster!: Phaser.GameObjects.Container
   private roosterSprite!: Phaser.GameObjects.Image
   private roosterKey = ROOSTER_KEYS.thepbut
@@ -460,6 +461,9 @@ export class IdleScene extends Phaser.Scene {
     this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font, fontSize: TYPE.plateTrainer })
     this.trainerPlate.place(L.TRAINER_X, L.TRAINER_FEET - L.TRAINER_H - 64)
     this.startTrainerBob()
+    // breathing on the container (origin at the feet) never fights the sprite's attack tweens
+    this.tweens.add({ targets: this.trainer, scaleY: 1.025, scaleX: 0.99, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    this.scheduleTrainerLook()
 
     // rooster: the hero — 1.2× the trainer, bloodline aura, in front
     this.roosterKey = ROOSTER_KEYS[this.player.rooster.sireLine] ?? ROOSTER_KEYS.thepbut
@@ -481,6 +485,7 @@ export class IdleScene extends Phaser.Scene {
     this.roosterSprite = this.add.image(0, 0, this.roosterKey).setOrigin(0.5, 1).setDisplaySize(L.ROOSTER_H, L.ROOSTER_H)
     this.roosterS0 = this.roosterSprite.scaleX
     this.rooster.add(this.roosterSprite)
+    this.tweens.add({ targets: this.rooster, scaleY: 1.03, scaleX: 0.985, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 300 })
     this.roosterPlate = new Nameplate(this, this.roosterLabel(), {
       fontFamily: this.font,
       fontSize: TYPE.plateRooster,
@@ -492,6 +497,25 @@ export class IdleScene extends Phaser.Scene {
     this.scheduleRoosterIdle()
     this.roosterSprite.setInteractive({ useHandCursor: true })
     this.roosterSprite.on('pointerdown', () => this.cheerTap())
+  }
+
+  /** The trainer glances back over his shoulder every 4–8s when no swing is due. */
+  private scheduleTrainerLook(): void {
+    this.time.addEvent({
+      delay: Phaser.Math.Between(4000, 8000),
+      callback: () => {
+        const busy = this.trainerChain?.isPlaying() || this.nextTrainerAt - this.time.now < 800
+        if (!busy && !this.trainerLook) {
+          this.trainerLook = true
+          this.trainerSprite.setFlipX(true)
+          this.time.delayedCall(600, () => {
+            this.trainerSprite.setFlipX(false)
+            this.trainerLook = false
+          })
+        }
+        this.scheduleTrainerLook()
+      },
+    })
   }
 
   // ------------------------------------------------------ rooster personality
@@ -892,8 +916,9 @@ export class IdleScene extends Phaser.Scene {
     const s0 = this.trainerS0
     const sp = this.trainerSprite
     this.killTween(this.trainerChain)
-    sp.setPosition(0, 0).setScale(s0)
-    // anticipation → strike → overshoot recovery; the hit lands at the end of the strike
+    sp.setPosition(0, 0).setScale(s0).setFlipX(false)
+    this.trainerLook = false
+    // anticipation → strike → held impact pose → overshoot recovery; the hit lands at the end of the strike
     this.trainerChain = this.tweens.chain({
       targets: sp,
       tweens: [
@@ -916,11 +941,12 @@ export class IdleScene extends Phaser.Scene {
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * ROW_SCALE[target.row] * 0.5
             this.fx.slash(tx - 90, ty, 1, target.boss ? 1.6 : 1)
-            this.fx.impactStar(tx - 20, ty - 20, 1.2)
+            this.fx.impactStar(tx - 10, ty - 20, target.boss ? 1.6 : 1)
             this.fx.dustKick(L.TRAINER_X + JUICE.STRIKE_DX, L.TRAINER_FEET, 3)
             this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
           },
         },
+        { x: JUICE.STRIKE_DX + 6, scaleX: s0 * 0.94, scaleY: s0 * 1.06, duration: JUICE.HOLD },
         {
           x: 0,
           scaleX: s0,
@@ -976,11 +1002,12 @@ export class IdleScene extends Phaser.Scene {
             if (target.dead) return
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * rs * 0.45
-            this.fx.impactStar(tx - 30, ty, 1.1, INK.roosterTint)
+            this.fx.impactStar(tx - 30, ty, target.boss ? 1.5 : 0.95, 0xffd8a8)
             if (crit) this.fx.sparkle(dashX + 40, dashY - L.ROOSTER_H * 0.55, 8)
             this.hitPest(target, value, crit ? 'crit' : 'rooster', time)
           },
         },
+        { targets: this.rooster, x: dashX + 8, y: dashY, duration: JUICE.HOLD },
         {
           targets: this.rooster,
           x: L.ROOSTER_X,
@@ -999,15 +1026,18 @@ export class IdleScene extends Phaser.Scene {
     // the boss only dies when the server says so; cosmetic hits stop at 1 HP
     p.hp = Math.max(p.boss && !this.bossServerDead ? 1 : 0, p.hp - value)
     const lethal = p.hp <= 0
-    // the boss's crown reaches the boss bar, so its numbers sit on the forehead
+    // numbers anchor on the struck enemy, offset right so the 480px rooster's head
+    // never sits under them; the boss's crown reaches the boss bar, so its numbers
+    // sit on the forehead
     const numY = this.topYOf(p) + (p.boss ? 170 : 0)
-    this.fx.damage(p.container.x + (kind === 'rooster' ? JUICE.DMG_SPLIT_X : -JUICE.DMG_SPLIT_X), numY, value, kind)
+    const numX = p.container.x + (kind === 'rooster' ? JUICE.DMG_SPLIT_X + 100 : 60)
+    this.fx.damage(numX, numY, value, kind)
     p.bar.setPct(p.hp / p.maxHp)
     if (p.boss) this.bossBar?.setHp(p.hp, p.maxHp)
 
     // freeze on contact (victim vibrates in update), then knock back and squash
     p.sprite.setTintFill(0xffffff)
-    this.time.delayedCall(20, () => p.sprite.clearTint())
+    this.time.delayedCall(JUICE.FLINCH_MS, () => p.sprite.clearTint())
     this.fx.hitStop(lethal ? (p.boss ? JUICE.STOP_BOSS_KILL : JUICE.STOP_KILL) : kind === 'crit' ? JUICE.STOP_CRIT : JUICE.STOP_HIT)
     this.victim = p
 
@@ -1026,6 +1056,7 @@ export class IdleScene extends Phaser.Scene {
       targets: p.sprite,
       scaleX: ss * 0.86,
       scaleY: ss * 1.12,
+      angle: kind === 'rooster' ? -7 : 7,
       duration: 90,
       yoyo: true,
       ease: 'Quad.easeOut',

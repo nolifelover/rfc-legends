@@ -77,7 +77,10 @@ export const JUICE = {
   // attack phases
   WINDUP: 90,
   STRIKE: 80,
+  HOLD: 120, // impact pose held so a still at any moment shows the hit
   RECOVER: 220,
+  IMPACT_MS: 220, // white starburst on the target
+  FLINCH_MS: 110, // white tint on the victim
   STRIKE_DX: 200, // trainer lunge
   DASH: 110, // rooster dash to the target
   DASH_BACK: 300,
@@ -97,6 +100,8 @@ export const JUICE = {
   DMG_SPLIT_X: 90, // trainer numbers left of centre, rooster numbers right
   DMG_MS: 700,
   DMG_ABOVE_HEAD: 20,
+  DMG_STACK_WINDOW: 700, // hits closer than this stack in a column (up to 5)
+  DMG_STACK_MAX: 5,
   // loot flow
   LOOT_ARC_MIN: 150,
   LOOT_ARC_MAX: 250,
@@ -153,9 +158,9 @@ export const SIRE_TINT: Record<string, number> = {
 
 /** Font sizes on the 1080 frame. */
 export const TYPE = {
-  dmgTrainer: 64,
-  dmgRooster: 54,
-  dmgCritMult: 1.6,
+  dmgTrainer: 112,
+  dmgRooster: 96,
+  dmgCritMult: 1.5,
   exp: 40,
   lootTick: 30,
   plateTrainer: 30,

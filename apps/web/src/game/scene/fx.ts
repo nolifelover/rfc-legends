@@ -24,6 +24,8 @@ export class Fx {
 
   private readonly pool: Phaser.GameObjects.Text[] = []
   private poolIdx = 0
+  private dmgStack = 0
+  private lastDmgAt = -99999
   private readonly ghosts: Phaser.GameObjects.Image[] = []
   private ghostIdx = 0
   private readonly slashG: Phaser.GameObjects.Graphics
@@ -211,19 +213,23 @@ export class Fx {
   }
 
   /**
-   * Damage number 20px above the head: drifts 80–120px up with ±40px x jitter and
-   * fades over 700ms. White for the trainer, orange-red for the rooster, gold and
-   * 1.6× for crits (1.8 → 1.0 pop plus a 4px shake).
+   * Damage number above the struck enemy: heavy dark outline, drifts 80–120px up
+   * and fades over 700ms. Hits within 700ms of each other stack in a rising column
+   * of up to five (Idleon's look). White for the trainer, orange-red for the
+   * rooster, gold with a star and 1.5× for crits (1.8 → 1.0 pop plus a 4px shake).
    */
   damage(x: number, topY: number, value: number, kind: DamageKind): void {
     const crit = kind === 'crit'
     const size = crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster
     const color = crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
+    const now = performance.now()
+    this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
+    this.lastDmgAt = now
     const t = this.acquire()
-    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 8 : 6 })
-    t.setText(fmt(value))
+    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 14 : 12 })
+    t.setText(crit ? `★ ${fmt(value)}` : fmt(value))
     const sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
-    const sy = topY - JUICE.DMG_ABOVE_HEAD
+    const sy = topY - JUICE.DMG_ABOVE_HEAD - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
     t.setPosition(sx, sy).setDepth(52)
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
     if (crit) {
@@ -360,13 +366,17 @@ export class Fx {
     })
   }
 
-  impactStar(x: number, y: number, scale = 1, tint = 0xfff3d6): void {
-    const star = this.scene.add.image(x, y, FX.star).setTint(tint).setDepth(37).setScale(0.6 * scale)
+  /** White impact starburst on the target: snaps to ~220px, holds, then fades (~320ms total). */
+  impactStar(x: number, y: number, scale = 1, tint = 0xffffff): void {
+    const flash = this.scene.add.image(x, y, FX.glow).setTint(tint).setDepth(36).setScale(2 * scale).setAlpha(0.9)
+    const star = this.scene.add.image(x, y, FX.star).setTint(tint).setDepth(37).setScale(1.2 * scale)
+    this.scene.tweens.add({ targets: flash, scale: 6 * scale, alpha: 0, duration: JUICE.IMPACT_MS, ease: 'Cubic.easeOut', onComplete: () => flash.destroy() })
     this.scene.tweens.chain({
       targets: star,
       tweens: [
-        { scale: 2.2 * scale, angle: 90, duration: 110, ease: 'Back.easeOut' },
-        { alpha: 0, scale: 1.4 * scale, duration: 130 },
+        { scale: 4.6 * scale, angle: 45, duration: 90, ease: 'Back.easeOut' },
+        { scale: 4.2 * scale, angle: 60, duration: JUICE.IMPACT_MS - 90 },
+        { alpha: 0, scale: 3 * scale, angle: 90, duration: 110 },
       ],
       onComplete: () => star.destroy(),
     })
