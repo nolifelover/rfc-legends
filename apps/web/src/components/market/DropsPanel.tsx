@@ -14,7 +14,8 @@ import { rareItemsAbi } from "@/lib/contracts/abis";
 import { txUrl } from "@/lib/worldid/client";
 import { ownershipMessage, randomNonce } from "@/lib/worldid/ownership";
 import type { Hex, VoucherResponse } from "@/lib/worldid/types";
-import { describeError, itemInfo, runTx } from "./chain";
+import { describeError, itemInfo, runTx, useSingleFlight, useTxBlocked, WRONG_CHAIN_LABEL } from "./chain";
+import { CONTRACT_REASONS } from "./errors";
 import { ItemArt, ItemTitle } from "./ItemArt";
 import { RejectionCard } from "./RejectionCard";
 
@@ -131,6 +132,8 @@ function DropCard({
   mintedTx?: string;
 }) {
   const config = useConfig();
+  const flight = useSingleFlight();
+  const blocked = useTxBlocked();
   const queryClient = useQueryClient();
   const [state, setState] = useState<MintState>({ kind: "idle" });
   const ref = useRef<HTMLLIElement>(null);
@@ -140,41 +143,43 @@ function DropCard({
     if (focused) ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focused]);
 
-  async function mint() {
-    // Prove this wallet is asking (single-use signature), so nobody else can spend its daily mints.
-    setState({ kind: "busy", step: "Sign the mint request in your wallet…" });
-    const nonce = randomNonce();
-    const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
-    let signature: Hex;
+  // One mint flow at a time per card; a double click can't send two transactions.
+  const mint = () => flight.run(doMint);
+
+  async function doMint() {
     try {
-      signature = await signMessage(config, {
+      // Prove this wallet is asking (single-use signature), so nobody else can spend its daily mints.
+      setState({ kind: "busy", step: "Sign the mint request in your wallet…" });
+      const nonce = randomNonce();
+      const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+      const signature: Hex = await signMessage(config, {
         account: address,
         message: ownershipMessage({ purpose: "mint-rare-drop", address, dropId, nonce, expiresAt }),
       });
-    } catch (err) {
-      setState({ kind: "rejected", source: "wallet", reason: describeError(err).message });
-      return;
-    }
-    setState({ kind: "busy", step: "Checking World ID, level and drop…" });
-    const res = await fetch("/api/voucher/mint", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ address, dropId, ownership: { nonce, expiresAt, signature } }),
-    });
-    const body = (await res.json().catch(() => null)) as VoucherResponse | null;
-    if (!body || !body.ok) {
-      setState({
-        kind: "rejected",
-        source: "server",
-        code: body && !body.ok ? body.code : undefined,
-        reason: body && !body.ok ? body.reason : `Voucher request failed (HTTP ${res.status}).`,
-      });
-      return;
-    }
 
-    try {
-      setState({ kind: "busy", step: "Confirm the mint in your wallet…" });
+      setState({ kind: "busy", step: "Checking World ID, level and drop…" });
+      const res = await fetch("/api/voucher/mint", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ address, dropId, ownership: { nonce, expiresAt, signature } }),
+      });
+      const body = (await res.json().catch(() => null)) as VoucherResponse | null;
+      if (!body || !body.ok) {
+        setState({
+          kind: "rejected",
+          source: "server",
+          code: body && !body.ok ? body.code : undefined,
+          reason: body && !body.ok ? body.reason : `Voucher request failed (HTTP ${res.status}).`,
+        });
+        return;
+      }
+
       const v = body.voucher;
+      if (Number(v.deadline) <= Math.floor(Date.now() / 1000) + 30) {
+        setState({ kind: "rejected", source: "server", code: "VoucherExpired", reason: CONTRACT_REASONS.VoucherExpired });
+        return;
+      }
+      setState({ kind: "busy", step: "Confirm the mint in your wallet…" });
       const receipt = await runTx(config, address, {
         address: body.rareItems,
         abi: rareItemsAbi,
@@ -183,24 +188,22 @@ function DropCard({
           { to: v.to, itemId: BigInt(v.itemId), amount: BigInt(v.amount), dropId: v.dropId, deadline: BigInt(v.deadline) },
           body.signature,
         ],
+        revertHint: "The voucher probably expired or the drop was minted elsewhere. Press Mint again.",
       });
       setState({ kind: "busy", step: "Recording the mint…" });
+      // The mint is onchain either way; if recording fails the server heals it on the next read.
       await fetch("/api/voucher/confirm", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ address, dropId, txHash: receipt.transactionHash }),
-      });
+      }).catch(() => undefined);
       setState({ kind: "minted", txHash: receipt.transactionHash });
-      void queryClient.invalidateQueries({ queryKey: ["market-drops"] });
-      void queryClient.invalidateQueries({ queryKey: ["market-balances"] });
     } catch (err) {
       const { message, errorName } = describeError(err);
-      setState({
-        kind: "rejected",
-        source: errorName ? "contract" : "wallet",
-        code: errorName,
-        reason: errorName === "NotVerifiedHuman" ? `${message}: RareItems only mints to World ID verified humans.` : message,
-      });
+      setState({ kind: "rejected", source: errorName ? "contract" : "wallet", code: errorName, reason: message });
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ["market-drops"] });
+      void queryClient.invalidateQueries({ queryKey: ["market-balances"] });
     }
   }
 
@@ -249,10 +252,16 @@ function DropCard({
         <button
           type="button"
           onClick={mint}
-          disabled={state.kind === "busy"}
-          className="rounded-full bg-clay px-4 py-2.5 text-sm font-bold text-cream transition hover:bg-clay-deep disabled:cursor-wait disabled:opacity-60"
+          disabled={state.kind === "busy" || blocked}
+          className="rounded-full bg-clay px-4 py-2.5 text-sm font-bold text-cream transition hover:bg-clay-deep disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {state.kind === "busy" ? state.step : state.kind === "rejected" ? "Try mint again" : "Mint as NFT"}
+          {state.kind === "busy"
+            ? state.step
+            : blocked
+              ? WRONG_CHAIN_LABEL
+              : state.kind === "rejected"
+                ? "Try mint again"
+                : "Mint as NFT"}
         </button>
       )}
     </li>
