@@ -122,7 +122,8 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
             address={wallet}
             deployment={deployment}
             candidateItemIds={[...mintedIds, ...listedIds]}
-            verified={status.data?.verified}
+            // RareMarket.list checks HumanRegistry onchain, so the lock follows the chain when we can read it.
+            verified={status.data?.onchainVerified ?? status.data?.verified}
           />
           <ListingsPanel address={wallet} deployment={deployment} onSold={setReceipt} />
         </div>
