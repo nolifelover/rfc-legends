@@ -33,6 +33,12 @@ describe("describeError", () => {
     const wrapped = new BaseError("Request failed", { cause: new UserRejectedRequestError(new Error("denied")) });
     expect(describeError(wrapped)).toMatchObject({ userRejected: true });
     expect(describeError({ code: 4001, message: "User rejected" })).toMatchObject({ userRejected: true });
+    // Some wallets/bridges lose the 4001 code and viem reports it as a revert reason.
+    const asRevert = new BaseError("The contract function \"approve\" reverted with the following reason:\nUser rejected the request.", {
+      details: "User rejected the request.",
+    });
+    expect(describeError(asRevert)).toMatchObject({ userRejected: true });
+    expect(describeError(new Error("MetaMask Tx Signature: User denied transaction signature."))).toMatchObject({ userRejected: true });
   });
 
   it("passes TxRejected messages through", () => {

@@ -30,10 +30,16 @@ export const CONTRACT_REASONS: Record<string, string> = {
 
 export type ReadableError = { message: string; errorName?: string; userRejected?: boolean };
 
+// Wallets word rejections differently ("User rejected the request.", MetaMask's
+// "User denied transaction signature."), and some bridges drop the 4001 code.
+const USER_REJECTED_TEXT = /user (rejected|denied|cancel+ed)|rejected the request|request rejected/i;
+const REJECTED: ReadableError = { message: "You rejected the request in your wallet. Nothing was sent.", userRejected: true };
+
 /** Turns a viem/wagmi error into one readable line, naming the custom error when there is one. */
 export function describeError(err: unknown): ReadableError {
   if (err instanceof TxRejected) return { message: err.message, errorName: err.errorName };
   if (err instanceof BaseError) {
+    if (USER_REJECTED_TEXT.test(`${err.details ?? ""} ${err.shortMessage}`)) return REJECTED;
     const revert = err.walk((e) => e instanceof ContractFunctionRevertedError);
     if (revert instanceof ContractFunctionRevertedError && revert.data?.errorName) {
       const name = revert.data.errorName;
@@ -42,17 +48,21 @@ export function describeError(err: unknown): ReadableError {
       return { message: friendly ? `${friendly} (${name})` : `${name}(${args})`, errorName: name };
     }
     const rejected = err.walk((e) => {
-      const x = e as { name?: string; code?: number };
-      return x.name === "UserRejectedRequestError" || x.code === 4001;
+      const x = e as { name?: string; code?: number; details?: string; shortMessage?: string; message?: string };
+      return (
+        x.name === "UserRejectedRequestError" ||
+        x.code === 4001 ||
+        USER_REJECTED_TEXT.test(`${x.details ?? ""} ${x.shortMessage ?? ""} ${x.message ?? ""}`)
+      );
     });
-    if (rejected) return { message: "You rejected the request in your wallet. Nothing was sent.", userRejected: true };
+    if (rejected) return REJECTED;
     if (err.walk((e) => (e as { name?: string }).name === "WaitForTransactionReceiptTimeoutError")) {
       return { message: "The transaction wasn't confirmed in time. Check it on Etherscan before retrying." };
     }
     return { message: err.shortMessage };
   }
   const code = (err as { code?: number } | null)?.code;
-  if (code === 4001) return { message: "You rejected the request in your wallet. Nothing was sent.", userRejected: true };
+  if (code === 4001 || (err instanceof Error && USER_REJECTED_TEXT.test(err.message))) return REJECTED;
   return { message: err instanceof Error ? err.message : String(err) };
 }
 
