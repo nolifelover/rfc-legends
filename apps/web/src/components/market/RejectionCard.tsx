@@ -6,6 +6,7 @@ export function RejectionCard({
   reason,
   source,
   onDismiss,
+  action,
 }: {
   title?: string;
   code?: string;
@@ -13,6 +14,8 @@ export function RejectionCard({
   /** Who refused: our game server (after World ID) or the contract itself. */
   source: "server" | "contract" | "wallet";
   onDismiss?: () => void;
+  /** Optional next step offered right in the card (e.g. the USDC faucet). */
+  action?: { label: string; onClick: () => void; disabled?: boolean };
 }) {
   const by = {
     server: "Refused by the game server's mint checks",
@@ -29,6 +32,16 @@ export function RejectionCard({
         {code ? <code className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 font-mono text-[11px]">{code}</code> : null}
       </div>
       <p className="mt-1 leading-relaxed break-words [overflow-wrap:anywhere] text-bark">{reason}</p>
+      {action ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          disabled={action.disabled}
+          className="mt-2 rounded-full bg-field px-3 py-1.5 text-xs font-bold text-cream hover:bg-field-deep disabled:opacity-60"
+        >
+          {action.label}
+        </button>
+      ) : null}
       <div className="mt-2 flex items-center justify-between gap-2 text-xs text-bark-soft">
         <span>{by}</span>
         {onDismiss ? (

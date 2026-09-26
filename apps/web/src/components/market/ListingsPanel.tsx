@@ -12,9 +12,9 @@ import { useConfig, usePublicClient } from "wagmi";
 import { readContract } from "wagmi/actions";
 import { mockUsdcAbi, rareMarketAbi } from "@/lib/contracts/abis";
 import type { Deployment } from "@/lib/worldid/deployment";
-import { shortAddress } from "@/lib/worldid/client";
+import { shortAddress, txUrl } from "@/lib/worldid/client";
 import type { Hex } from "@/lib/worldid/types";
-import { describeError, fmtUsdc, itemInfo, runTx } from "./chain";
+import { describeError, fmtUsdc, itemInfo, runTx, useSingleFlight, useTxBlocked, WRONG_CHAIN_LABEL } from "./chain";
 import { ItemArt, ItemTitle } from "./ItemArt";
 import { RejectionCard } from "./RejectionCard";
 import type { SaleReceipt } from "./SplitReceipt";
@@ -71,6 +71,8 @@ export function ListingsPanel({
 }) {
   const listings = useListings(deployment);
   const client = usePublicClient({ chainId: sepolia.id });
+  // Lives at panel level: a cancelled listing's card disappears on the next refetch.
+  const [cancelled, setCancelled] = useState<{ id: bigint; txHash: Hex } | null>(null);
   const usdc = useQuery({
     queryKey: ["market-usdc", address, deployment?.MockUSDC],
     enabled: Boolean(address && deployment && client),
@@ -89,6 +91,14 @@ export function ListingsPanel({
         ) : null}
       </header>
 
+      {cancelled ? (
+        <p className="mb-3 rounded-2xl border-2 border-field/40 bg-field/10 px-4 py-2 text-sm font-bold text-field-deep">
+          Listing #{cancelled.id.toString()} cancelled ✓ The item is back in your wallet.{" "}
+          <a className="font-normal underline" href={txUrl(cancelled.txHash)} target="_blank" rel="noreferrer">
+            view tx ↗
+          </a>
+        </p>
+      ) : null}
       {!deployment ? (
         <p className="text-sm text-bark-soft">Contracts aren&apos;t deployed yet.</p>
       ) : listings.isLoading ? (
@@ -111,6 +121,7 @@ export function ListingsPanel({
                 void usdc.refetch();
                 onSold(r);
               }}
+              onCancelled={(id, txHash) => setCancelled({ id, txHash })}
             />
           ))}
         </ul>
@@ -121,6 +132,15 @@ export function ListingsPanel({
       </p>
     </section>
   );
+}
+
+async function mintTestUsdc(config: ReturnType<typeof useConfig>, address: Hex, deployment: Deployment) {
+  await runTx(config, address, {
+    address: deployment.MockUSDC,
+    abi: mockUsdcAbi,
+    functionName: "mint",
+    args: [address, parseUnits("100", 6)],
+  });
 }
 
 function UsdcFaucet({
@@ -135,6 +155,8 @@ function UsdcFaucet({
   onDone: () => void;
 }) {
   const config = useConfig();
+  const flight = useSingleFlight();
+  const blocked = useTxBlocked();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
@@ -144,24 +166,22 @@ function UsdcFaucet({
       </span>
       <button
         type="button"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          setError(null);
-          try {
-            await runTx(config, address, {
-              address: deployment.MockUSDC,
-              abi: mockUsdcAbi,
-              functionName: "mint",
-              args: [address, parseUnits("100", 6)],
-            });
-            onDone();
-          } catch (err) {
-            setError(describeError(err).message);
-          } finally {
-            setBusy(false);
-          }
-        }}
+        disabled={busy || blocked}
+        title={blocked ? WRONG_CHAIN_LABEL : undefined}
+        onClick={() =>
+          flight.run(async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              await mintTestUsdc(config, address, deployment);
+              onDone();
+            } catch (err) {
+              setError(describeError(err).message);
+            } finally {
+              setBusy(false);
+            }
+          })
+        }
         className="rounded-full border-2 border-field/40 px-3 py-1 font-bold text-field-deep hover:bg-field/10 disabled:opacity-60"
       >
         {busy ? "Minting…" : "+100 test USDC"}
@@ -176,20 +196,43 @@ function ListingCard({
   address,
   deployment,
   onSold,
+  onCancelled,
 }: {
   listing: ActiveListing;
   address?: Hex;
   deployment: Deployment;
   onSold: (r: SaleReceipt) => void;
+  onCancelled: (listingId: bigint, txHash: Hex) => void;
 }) {
   const config = useConfig();
   const queryClient = useQueryClient();
+  const flight = useSingleFlight();
+  const blocked = useTxBlocked();
   const [step, setStep] = useState<string | null>(null);
-  const [rejection, setRejection] = useState<{ code?: string; reason: string } | null>(null);
+  const [rejection, setRejection] = useState<{ code?: string; reason: string; needsUsdc?: boolean } | null>(null);
   const info = itemInfo(listing.itemId);
   const mine = address?.toLowerCase() === listing.seller.toLowerCase();
 
-  async function buy() {
+  const buy = () => flight.run(doBuy);
+  const cancel = () => flight.run(doCancel);
+
+  async function getTestUsdc() {
+    if (!address) return;
+    await flight.run(async () => {
+      try {
+        setStep("Minting 100 test USDC…");
+        await mintTestUsdc(config, address, deployment);
+        setRejection(null);
+        void queryClient.invalidateQueries({ queryKey: ["market-usdc"] });
+      } catch (err) {
+        setRejection({ reason: describeError(err).message, needsUsdc: true });
+      } finally {
+        setStep(null);
+      }
+    });
+  }
+
+  async function doBuy() {
     if (!address) return;
     setRejection(null);
     const total = listing.unitPrice; // buys one unit
@@ -206,11 +249,15 @@ function ListingCard({
         }),
       ]);
       if (balance < total) {
-        setRejection({ reason: `You need ${fmtUsdc(total)} USDC but have ${fmtUsdc(balance)}. Use the +100 test USDC button.` });
+        setRejection({
+          reason: `Not enough test USDC: this costs ${fmtUsdc(total)} and you have ${fmtUsdc(balance)}.`,
+          needsUsdc: true,
+        });
         return;
       }
-      if (allowance < total) {
-        setStep("Approve USDC in your wallet…");
+      const needsApproval = allowance < total;
+      if (needsApproval) {
+        setStep("Step 1 of 2: approve USDC in your wallet…");
         await runTx(config, address, {
           address: deployment.MockUSDC,
           abi: mockUsdcAbi,
@@ -218,7 +265,7 @@ function ListingCard({
           args: [deployment.RareMarket, total],
         });
       }
-      setStep("Confirm the purchase in your wallet…");
+      setStep(needsApproval ? "Step 2 of 2: confirm the purchase…" : "Confirm the purchase in your wallet…");
       const receipt = await runTx(config, address, {
         address: deployment.RareMarket,
         abi: rareMarketAbi,
@@ -259,17 +306,18 @@ function ListingCard({
     }
   }
 
-  async function cancel() {
+  async function doCancel() {
     if (!address) return;
     setRejection(null);
     try {
       setStep("Confirm cancel in your wallet…");
-      await runTx(config, address, {
+      const receipt = await runTx(config, address, {
         address: deployment.RareMarket,
         abi: rareMarketAbi,
         functionName: "cancel",
         args: [listing.id],
       });
+      onCancelled(listing.id, receipt.transactionHash);
       void queryClient.invalidateQueries({ queryKey: ["market-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["market-balances"] });
     } catch (err) {
@@ -304,6 +352,7 @@ function ListingCard({
           code={rejection.code}
           reason={rejection.reason}
           onDismiss={() => setRejection(null)}
+          action={rejection.needsUsdc ? { label: "Get 100 test USDC", onClick: getTestUsdc, disabled: !!step || blocked } : undefined}
         />
       ) : null}
 
@@ -311,19 +360,24 @@ function ListingCard({
         <button
           type="button"
           onClick={cancel}
-          disabled={!!step}
+          disabled={!!step || blocked}
           className="rounded-full border-2 border-clay/40 px-4 py-2 text-sm font-bold text-clay-deep hover:bg-clay/10 disabled:opacity-60"
         >
-          {step ?? "Cancel listing"}
+          {step ?? (blocked ? WRONG_CHAIN_LABEL : "Cancel listing")}
         </button>
       ) : (
         <button
           type="button"
           onClick={buy}
-          disabled={!address || !!step}
-          className="rounded-full bg-field px-4 py-2.5 text-sm font-bold text-cream transition hover:bg-field-deep disabled:cursor-wait disabled:opacity-60"
+          disabled={!address || !!step || blocked}
+          className="rounded-full bg-field px-4 py-2.5 text-sm font-bold text-cream transition hover:bg-field-deep disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {step ?? (address ? `Buy for ${fmtUsdc(listing.unitPrice)} USDC` : "Connect a wallet to buy")}
+          {step ??
+            (!address
+              ? "Connect a wallet to buy"
+              : blocked
+                ? WRONG_CHAIN_LABEL
+                : `Buy ${listing.amount > BigInt(1) ? "1 " : ""}for ${fmtUsdc(listing.unitPrice)} USDC`)}
         </button>
       )}
     </li>
