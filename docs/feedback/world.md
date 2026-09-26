@@ -5,7 +5,12 @@ Mandatory feedback for the World "Best Use of IDKit" prize. Written as it happen
 ## Timeline
 
 - **IDKit work started:** 2026-09-26T07:37:08Z
-- **First successful verify round-trip:** _pending_
+- **First successful verify round-trip:** 2026-09-26T08:39:27Z, **62 minutes** after we started
+  (wall clock, including about 35 minutes waiting for Portal credentials). Flow: our `/market` UI,
+  then the IDKit widget (staging), then the World ID simulator, then `POST /api/worldid/verify`,
+  then the Portal v4 verify, then `HumanRegistry.markVerified` on Sepolia:
+  [`0xa081ee7f…858ff`](https://sepolia.etherscan.io/tx/0xa081ee7fd146ed9437061e71af91a39348a1f1c18ff28ee4985588388f0858ff)
+  (block 11785102, `HumanVerified` for test wallet `0x4f6b…f395`).
 
 ## Blockers (logged as they happen)
 
