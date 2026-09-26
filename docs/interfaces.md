@@ -227,7 +227,7 @@ eth-dev2 hit its 5-hour usage limit. Until it returns, these owners replace it:
 |---|---|
 | `apps/web/src/game/**` (Phaser scene, fx, art), except `types.ts` | lead's subagent `scene-builder` |
 | `apps/web/src/components/game/**`, `apps/web/src/game/types.ts`, `apps/web/src/app/page.tsx`, `apps/web/src/app/layout.tsx` | eth-dev1 |
-| `apps/web/src/server/game/**` (engine; ENG2 adds server-side coins/เบี้ย + demo common drops) | eth-dev3 |
+| `apps/web/src/server/game/**` (engine; ENG2 adds server-side coins/เบี้ย + demo common drops; ENG3 adds a second zone at Base Lv 30) | eth-dev3 |
 
 eth-dev2 is back as of 13:19 UTC. The takeover owners keep these paths through critic round 3 to avoid collisions near the freeze. eth-dev2 is the independent game-lane verifier (G-QA): read-only plus tests, with fixes routed through the lead.
 
@@ -255,6 +255,6 @@ No gambling, no betting, no fight results. Art is cartoon with no blood or injur
 | 08:30 | Scaffold pushed; contracts compile; ENSv2 go/no-go decided (one subname created and read back on Sepolia) |
 | 11:30 | Contracts tested and deployed to Sepolia; World ID verify round-trips locally; idle loop playable |
 | 15:30 | Demo beat works end-to-end on Sepolia |
-| 18:30 | Feature freeze; live demo deployed |
+| 18:30 | Feature freeze; live demo deployed. After this, only fixes for things that visibly break in the demo, and redeploys go only through the lead. |
 | 20:30 | README with file:line pointers; World and Curvegrid feedback written; video recorded |
 | 22:00 | Submitted (the 2h buffer isn't optional) |
