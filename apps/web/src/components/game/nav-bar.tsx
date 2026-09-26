@@ -55,64 +55,47 @@ export function NavBar() {
   // button so the canvas keeps the viewport.
   if (pathname?.startsWith("/game")) {
     return (
-      <header data-riverside-nav className="static z-40 flex w-full items-center gap-2 bg-[#102b43] px-3 py-1.5 lg:pointer-events-none lg:fixed lg:left-3 lg:top-2 lg:w-auto lg:bg-transparent lg:px-0 lg:py-0">
+      <header data-riverside-nav className="pointer-events-none fixed right-2 top-2 z-40 flex items-center gap-1.5 text-[#fff8e8]">
         <style>{`
-          [data-riverside-nav] [class*="bg-bark"] { background-color: #283b63 !important; }
-          [data-riverside-nav] [class*="border-sun"] { border-color: #c69a5b !important; }
+          [data-riverside-nav] { top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); }
+          [data-riverside-nav] .game-site-action { display: grid; width: 44px; height: 44px; place-items: center; pointer-events: auto; border: 2px solid #c69a5b; border-radius: 14px 7px; background: rgba(27,49,83,.96); box-shadow: 0 3px 0 rgba(66,38,21,.7); }
+          [data-riverside-nav] .game-site-action:focus-visible { outline: 2px solid #fff1bd; outline-offset: 2px; }
+          [data-riverside-nav] .game-site-links a { display: flex; min-height: 44px; align-items: center; color: #fff8e8; }
+          [data-riverside-nav] .game-site-links a[aria-current] { color: #102b43; }
         `}</style>
-        <Link
-          href="/"
-          className="pointer-events-auto flex items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
-          aria-label="RFC Legends home"
-        >
-          <RoosterMark size={22} riverside />
-        </Link>
+        {isConnected && address ? (
+          <button
+            type="button"
+            title={`${address} (click to copy)`}
+            aria-label="Copy wallet address"
+            onClick={() => { void navigator.clipboard?.writeText(address).catch(() => {}); }}
+            className="game-site-action relative"
+          >
+            <GameChromeIcon name="wallet" className="h-5 w-5" />
+            <span aria-hidden className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-400" />
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
           aria-label="Site menu"
-          className="pointer-events-auto rounded-full border-2 border-sun/80 bg-bark/95 px-3.5 py-1 text-lg font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
+          className="game-site-action"
         >
-          ☰
+          <GameChromeIcon name="menu" width={25} height={25} />
         </button>
-        {process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? (
-          <span className="pointer-events-auto whitespace-nowrap rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-0.5 text-xs font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur">
-            ⚡ <span className="md:hidden">Demo</span>
-            <span className="hidden md:inline">Demo <span lang="th">(อัตราเร่งสำหรับสาธิต)</span></span>
-          </span>
-        ) : null}
-        {/* wallet tucked behind an icon + green dot; the address reveals on
-            hover (critic r6 #4) */}
-        {isConnected && address ? (
-          <span className="group pointer-events-auto relative ml-1 inline-flex">
-            <span
-              title={`${address}
-(click to copy)`}
-              onClick={() => {
-                void navigator.clipboard?.writeText(address).catch(() => {});
-              }}
-              className="flex cursor-pointer items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 text-lg font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
-            >
-              <GameChromeIcon name="wallet" className="h-5 w-5" />
-              <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-400" />
-            </span>
-            <span className="pointer-events-none absolute right-0 top-full z-50 mt-1 hidden whitespace-nowrap rounded-md border border-sun/60 bg-[#1d130c] px-2 py-1 text-xs font-bold text-cream/90 shadow-lg group-hover:block">
-              {address.slice(0, 8)}…{address.slice(-6)}
-            </span>
-          </span>
-        ) : null}
         {menuOpen ? (
-          <div className="pointer-events-auto flex items-center gap-1 rounded-full border-2 border-sun/80 bg-bark/95 px-2 py-1 shadow-[0_3px_0_rgba(0,0,0,0.45)] backdrop-blur">
+          <div className="game-site-links pointer-events-auto absolute right-0 top-[52px] flex max-h-[calc(100dvh-68px-env(safe-area-inset-top))] w-64 overflow-y-auto overscroll-contain max-w-[calc(100vw-16px)] flex-col gap-1 rounded-2xl border-2 border-[#c69a5b] bg-[#142a4c] p-3 shadow-xl">
+            <Link href="/" aria-label="RFC Legends home" className="gap-2 font-bold">
+              <RoosterMark size={26} riverside /> RFC Legends
+            </Link>
+            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? (
+              <span className="py-1 text-xs font-bold text-[#f2c66d]">Demo <span lang="th">(อัตราเร่งสำหรับสาธิต)</span></span>
+            ) : null}
             {NAV_LINKS.map((link) => (
-              <NavLink
-                key={link.href}
-                href={link.href}
-                label={link.label}
-                active={pathname === link.href}
-              />
+              <NavLink key={link.href} href={link.href} label={link.label} active={pathname === link.href} />
             ))}
-            <ConnectButton className="!px-2.5 !py-1 !text-xs" />
+            <ConnectButton className="!min-h-11 !px-2.5 !py-1 !text-xs" />
           </div>
         ) : null}
       </header>

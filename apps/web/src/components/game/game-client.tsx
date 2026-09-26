@@ -1,10 +1,10 @@
 "use client";
 
 // Owns the /game flow: connect wallet → create trainer → play screen.
-// The scene frame hosts the live Phaser idle-combat canvas (G4); the HUD strip
-// (sticky to the viewport bottom) and stat panel run on live engine numbers.
+// The scene frame hosts live Phaser combat; corner HUD panels and the stat
+// drawer read the same authoritative game state.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConnection } from "wagmi";
 import type { Drop, Player, SireLine, StatKey } from "@/game/types";
@@ -16,7 +16,7 @@ import { WrongChainBanner } from "@/components/market/WrongChainBanner";
 import { CreateCharacter, type CreateOutcome } from "./create-character";
 import { DropToasts } from "./drop-toasts";
 import { GuildDock } from "./guild-dock";
-import { HudStrip } from "./hud-strip";
+import { GameHudOverlay } from "./game-hud-overlay";
 import { nextGoalLine } from "./next-goal";
 import { WelcomeBack, type WelcomeBackSummary } from "./welcome-back";
 import { IdleScene } from "./idle-scene";
@@ -24,6 +24,10 @@ import { InventoryDrawer } from "./inventory-drawer";
 import { SceneFrame } from "./scene-frame";
 import { StatPanel, type AllocateResult } from "./stat-panel";
 import { GameChromeIcon } from "./game-chrome-icon";
+import type { SceneBridge } from "@/game/scene/scene-bridge";
+import type { GameActionResponse } from "@/game/manual-controls";
+import { GameMovementControl, GameActionControls } from "./game-input-controls";
+import { useGameControls } from "./use-game-controls";
 
 interface GameState {
   player: Player | null;
@@ -68,6 +72,7 @@ export function GameClient() {
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
+  const [sceneBridge, setSceneBridge] = useState<SceneBridge | null>(null);
   const [guildOpen, setGuildOpen] = useState(false);
   const [welcomeBack, setWelcomeBack] = useState<WelcomeBackSummary | null>(null);
   const stateKey = ["game-state", address] as const;
@@ -136,19 +141,38 @@ export function GameClient() {
     enabled: !!address && booted,
     // Interval polling pauses while the tab is hidden (refetchIntervalInBackground
     // defaults to false), so the server only advances the game while watched.
-    refetchInterval: 4000,
+    refetchInterval: (query) => query.state.data?.player?.control?.mode === "manual" ? 500 : 4000,
     queryFn: async (): Promise<GameState> => {
       const res = await fetch(`/api/game/state?address=${address}`);
       const data = (await res.json()) as GameState & { reason?: string };
       if (!res.ok) throw new Error(data.reason ?? "INTERNAL");
+      // A poll started before an input command may finish after its response.
+      const current = queryClient.getQueryData<GameState>(stateKey);
+      if ((current?.player?.control?.sequence ?? 0) > (data.player?.control?.sequence ?? 0)) return current!;
+      if ((current?.player?.control?.updatedAt ?? 0) > (data.player?.control?.updatedAt ?? 0)) return current!;
       return data;
     },
   });
 
+  const applyControlState = useCallback((response: GameActionResponse) => {
+    queryClient.setQueryData<GameState>(["game-state", address], (old) => {
+      if ((old?.player?.control?.sequence ?? 0) > (response.player.control?.sequence ?? 0)) return old;
+      if ((old?.player?.control?.updatedAt ?? 0) > (response.player.control?.updatedAt ?? 0)) return old;
+      return { player: response.player, drops: response.drops, demoMode: response.demoMode };
+    });
+  }, [address, queryClient]);
+  const controlsBlocked = bagOpen || guildOpen || welcomeBack !== null;
+  const controls = useGameControls({
+    address, player: stateQuery.data?.player ?? null, bridge: sceneBridge,
+    onState: applyControlState, blocked: controlsBlocked,
+  });
+
   function applyPlayer(player: Player) {
-    queryClient.setQueryData<GameState>(stateKey, (old) =>
-      old ? { ...old, player } : { player, drops: [], demoMode: false },
-    );
+    queryClient.setQueryData<GameState>(stateKey, (old) => {
+      if ((old?.player?.control?.sequence ?? 0) > (player.control?.sequence ?? 0)) return old;
+      if ((old?.player?.control?.updatedAt ?? 0) > (player.control?.updatedAt ?? 0)) return old;
+      return old ? { ...old, player } : { player, drops: [], demoMode: false };
+    });
   }
 
   /** ≥60s away → the welcome-back card; otherwise the quiet sync notice. */
@@ -321,7 +345,7 @@ export function GameClient() {
   }
 
   // 4. Player exists → the game screen. The canvas claims the viewport;
-  // stat allocation and sync collapse into a single slim control row.
+  // profile and actions float at the corners of the scene.
   const player = state.player;
   // Riverside-night backdrop: the letterbox around the 16:9 stage reads as
   // part of the game, not a web page.
@@ -335,48 +359,50 @@ export function GameClient() {
     >
       <style>{`
         [data-riverside-ui] { background: #102b43 !important; }
-        [data-riverside-ui] .aspect-video { background-color: #102b43 !important; border-color: #c69a5b !important; }
+        [data-riverside-ui] .aspect-video { --game-top-inset: 202px; background-color: #102b43 !important; border-color: #c69a5b !important; }
+        @media (max-width: 1023px) and (orientation: landscape) {
+          [data-riverside-ui] .aspect-video { --game-top-inset: 146px; }
+        }
         [data-riverside-ui] .rounded-2xl.border-4 { border-color: #c69a5b !important; }
         [data-riverside-ui] [class*="bg-[#2b1b12]"] { background-color: rgba(40,59,99,.96) !important; }
         [data-riverside-ui] [class*="border-sun"] { border-color: #c69a5b !important; }
         [data-riverside-ui] [class*="bg-sun"] { background-color: #f2b45b !important; }
       `}</style>
-      <div className="mx-auto flex w-full max-w-none flex-1 flex-col gap-1 px-1.5 py-1 sm:px-2 sm:py-1.5">
+      <div className="mx-auto flex min-h-0 w-full max-w-none flex-1 flex-col">
         {wrongChain ? <WrongChainBanner chainId={chainId ?? 0} /> : null}
         <div className="relative flex min-h-0 flex-1 justify-center">
-          {/* height = whatever the nav/banner/HUD leave free; the aspect-video
-              box derives width from that height, clamped by the viewport */}
-          {/* --game-top-inset tells the scene how much chrome sits above it
-              (mobile top bar) so in-canvas chips stay clear; 0 on desktop */}
-          <SceneFrame className="h-full w-auto max-w-full [--game-top-inset:0px]">
-            <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
+          {/* Reserve room for the profile and menu without moving world actors. */}
+          <SceneFrame className="h-full w-auto max-w-full">
+            <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} onBridgeChange={setSceneBridge} />
           </SceneFrame>
+          <GameHudOverlay
+            player={player}
+            movementSlot={<GameMovementControl player={player} blocked={controlsBlocked || !sceneBridge} onMove={controls.move} />}
+            actionSlot={<GameActionControls player={player} blocked={controlsBlocked || !sceneBridge} busy={controls.busy} onAttack={controls.attack} onToggleAuto={controls.toggleAuto} onUsePotion={controls.potion} onOpenBag={() => setBagOpen(true)} />}
+            statCta={<StatPanel player={player} onAllocate={handleAllocate} compact />}
+            goal={nextGoalLine(player)}
+            syncSlot={
+              <button
+                type="button"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                aria-label="Sync now"
+                title={syncMutation.isPending ? "Syncing…" : "Sync now"}
+                className="grid h-11 w-11 place-items-center rounded-full border-2 border-clay/40 bg-cream text-xl font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun disabled:cursor-wait disabled:opacity-60 lg:h-10 lg:w-10"
+              >
+                {syncMutation.isPending ? "…" : <GameChromeIcon name="sync" className="h-5 w-5" />}
+              </button>
+            }
+            rareDropCount={rareDropCount}
+            newestDropId={newestDropId}
+            bagCount={Object.values(player.inventory).reduce((a, b) => a + b, 0)}
+            onOpenBag={() => setBagOpen(true)}
+            onOpenGuild={() => setGuildOpen(true)}
+          />
         </div>
-
       </div>
 
-      <HudStrip
-        player={player}
-        statCta={<StatPanel player={player} onAllocate={handleAllocate} />}
-        goal={nextGoalLine(player)}
-        syncSlot={
-          <button
-            type="button"
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            aria-label="Sync now"
-            title={syncMutation.isPending ? "Syncing…" : "Sync now"}
-            className="grid h-11 w-11 place-items-center rounded-full border-2 border-clay/40 bg-cream text-xl font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun disabled:cursor-wait disabled:opacity-60 lg:h-10 lg:w-10"
-          >
-            {syncMutation.isPending ? "…" : <GameChromeIcon name="sync" className="h-5 w-5" />}
-          </button>
-        }
-        rareDropCount={rareDropCount}
-        newestDropId={newestDropId}
-        bagCount={Object.values(player.inventory).reduce((a, b) => a + b, 0)}
-        onOpenBag={() => setBagOpen(true)}
-        onOpenGuild={() => setGuildOpen(true)}
-      />
+      {controls.feedback ? <div role="status" className="pointer-events-none fixed bottom-40 left-1/2 z-30 max-w-[80vw] -translate-x-1/2 rounded-full border border-[#c69a5b] bg-[#142a4c]/95 px-4 py-2 text-center text-xs font-bold text-[#fff8e8]">{controls.feedback}</div> : null}
 
       <InventoryDrawer
         open={bagOpen}

@@ -4,6 +4,7 @@
 // only in the browser. The frame's placeholder shows while the chunk loads.
 
 import nextDynamic from "next/dynamic";
+import type { SceneBridge } from "@/game/scene/scene-bridge";
 import type { Drop, Player } from "@/game/types";
 import { ScenePlaceholder } from "./scene-frame";
 
@@ -16,10 +17,12 @@ export function IdleScene({
   player,
   drops,
   demoMode,
+  onBridgeChange,
 }: {
   player: Player;
   drops: Drop[];
   demoMode: boolean;
+  onBridgeChange?: (bridge: SceneBridge | null) => void;
 }) {
-  return <IdleCanvas player={player} drops={drops} demoMode={demoMode} />;
+  return <IdleCanvas player={player} drops={drops} demoMode={demoMode} onBridgeChange={onBridgeChange} />;
 }

@@ -11,9 +11,10 @@ interface IdleCanvasProps {
   player: Player;
   drops: Drop[];
   demoMode: boolean;
+  onBridgeChange?: (bridge: SceneBridge | null) => void;
 }
 
-export default function IdleCanvas({ player, drops, demoMode }: IdleCanvasProps) {
+export default function IdleCanvas({ player, drops, demoMode, onBridgeChange }: IdleCanvasProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const bridgeRef = useRef<SceneBridge | null>(null);
   // Latest props, readable from the mount-once effect without re-running it.
@@ -27,6 +28,7 @@ export default function IdleCanvas({ player, drops, demoMode }: IdleCanvasProps)
     if (!host) return;
     const bridge = new SceneBridge();
     bridgeRef.current = bridge;
+    onBridgeChange?.(bridge);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // Match canvas text to the page font (Noto Sans Thai first) for Thai glyphs.
     const fontFamily = getComputedStyle(document.body).fontFamily || "Arial, sans-serif";
@@ -39,10 +41,11 @@ export default function IdleCanvas({ player, drops, demoMode }: IdleCanvasProps)
       fontFamily,
     });
     return () => {
+      onBridgeChange?.(null);
       bridge.destroy();
       bridgeRef.current = null;
     };
-  }, []);
+  }, [onBridgeChange]);
 
   useEffect(() => {
     bridgeRef.current?.updateState(player, drops, demoMode);

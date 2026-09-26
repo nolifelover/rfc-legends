@@ -4,7 +4,8 @@
 // incrementally per click; cost for the next point follows the engine's curve.
 // Updates optimistically from the allocate response.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Player, StatKey } from "@/game/types";
 import { STAT_CAP, statUpgradeCost } from "@/server/game/stats";
 import { reasonText } from "./api-messages";
@@ -33,8 +34,10 @@ export interface AllocateResult {
 export function StatPanel({
   player,
   onAllocate,
+  compact = false,
 }: {
   player: Player;
+  compact?: boolean;
   onAllocate: (stat: StatKey) => Promise<AllocateResult>;
 }) {
   // Collapsed by default: the game screen stays scene-first; the allocation
@@ -42,6 +45,25 @@ export function StatPanel({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<StatKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const dialogRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex="0"]') ?? []);
+    focusable()[0]?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+      if (event.key !== "Tab") return;
+      const targets = focusable();
+      const first = targets[0], last = targets[targets.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); previous?.focus(); };
+  }, [open]);
 
   async function spend(stat: StatKey) {
     setPending(stat);
@@ -57,22 +79,24 @@ export function StatPanel({
         type="button"
         onClick={() => setOpen(true)}
         aria-expanded={open}
-        className={`inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-black shadow-[0_2px_0_rgba(0,0,0,0.45)] transition ${
+        aria-label={player.statPoints > 0 ? `${player.statPoints.toLocaleString()} points to spend` : `Stat points: ${player.statPoints.toLocaleString()}`}
+        title={player.statPoints > 0 ? `${player.statPoints.toLocaleString()} points to spend` : `Stat points: ${player.statPoints.toLocaleString()}`}
+        className={`inline-flex min-h-11 items-center justify-center gap-2 border-2 ${compact ? "h-[46px] min-w-[64px] rounded-xl px-2 text-xs" : "rounded-full px-4 py-2 text-sm"} font-black shadow-[0_2px_0_rgba(0,0,0,0.45)] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun lg:min-h-0 ${
           player.statPoints > 0
-            ? "animate-pulse border-sun bg-sun/25 text-sun-soft hover:bg-sun/40 hover:animate-none"
+            ? "border-[#f2c66d] bg-[#314b86] text-[#fff8e8] shadow-[0_2px_0_rgba(0,0,0,0.45),0_0_0_2px_rgba(242,198,109,0.18)] hover:bg-[#3b5a9b]"
             : "border-sun/50 bg-[#1d130c]/70 text-cream/85 hover:border-sun hover:text-cream"
         }`}
       >
         <span aria-hidden>✦</span>
-        {player.statPoints > 0
-          ? `${player.statPoints.toLocaleString()} points to spend`
-          : `Stat points: ${player.statPoints.toLocaleString()}`}
-        <span aria-hidden className="text-bark-soft">
-          ▸
-        </span>
+        {compact ? (
+          <span className="flex flex-col leading-tight"><span>Stats</span><span>{player.statPoints.toLocaleString()}</span></span>
+        ) : <>
+          {player.statPoints > 0 ? `${player.statPoints.toLocaleString()} points to spend` : `Stat points: ${player.statPoints.toLocaleString()}`}
+          <span aria-hidden className={player.statPoints > 0 ? "text-[#f2c66d]" : "text-bark-soft"}>▸</span>
+        </>}
       </button>
 
-      {open ? (
+      {open ? createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button
             type="button"
@@ -81,6 +105,7 @@ export function StatPanel({
             className="absolute inset-0 cursor-default bg-bark/45 backdrop-blur-sm"
           />
           <section
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="Stat allocation"
@@ -103,7 +128,7 @@ export function StatPanel({
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="grid h-8 w-8 place-items-center rounded-full border border-bark/20 text-bark-soft transition hover:bg-sun-soft/60"
+              className="grid h-11 w-11 place-items-center rounded-full border border-bark/20 text-bark-soft transition hover:bg-sun-soft/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-field lg:h-8 lg:w-8"
             >
               ✕
             </button>
@@ -159,7 +184,7 @@ export function StatPanel({
                           ? `Needs ${cost} points`
                           : `+1 ${stat.label} for ${cost} points`
                     }
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-field text-lg font-black text-cream shadow-sm transition hover:bg-field-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-field disabled:cursor-not-allowed disabled:bg-bark/20 disabled:text-bark-soft"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-field text-lg font-black text-cream shadow-sm transition hover:bg-field-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-field disabled:cursor-not-allowed disabled:bg-bark/20 disabled:text-bark-soft lg:h-9 lg:w-9"
                   >
                     {pending === stat.key ? "…" : "+"}
                   </button>
@@ -175,7 +200,8 @@ export function StatPanel({
           ) : null}
           </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );
