@@ -97,7 +97,7 @@ export async function getSaleHistory(limit = 20): Promise<SaleRecord[] | null> {
   const res = await mbFetch<{ result?: { rows?: Record<string, string>[] } }>(
     cfg,
     'GET',
-    `/queries/rfc-sold/results?limit=${Math.min(100, Math.max(1, limit))}`,
+    `/queries/rfc-sold/results?limit=${Math.min(50, Math.max(1, limit))}`,
   )
   const rows = res.result?.rows ?? []
   return rows.map((row) => ({
@@ -122,7 +122,7 @@ export async function runEventQuery(name: string, limit = 20): Promise<Record<st
   const res = await mbFetch<{ result?: { rows?: Record<string, unknown>[] } }>(
     cfg,
     'GET',
-    `/queries/${encodeURIComponent(name)}/results?limit=${Math.min(100, Math.max(1, limit))}`,
+    `/queries/${encodeURIComponent(name)}/results?limit=${Math.min(50, Math.max(1, limit))}`,
   )
   return res.result?.rows ?? []
 }
