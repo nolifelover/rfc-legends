@@ -1,6 +1,9 @@
 // POST /api/voucher/mint and /api/voucher/confirm, minus the HTTP layer.
 //
-// Mint checks run in this order, and the first failure is the reason shown:
+// The caller first proves it controls `address` (EIP-191 signature over
+// wallet + drop + nonce + expiry, single use), so nobody can burn another
+// player's daily slots. Mint checks then run in this order, and the first
+// failure is the reason shown:
 //   1. verified human (World ID, one human = one wallet)
 //   2. Base Lv >= 30
 //   3. drop owned + unminted + mintable rarity
@@ -15,6 +18,7 @@ import { rareItemsAbi } from "../../lib/contracts/abis";
 import type { Hex, VoucherRejectCode, VoucherResponse } from "../../lib/worldid/types";
 import type { Drop, GameApi } from "./deps";
 import { maskAddress } from "./nullifier";
+import { checkOwnership, ownershipSchema } from "./ownership";
 import type { WorldIdStore } from "./store";
 
 export const MIN_BASE_LEVEL = 30;
@@ -39,6 +43,7 @@ const bytes32 = z.string().refine((v) => isHex(v) && v.length === 66, "dropId mu
 const mintBody = z.object({
   address: z.string().refine((a) => isAddress(a, { strict: false }), "not an address"),
   dropId: bytes32,
+  ownership: ownershipSchema.extend({ nonce: z.string().min(8).max(130) }),
 });
 
 function reject(status: number, code: VoucherRejectCode, reason: string): VoucherOutcome {
@@ -50,13 +55,26 @@ export const utcDay = (d: Date) => d.toISOString().slice(0, 10);
 export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promise<VoucherOutcome> {
   const now = deps.now ?? (() => new Date());
   const parsed = mintBody.safeParse(input);
-  if (!parsed.success) return reject(400, "invalid_request", "Request must include a wallet address and a bytes32 dropId.");
+  if (!parsed.success) {
+    return reject(400, "invalid_request", "Request must include a wallet address, a bytes32 dropId and a wallet signature.");
+  }
   const address = getAddress(parsed.data.address).toLowerCase() as Hex;
   const dropId = parsed.data.dropId.toLowerCase() as Hex;
+  const { ownership } = parsed.data;
+
+  // 0. The caller controls this wallet, and this signature hasn't been used before.
+  const nowSeconds = Math.floor(now().getTime() / 1000);
+  const badSignature = await checkOwnership(
+    { purpose: "mint-rare-drop", address, dropId, nonce: ownership.nonce, expiresAt: ownership.expiresAt, signature: ownership.signature },
+    nowSeconds,
+  );
+  if (badSignature) return reject(401, "bad_signature", badSignature);
+  if (!(await deps.store.useOnce(ownership.nonce, address, ownership.expiresAt))) {
+    return reject(401, "signature_replayed", "This wallet signature was already used. Sign a new request.");
+  }
 
   // 1. Verified human
-  const state = await deps.store.read();
-  if (!state.humans[address]) {
+  if (!(await deps.store.getVerifiedHuman(address))) {
     return reject(
       403,
       "not_verified_human",
@@ -93,7 +111,7 @@ export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promi
 
   // 4. Daily limit (re-issuing a voucher for the same drop doesn't count again)
   const day = utcDay(now());
-  const issuedToday = state.vouchers[address]?.[day] ?? [];
+  const issuedToday = await deps.store.vouchersOn(address, day);
   if (!issuedToday.includes(dropId) && issuedToday.length >= deps.dailyLimit) {
     return reject(
       403,
@@ -106,15 +124,9 @@ export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promi
     return reject(503, "not_configured", "Minting isn't available yet: contracts or GAME_SIGNER aren't configured.");
   }
 
-  // Record the issuance atomically, re-checking the limit under the lock.
-  const recorded = await deps.store.update((s) => {
-    const list = ((s.vouchers[address] ??= {})[day] ??= []);
-    if (list.includes(dropId)) return list.length;
-    if (list.length >= deps.dailyLimit) return null;
-    list.push(dropId);
-    return list.length;
-  });
-  if (recorded === null) {
+  // Record the issuance atomically (a UNIQUE (wallet, day, slot) insert in PocketBase).
+  const slot = await deps.store.claimVoucherSlot(address, day, dropId, deps.dailyLimit);
+  if (slot === null) {
     return reject(403, "daily_limit_reached", `Daily mint limit reached (${deps.dailyLimit}/${deps.dailyLimit} today).`);
   }
 
@@ -148,7 +160,7 @@ export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promi
       signature,
       rareItems: deps.rareItems.address,
       chainId: deps.rareItems.chainId,
-      mintsToday: recorded,
+      mintsToday: (await deps.store.vouchersOn(address, day)).length,
       dailyLimit: deps.dailyLimit,
     },
   };

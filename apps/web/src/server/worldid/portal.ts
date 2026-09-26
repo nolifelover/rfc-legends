@@ -17,7 +17,15 @@ const responseItem = z.looseObject({
   identifier: z.string(),
   signal_hash: z.string().optional(),
   nullifier: z.string(),
+  issuer_schema_id: z.number().optional(),
 });
+
+/**
+ * The one credential we accept: World ID proof of human (Orb). The widget asks
+ * for exactly this (proofOfHuman preset), so a result that carries anything
+ * else, or more than one response, was not produced by our request.
+ */
+export const EXPECTED_CREDENTIAL = { identifier: "proof_of_human", issuerSchemaId: 1 } as const;
 
 /** Only the fields we check; everything else is forwarded untouched. */
 export const idkitResultSchema = z.looseObject({
@@ -26,7 +34,7 @@ export const idkitResultSchema = z.looseObject({
   action: z.string().optional(),
   environment: z.string().optional(),
   session_id: z.string().optional(),
-  responses: z.array(responseItem).min(1),
+  responses: z.array(responseItem).min(1).max(8),
 });
 
 export type IdkitResult = z.infer<typeof idkitResultSchema>;
@@ -48,6 +56,24 @@ export function precheckResult(result: IdkitResult, address: Hex, cfg: WorldIdCo
       ok: false,
       code: "legacy_proof_not_allowed",
       reason: "This proof uses legacy World ID 3.0. Update World App and verify again with World ID 4.0.",
+    };
+  }
+  if (result.responses.length !== 1) {
+    return {
+      ok: false,
+      code: "unexpected_proof_shape",
+      reason: `Expected exactly one proof-of-human response, got ${result.responses.length}.`,
+    };
+  }
+  const item = result.responses[0];
+  if (
+    item.identifier !== EXPECTED_CREDENTIAL.identifier ||
+    (result.protocol_version === "4.0" && item.issuer_schema_id !== EXPECTED_CREDENTIAL.issuerSchemaId)
+  ) {
+    return {
+      ok: false,
+      code: "unexpected_proof_shape",
+      reason: `Only World ID proof of human is accepted (got "${item.identifier}", issuer ${item.issuer_schema_id ?? "none"}).`,
     };
   }
   if (result.action !== cfg.action) {
@@ -141,17 +167,33 @@ export async function verifyWithPortal(
     return { ok: false, code: "proof_rejected", reason: `World ID rejected the proof: ${detail} (${code}).${hint}` };
   }
 
-  const verified = payload.results?.find((r) => r.success !== false && r.nullifier);
-  // The proof's public inputs include the nullifier, so once the Portal says
-  // success the value in the result is authenticated too.
-  const raw = payload.nullifier ?? verified?.nullifier ?? result.responses[0].nullifier;
-  try {
+  // Bind only what the Portal itself says it verified: the result for our
+  // credential with success === true. Never fall back to the client's copy.
+  const verified = (payload.results ?? []).filter(
+    (r) => r.identifier === EXPECTED_CREDENTIAL.identifier && r.success === true && typeof r.nullifier === "string",
+  );
+  if (verified.length !== 1) {
     return {
-      ok: true,
-      nullifier: normalizeNullifier(raw),
-      identifier: verified?.identifier ?? result.responses[0].identifier,
+      ok: false,
+      code: "proof_rejected",
+      reason: "World ID didn't confirm a proof-of-human result for this request.",
     };
+  }
+  let nullifier: string;
+  try {
+    nullifier = normalizeNullifier(verified[0].nullifier!);
   } catch {
     return { ok: false, code: "proof_rejected", reason: "World ID returned an unreadable nullifier." };
   }
+  // Sanity check: the Portal verified the proof we sent, so its nullifier must be the one in that proof.
+  let claimed: string | null = null;
+  try {
+    claimed = normalizeNullifier(result.responses[0].nullifier);
+  } catch {
+    claimed = null;
+  }
+  if (claimed !== nullifier) {
+    return { ok: false, code: "proof_rejected", reason: "World ID's nullifier doesn't match the submitted proof." };
+  }
+  return { ok: true, nullifier, identifier: EXPECTED_CREDENTIAL.identifier };
 }

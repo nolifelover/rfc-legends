@@ -1,7 +1,8 @@
 import { getAddress, isAddress } from "viem";
 import { dailyMintLimit } from "@/server/worldid/chain";
 import { devFixturesEnabled, getGameApi } from "@/server/worldid/deps";
-import { getWorldIdStore } from "@/server/worldid/store";
+import { getWorldIdStore } from "@/server/worldid/runtime";
+import type { Hex } from "@/lib/worldid/types";
 import { MIN_BASE_LEVEL, MINTABLE_RARITIES, utcDay } from "@/server/worldid/voucher";
 
 // GET ?address= -> the wallet's mint-eligible drops plus what the mint checks will look at.
@@ -11,16 +12,16 @@ export async function GET(request: Request) {
   const address = getAddress(raw).toLowerCase();
 
   const game = await getGameApi();
-  const [player, drops, state] = await Promise.all([
+  const [player, drops, vouchersToday] = await Promise.all([
     game.getPlayer(address),
     game.listDrops(address),
-    getWorldIdStore().read(),
+    getWorldIdStore().vouchersOn(address as Hex, utcDay(new Date())),
   ]);
   return Response.json({
     player: player ? { name: player.name ?? null, baseLevel: player.baseLevel } : null,
     minBaseLevel: MIN_BASE_LEVEL,
     drops: drops.filter((d) => MINTABLE_RARITIES.has(d.rarity) && d.itemId >= 1000),
-    mintsToday: state.vouchers[address]?.[utcDay(new Date())]?.length ?? 0,
+    mintsToday: vouchersToday.length,
     dailyLimit: dailyMintLimit(),
     /** True when the game data is fake (local dev only); the UI labels it. */
     devFixtures: devFixturesEnabled(),

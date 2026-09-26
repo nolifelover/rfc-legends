@@ -1,7 +1,7 @@
 import { getAddress, isAddress } from "viem";
 import { loadWorldIdConfig, WorldIdConfigError } from "@/server/worldid/config";
 import { issueRpContext } from "@/server/worldid/rp-context";
-import { getWorldIdStore } from "@/server/worldid/store";
+import { getWorldIdStore } from "@/server/worldid/runtime";
 import type { Hex } from "@/lib/worldid/types";
 
 // POST { address } -> { app_id, action, environment, signal, rp_context }

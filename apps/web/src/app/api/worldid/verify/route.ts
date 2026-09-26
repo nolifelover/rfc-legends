@@ -1,15 +1,16 @@
 import { loadWorldIdConfig, WorldIdConfigError } from "@/server/worldid/config";
 import { resolveHumanRegistry } from "@/server/worldid/registry";
-import { getWorldIdStore } from "@/server/worldid/store";
+import { getWorldIdStore } from "@/server/worldid/runtime";
 import { verifyHuman } from "@/server/worldid/verify";
 import type { VerifyResponse } from "@/lib/worldid/types";
 
-// POST { address, result } -> 200 { verified: true, txHash } | 4xx/5xx { verified: false, code, reason }
+// POST { address, result, ownership } -> 200 { verified: true, txHash } | 4xx/5xx { verified: false, code, reason }
 // Every rejection is non-2xx so the IDKit widget's handleVerify fails the flow.
 export async function POST(request: Request) {
-  let cfg;
+  let cfg, store;
   try {
     cfg = loadWorldIdConfig();
+    store = getWorldIdStore();
   } catch (err) {
     if (!(err instanceof WorldIdConfigError)) throw err;
     const body: VerifyResponse = { verified: false, code: "not_configured", reason: err.message };
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   const registry = await resolveHumanRegistry();
   const outcome = await verifyHuman(input, {
     cfg,
-    store: getWorldIdStore(),
+    store,
     registry: registry.client,
     registryNote: registry.client ? undefined : registry.note,
   });

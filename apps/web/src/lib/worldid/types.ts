@@ -8,17 +8,19 @@ export type Hex = `0x${string}`;
 export type VerifyRejectCode =
   | "invalid_request"
   | "not_configured"
+  | "bad_signature"
+  | "unexpected_proof_shape"
   | "wrong_action"
   | "wrong_environment"
   | "legacy_proof_not_allowed"
   | "session_proof_not_allowed"
   | "nonce_unknown"
   | "nonce_expired"
-  | "nonce_used"
   | "signal_mismatch"
   | "proof_rejected"
   | "portal_unreachable"
   | "nullifier_bound_to_other_wallet"
+  | "wallet_already_verified"
   | "onchain_failed";
 
 export type VerifyResponse =
@@ -60,7 +62,19 @@ export type HumanStatusResponse = {
   verified: boolean;
   verifiedAt?: string;
   txHash?: Hex | null;
-  onchain?: boolean | null;
+  /** What the server did onchain when it verified this wallet. */
+  onchain?: "marked" | "already_marked" | "skipped" | null;
+  /** Live HumanRegistry.isVerified(address); null if it couldn't be read. */
+  onchainVerified?: boolean | null;
+};
+
+/** Proof that the caller controls the wallet: an EIP-191 signature over ownershipMessage(). */
+export type OwnershipProof = {
+  signature: Hex;
+  /** Unix seconds. */
+  expiresAt: number;
+  /** Required for mint (random, single use). For verify the RP nonce is used instead. */
+  nonce?: string;
 };
 
 /** EIP-712 MintVoucher as JSON (uint256 fields as decimal strings). */
@@ -74,6 +88,8 @@ export type MintVoucherJson = {
 
 export type VoucherRejectCode =
   | "invalid_request"
+  | "bad_signature"
+  | "signature_replayed"
   | "not_verified_human"
   | "player_not_found"
   | "base_level_too_low"

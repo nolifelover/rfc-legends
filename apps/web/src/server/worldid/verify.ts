@@ -1,19 +1,26 @@
 // POST /api/worldid/verify, minus the HTTP layer. Order of checks:
 //   1. body shape + wallet address
-//   2. result pinned to our action / environment / protocol / wallet signal
-//   3. RP nonce was issued by us, for this wallet, unexpired, unused
-//   4. proof verified by World's Portal (we take the nullifier from there)
-//   5. nullifier not bound to another wallet (server store, then onchain)
-//   6. HumanRegistry.markVerified mirrored onchain with GAME_SIGNER
+//   2. wallet ownership: EIP-191 signature over (wallet, RP nonce, expiry)
+//   3. result pinned to one proof-of-human response, our action / environment,
+//      World ID 4.0, and the wallet as signal
+//   4. RP nonce was issued by us, for this wallet, and is unexpired
+//   5. proof verified by World's Portal; we bind only the nullifier it confirms
+//   6. nonce consumed (single use), then the nullifier <-> wallet binding is
+//      reserved by a UNIQUE-index insert
+//   7. HumanRegistry.markVerified mirrored onchain with GAME_SIGNER
+//
+// World's Portal accepts nullifier reuse (a repeat verification succeeds), so
+// step 6 is the sybil guard, backed onchain by HumanRegistry.
 
 import { getAddress, isAddress } from "viem";
 import { z } from "zod";
 import type { Hex, VerifyRejectCode, VerifyResponse } from "../../lib/worldid/types";
 import type { WorldIdConfig } from "./config";
-import { decideBinding, maskAddress } from "./nullifier";
+import { maskAddress } from "./nullifier";
+import { checkOwnership, ownershipSchema } from "./ownership";
 import { idkitResultSchema, precheckResult, verifyWithPortal } from "./portal";
 import type { HumanRegistryClient } from "./registry";
-import type { OnchainStatus, WorldIdStore } from "./store";
+import type { NonceCheck, OnchainStatus, WorldIdStore } from "./store";
 
 export type VerifyDeps = {
   cfg: WorldIdConfig;
@@ -30,6 +37,7 @@ export type VerifyOutcome = { status: number; body: VerifyResponse };
 const bodySchema = z.object({
   address: z.string().refine((a) => isAddress(a, { strict: false }), "not an address"),
   result: idkitResultSchema,
+  ownership: ownershipSchema,
 });
 
 function reject(status: number, code: VerifyRejectCode, reason: string, boundTo?: string): VerifyOutcome {
@@ -45,50 +53,52 @@ function secondWallet(boundTo: string): VerifyOutcome {
   );
 }
 
+function nonceReject(status: Exclude<NonceCheck, "ok">): VerifyOutcome {
+  return status === "expired"
+    ? reject(403, "nonce_expired", "The verification request expired. Start again.")
+    : reject(403, "nonce_unknown", "This verification request is unknown, already used, or for another wallet. Start again.");
+}
+
 export async function verifyHuman(input: unknown, deps: VerifyDeps): Promise<VerifyOutcome> {
   const now = deps.now ?? (() => new Date());
+  const nowSeconds = () => Math.floor(now().getTime() / 1000);
 
   const parsed = bodySchema.safeParse(input);
   if (!parsed.success) {
-    return reject(400, "invalid_request", "Request must include a wallet address and the IDKit result.");
+    return reject(400, "invalid_request", "Request must include a wallet address, the IDKit result and a wallet signature.");
   }
   const address = getAddress(parsed.data.address).toLowerCase() as Hex;
-  const result = parsed.data.result;
+  const { result, ownership } = parsed.data;
+
+  const badSignature = await checkOwnership(
+    { purpose: "verify-world-id", address, nonce: result.nonce, expiresAt: ownership.expiresAt, signature: ownership.signature },
+    nowSeconds(),
+  );
+  if (badSignature) return reject(401, "bad_signature", badSignature);
 
   const pre = precheckResult(result, address, deps.cfg);
   if (pre) return reject(403, pre.code, pre.reason);
 
-  const nonceProblem = checkNonce((await deps.store.read()).nonces[result.nonce], address, now());
-  if (nonceProblem) return reject(403, nonceProblem.code, nonceProblem.reason);
+  const nonce = await deps.store.checkNonce(result.nonce, address, nowSeconds());
+  if (nonce !== "ok") return nonceReject(nonce);
 
   const portal = await verifyWithPortal(result, address, deps.cfg, deps.fetchImpl);
   if (!portal.ok) return reject(portal.code === "portal_unreachable" ? 502 : 403, portal.code, portal.reason);
   const nullifier = portal.nullifier;
 
-  // Consume the nonce and reserve the nullifier atomically.
-  const reservation = await deps.store.update((state) => {
-    const again = checkNonce(state.nonces[result.nonce], address, now());
-    if (again) return { kind: "nonce" as const, ...again };
-    state.nonces[result.nonce].usedAt = now().toISOString();
+  const consumed = await deps.store.consumeNonce(result.nonce, address, nowSeconds());
+  if (consumed !== "ok") return nonceReject(consumed);
 
-    const decision = decideBinding(state, address, nullifier);
-    if (decision.kind === "other") return { kind: "other" as const, boundTo: decision.boundTo };
-    if (decision.kind === "new") {
-      state.bindings[nullifier] = { address, status: "pending", verifiedAt: now().toISOString(), txHash: null };
-    }
-    return { kind: decision.kind };
-  });
-  if (reservation.kind === "nonce") return reject(403, reservation.code, reservation.reason);
-  if (reservation.kind === "other") return secondWallet(reservation.boundTo);
-
-  const release = async () => {
-    if (reservation.kind !== "new") return;
-    await deps.store.update((state) => {
-      if (state.bindings[nullifier]?.status === "pending" && state.bindings[nullifier].address === address) {
-        delete state.bindings[nullifier];
-      }
-    });
-  };
+  const reservation = await deps.store.reserveBinding(nullifier, address, now().toISOString());
+  if (reservation.kind === "nullifier_taken") return secondWallet(reservation.boundTo);
+  if (reservation.kind === "wallet_taken") {
+    return reject(
+      409,
+      "wallet_already_verified",
+      "This wallet is already verified with a different World ID. One wallet, one human.",
+    );
+  }
+  const release = () => (reservation.kind === "new" ? deps.store.releaseBinding(nullifier, address) : Promise.resolve());
 
   // Mirror onchain. The contract enforces the same rule, so a stale local
   // store can't let a second wallet through.
@@ -118,11 +128,7 @@ export async function verifyHuman(input: unknown, deps: VerifyDeps): Promise<Ver
     }
   }
 
-  const verifiedAt = now().toISOString();
-  await deps.store.update((state) => {
-    state.bindings[nullifier] = { address, status: "verified", verifiedAt, txHash, onchain };
-    state.humans[address] = { nullifier, verifiedAt, txHash, onchain };
-  });
+  await deps.store.finalizeBinding(nullifier, address, { verifiedAt: now().toISOString(), txHash, onchain });
 
   return {
     status: 200,
@@ -134,19 +140,4 @@ export async function verifyHuman(input: unknown, deps: VerifyDeps): Promise<Ver
       ...(onchain === "skipped" && deps.registryNote ? { onchainNote: deps.registryNote } : {}),
     },
   };
-}
-
-function checkNonce(
-  entry: { address: Hex; expiresAt: number; usedAt?: string } | undefined,
-  address: Hex,
-  now: Date,
-): { code: VerifyRejectCode; reason: string } | null {
-  if (!entry || entry.address !== address) {
-    return { code: "nonce_unknown", reason: "This verification request wasn't issued for this wallet. Start again." };
-  }
-  if (entry.usedAt) return { code: "nonce_used", reason: "This proof was already used. Start a new verification." };
-  if (entry.expiresAt < Math.floor(now.getTime() / 1000)) {
-    return { code: "nonce_expired", reason: "The verification request expired. Start again." };
-  }
-  return null;
 }

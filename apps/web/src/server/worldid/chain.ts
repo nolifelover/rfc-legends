@@ -6,7 +6,7 @@ import { rareItemsAbi } from "../../lib/contracts/abis";
 import { getDeployment } from "../../lib/worldid/deployment";
 import type { Hex } from "../../lib/worldid/types";
 import { getGameApi } from "./deps";
-import { getWorldIdStore } from "./store";
+import { getWorldIdStore } from "./runtime";
 import type { ConfirmDeps, VoucherDeps } from "./voucher";
 
 function publicClient() {

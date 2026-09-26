@@ -17,9 +17,7 @@ export async function issueRpContext(
   sign: typeof signRequest = signRequest,
 ): Promise<RpContextResponse> {
   const sig = sign({ signingKeyHex: cfg.signingKey, action: cfg.action, ttl: cfg.nonceTtlSeconds });
-  await store.update((state) => {
-    state.nonces[sig.nonce] = { address, expiresAt: sig.expiresAt + VERIFY_GRACE_SECONDS };
-  });
+  await store.putNonce(sig.nonce, address, sig.expiresAt + VERIFY_GRACE_SECONDS);
   return {
     app_id: cfg.appId,
     action: cfg.action,

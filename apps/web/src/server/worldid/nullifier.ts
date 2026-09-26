@@ -1,7 +1,4 @@
-// Nullifier normalization and the one-human-one-wallet binding rule.
-
-import type { Hex } from "../../lib/worldid/types";
-import type { WorldIdState } from "./store";
+// Nullifier normalization and display helpers.
 
 const UINT256_MAX = (BigInt(1) << BigInt(256)) - BigInt(1);
 
@@ -18,19 +15,6 @@ export function normalizeNullifier(input: string): string {
   else throw new Error(`Invalid nullifier: ${input}`);
   if (value > UINT256_MAX) throw new Error("Nullifier exceeds uint256");
   return value.toString(10);
-}
-
-export type BindingDecision =
-  | { kind: "new" }
-  | { kind: "same" }
-  | { kind: "other"; boundTo: Hex };
-
-/** Can `nullifier` be bound to `address`? Addresses must already be lowercase. */
-export function decideBinding(state: WorldIdState, address: Hex, nullifier: string): BindingDecision {
-  const existing = state.bindings[nullifier];
-  if (!existing) return { kind: "new" };
-  if (existing.address === address) return { kind: "same" };
-  return { kind: "other", boundTo: existing.address };
 }
 
 /** 0x1234…abcd, so the UI can name the other wallet without leaking it whole. */
