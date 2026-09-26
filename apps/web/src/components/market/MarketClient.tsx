@@ -6,8 +6,8 @@ import { useState } from "react";
 import { useConnection } from "wagmi";
 import { VerifyHuman } from "@/components/worldid/VerifyHuman";
 import { addressUrl, shortAddress, useHumanStatus } from "@/lib/worldid/client";
+import { getDeployment } from "@/lib/worldid/deployment";
 import type { Hex } from "@/lib/worldid/types";
-import { useDeployment } from "./chain";
 import { DropsPanel, useDrops } from "./DropsPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { ListingsPanel, useListings } from "./ListingsPanel";
@@ -16,8 +16,7 @@ import { SplitReceipt, type SaleReceipt } from "./SplitReceipt";
 export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
   const { address } = useConnection();
   const wallet = address?.toLowerCase() as Hex | undefined;
-  const config = useDeployment();
-  const deployment = config.data?.deployment;
+  const deployment = getDeployment();
   const status = useHumanStatus(wallet);
   const drops = useDrops(wallet);
   const listings = useListings(deployment);
@@ -39,7 +38,9 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <header className="mb-6">
-        <p className="text-sm font-medium text-clay-deep">ตลาดของหายาก · Rare Market</p>
+        <p className="text-sm font-medium text-clay-deep">
+          Rare Market <span className="text-bark-soft">· ตลาดของหายาก</span>
+        </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-bark sm:text-4xl">
           Rare drops, owned by real players
         </h1>
@@ -73,7 +74,7 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
         ))}
       </ol>
 
-      {config.data && !deployment ? (
+      {!deployment ? (
         <p className="mb-6 rounded-2xl border-2 border-sun/50 bg-sun-soft/50 px-4 py-3 text-sm text-bark">
           Contracts aren&apos;t deployed to Sepolia yet, so onchain steps are disabled. World ID verification and the
           mint checks still run.
@@ -88,7 +89,7 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
             <ul className="list-disc space-y-1 pl-5">
               <li>One World ID backs one wallet. A second wallet of the same person is refused.</li>
               <li>Minting needs Base Lv {drops.data?.minBaseLevel ?? 30}+ and a drop you actually own.</li>
-              <li>Daily mint limit: {config.data?.dailyLimit ?? 3} per wallet.</li>
+              <li>Daily mint limit: {drops.data?.dailyLimit ?? 3} per wallet.</li>
               <li>Only World ID verified humans can list. Anyone can buy.</li>
             </ul>
             {deployment ? (

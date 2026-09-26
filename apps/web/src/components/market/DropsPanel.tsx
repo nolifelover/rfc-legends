@@ -7,8 +7,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConfig } from "wagmi";
-import { rareItemsAbi } from "@/lib/worldid/contracts";
-import { txUrl, voucherRejectThai } from "@/lib/worldid/client";
+import { rareItemsAbi } from "@/lib/contracts/abis";
+import { txUrl } from "@/lib/worldid/client";
 import type { Hex, VoucherResponse } from "@/lib/worldid/types";
 import { describeError, itemInfo, runTx } from "./chain";
 import { RejectionCard } from "./RejectionCard";
@@ -20,6 +20,7 @@ type DropsResponse = {
   drops: Drop[];
   mintsToday: number;
   dailyLimit: number;
+  devFixtures?: boolean;
 };
 
 export const dropsKey = (address?: string) => ["market-drops", address?.toLowerCase()] as const;
@@ -39,7 +40,7 @@ export function useDrops(address?: Hex) {
 type MintState =
   | { kind: "idle" }
   | { kind: "busy"; step: string }
-  | { kind: "rejected"; source: "server" | "contract" | "wallet"; code?: string; reason: string; thai?: string }
+  | { kind: "rejected"; source: "server" | "contract" | "wallet"; code?: string; reason: string }
   | { kind: "minted"; txHash: Hex };
 
 export function DropsPanel({ address, focusDropId }: { address?: Hex; focusDropId?: Hex }) {
@@ -57,7 +58,7 @@ export function DropsPanel({ address, focusDropId }: { address?: Hex; focusDropI
     <section className="rounded-3xl border-2 border-clay/20 bg-cream p-5 shadow-sm">
       <header className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-bold text-bark">
-          Your rare drops <span className="text-sm font-medium text-bark-soft">· ของดรอปหายากที่ยังไม่ mint</span>
+          Your rare drops
         </h2>
         {data ? (
           <p className="text-xs text-bark-soft">
@@ -67,6 +68,11 @@ export function DropsPanel({ address, focusDropId }: { address?: Hex; focusDropI
         ) : null}
       </header>
 
+      {data?.devFixtures ? (
+        <p className="mb-3 rounded-xl border border-dashed border-bark-soft/50 px-3 py-1.5 text-xs text-bark-soft">
+          Dev fixtures: these drops are fake local test data, not from the game.
+        </p>
+      ) : null}
       {!address ? (
         <p className="text-sm text-bark-soft">Connect a wallet to see your drops.</p>
       ) : drops.isLoading ? (
@@ -126,13 +132,11 @@ function DropCard({
     });
     const body = (await res.json().catch(() => null)) as VoucherResponse | null;
     if (!body || !body.ok) {
-      const code = body && !body.ok ? body.code : undefined;
       setState({
         kind: "rejected",
         source: "server",
-        code,
+        code: body && !body.ok ? body.code : undefined,
         reason: body && !body.ok ? body.reason : `Voucher request failed (HTTP ${res.status}).`,
-        thai: code ? voucherRejectThai[code] : undefined,
       });
       return;
     }
@@ -197,7 +201,6 @@ function DropCard({
           source={state.source}
           code={state.code}
           reason={state.reason}
-          thai={state.thai}
           onDismiss={() => setState({ kind: "idle" })}
         />
       ) : null}

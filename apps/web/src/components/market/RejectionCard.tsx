@@ -1,17 +1,15 @@
 // The "rejected" path World wants to see: which check failed, and why, in plain words.
 
 export function RejectionCard({
-  title = "Rejected · ถูกปฏิเสธ",
+  title = "Rejected",
   code,
   reason,
-  thai,
   source,
   onDismiss,
 }: {
   title?: string;
   code?: string;
   reason: string;
-  thai?: string;
   /** Who refused: our game server (after World ID) or the contract itself. */
   source: "server" | "contract" | "wallet";
   onDismiss?: () => void;
@@ -31,7 +29,6 @@ export function RejectionCard({
         {code ? <code className="shrink-0 rounded bg-black/5 px-1.5 py-0.5 font-mono text-[11px]">{code}</code> : null}
       </div>
       <p className="mt-1 leading-relaxed text-bark">{reason}</p>
-      {thai ? <p className="mt-0.5 text-bark-soft">{thai}</p> : null}
       <div className="mt-2 flex items-center justify-between gap-2 text-xs text-bark-soft">
         <span>{by}</span>
         {onDismiss ? (

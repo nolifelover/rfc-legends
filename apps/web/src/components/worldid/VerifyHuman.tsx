@@ -16,7 +16,6 @@ import {
   shortAddress,
   txUrl,
   useHumanStatus,
-  verifyRejectThai,
 } from "@/lib/worldid/client";
 import type { RpContextResponse, VerifyResponse } from "@/lib/worldid/types";
 
@@ -138,7 +137,7 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
       </header>
 
       {!address ? (
-        <p className="text-sm text-bark-soft">Connect a wallet to verify. · เชื่อมต่อกระเป๋าก่อนยืนยันตัวตน</p>
+        <p className="text-sm text-bark-soft">Connect a wallet to verify you&apos;re a unique human.</p>
       ) : phase.kind === "verified" || (alreadyVerified && phase.kind === "idle") ? (
         <Verified
           address={address}
@@ -151,14 +150,11 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
       ) : (
         <>
           {phase.kind === "rejected" ? (
-            <Banner tone="bad" title="Rejected · ถูกปฏิเสธ" code={phase.code}>
+            <Banner tone="bad" title="Rejected" code={phase.code}>
               <p>{phase.reason}</p>
-              {verifyRejectThai[phase.code as keyof typeof verifyRejectThai] ? (
-                <p className="mt-1 opacity-80">{verifyRejectThai[phase.code as keyof typeof verifyRejectThai]}</p>
-              ) : null}
             </Banner>
           ) : phase.kind === "cancelled" ? (
-            <Banner tone="muted" title="Cancelled · ยกเลิกแล้ว">
+            <Banner tone="muted" title="Cancelled">
               <p>Verification was closed before it finished. Nothing was recorded.</p>
             </Banner>
           ) : phase.kind === "error" ? (
@@ -166,7 +162,7 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
               <p>{phase.message}</p>
             </Banner>
           ) : (
-            <Banner tone="muted" title="Not verified · ยังไม่ยืนยันตัวตน">
+            <Banner tone="muted" title="Not verified">
               <p>
                 Rare drops can only be minted and sold by verified humans. One World ID can back one wallet, so
                 bot farms can&apos;t cash out drops.
@@ -229,7 +225,7 @@ function Verified({
   onchain: boolean | null;
 }) {
   return (
-    <Banner tone="good" title="Verified human ✓ · ยืนยันว่าเป็นคนจริงแล้ว">
+    <Banner tone="good" title="Verified human ✓">
       <p>
         Wallet <span className="font-mono">{shortAddress(address)}</span> is bound to one World ID. It can mint and
         sell rare drops.

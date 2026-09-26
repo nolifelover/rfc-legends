@@ -1,6 +1,6 @@
 import { getAddress, isAddress } from "viem";
 import { dailyMintLimit } from "@/server/worldid/chain";
-import { getGameApi } from "@/server/worldid/deps";
+import { devFixturesEnabled, getGameApi } from "@/server/worldid/deps";
 import { getWorldIdStore } from "@/server/worldid/store";
 import { MIN_BASE_LEVEL, MINTABLE_RARITIES, utcDay } from "@/server/worldid/voucher";
 
@@ -22,5 +22,7 @@ export async function GET(request: Request) {
     drops: drops.filter((d) => MINTABLE_RARITIES.has(d.rarity) && d.itemId >= 1000),
     mintsToday: state.vouchers[address]?.[utcDay(new Date())]?.length ?? 0,
     dailyLimit: dailyMintLimit(),
+    /** True when the game data is fake (local dev only); the UI labels it. */
+    devFixtures: devFixturesEnabled(),
   });
 }

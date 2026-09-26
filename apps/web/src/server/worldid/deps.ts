@@ -1,28 +1,8 @@
-// TEMPORARY SHIMS for things other lanes own. Each one names what replaces it.
-//
-// 1. loadDeployment(): reads contracts/deployments/sepolia.json directly.
-//    Replace with apps/web/src/lib/contracts/addresses.ts (eth-dev1).
-// 2. gameApi: stands in for apps/web/src/server/game/index.ts (eth-dev2).
-//    Replace the body of getGameApi() with `return import("../game")`-style
-//    re-exports of getPlayer / getDrop / listDrops / setDropStatus.
+// TEMPORARY SHIM: stands in for apps/web/src/server/game/index.ts (eth-dev2)
+// until it is committed. Replace the body of getGameApi() with the real
+// getPlayer / getDrop / listDrops / setDropStatus (docs/interfaces.md §5).
 
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import type { Deployment } from "../../lib/worldid/contracts";
 import type { Hex } from "../../lib/worldid/types";
-
-export async function loadDeployment(): Promise<Deployment | null> {
-  const file = path.resolve(process.cwd(), "..", "..", "contracts", "deployments", "sepolia.json");
-  try {
-    const parsed = JSON.parse(await readFile(file, "utf8")) as Partial<Deployment>;
-    if (!parsed.HumanRegistry || !parsed.RareItems || !parsed.RareMarket || !parsed.MockUSDC) return null;
-    return { chainId: 11155111, ...parsed } as Deployment;
-  } catch {
-    return null;
-  }
-}
-
-// ---- game API (docs/interfaces.md §5) -------------------------------------
 
 export type Rarity = "common" | "rare" | "epic" | "legendary" | "monster_card" | "mvp_card";
 export type DropStatus = "unminted" | "minting" | "minted";
@@ -44,13 +24,18 @@ export type GameApi = {
 };
 
 /**
- * Until the game engine lands this returns an empty world: no players, no
- * drops, so every voucher request fails with "player not found". Set
- * WORLDID_DEV_FIXTURES=true to get one Lv 35 player per wallet with three
- * mintable drops, for building the market UI before the engine exists.
+ * Fake game data (one Lv 35 player per wallet with mintable drops) for local
+ * UI work only. Off unless WORLDID_DEV_FIXTURES=true, and never in a
+ * production build. It fakes the game, never World ID: verification always
+ * goes through World's API.
  */
+export function devFixturesEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.NODE_ENV !== "production" && env.WORLDID_DEV_FIXTURES === "true";
+}
+
+/** Until the game engine lands this is an empty world: every voucher request fails with "player not found". */
 export async function getGameApi(): Promise<GameApi> {
-  return process.env.WORLDID_DEV_FIXTURES === "true" ? devFixtureGame : emptyGame;
+  return devFixturesEnabled() ? devFixtureGame : emptyGame;
 }
 
 const emptyGame: GameApi = {
