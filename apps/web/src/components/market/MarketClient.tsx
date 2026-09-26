@@ -11,6 +11,7 @@ import type { Hex } from "@/lib/worldid/types";
 import { DropsPanel, useDrops } from "./DropsPanel";
 import { InventoryPanel } from "./InventoryPanel";
 import { ListingsPanel, useListings } from "./ListingsPanel";
+import { RecentSalesPanel } from "./RecentSalesPanel";
 import { SplitReceipt, type SaleReceipt } from "./SplitReceipt";
 
 export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
@@ -84,6 +85,7 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
           <VerifyHuman address={wallet} />
+          <RecentSalesPanel pendingTx={receipt?.txHash} />
           <div className="rounded-3xl border-2 border-clay/15 bg-cream p-5 text-sm text-bark-soft">
             <h3 className="mb-2 font-bold text-bark">Rules of the Rare Market</h3>
             <ul className="list-disc space-y-1 pl-5">
