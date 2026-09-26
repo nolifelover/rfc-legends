@@ -1053,7 +1053,7 @@ export class IdleScene extends Phaser.Scene {
       plate,
       bar,
       h,
-      baseX: this.slotX(row, slot) + (boss ? 40 : Phaser.Math.Between(-16, 16)),
+      baseX: this.slotX(row, slot) + (boss ? 40 : Phaser.Math.Between(-10, 10)),
       feetY,
       ready: false,
       boss,

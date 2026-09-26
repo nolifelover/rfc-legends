@@ -41,10 +41,10 @@ export const LAYOUT = {
   ENGAGE_MID_X: 1260,
   ENGAGE_BACK_X: 1370,
   /** Spacing between queued pests behind the leader. */
-  PACK_GAP: 175,
+  PACK_GAP: 215, // minimum spacing per lane so pests never blob
   SPAWN_X: 2020,
-  PACK_MIN: 8,
-  PACK_MAX: 12,
+  PACK_MIN: 7,
+  PACK_MAX: 10,
   WALK_SPEED: 420, // px/s while advancing
   /** Heroes. */
   TRAINER_X: 290,
