@@ -1863,14 +1863,17 @@ export function createIdleGame(
   // own (the HUD mounts below it after the canvas) and a stale canvas is clipped by
   // the frame's overflow-hidden. Re-fit immediately — read the bounds first, or
   // refresh() computes the FIT from the stale parent size.
-  const ro =
-    typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => {
-          if (game.scale.getParentBounds()) game.scale.refresh()
-        })
-      : null
+  const refit = (): void => {
+    if (game.scale.getParentBounds()) game.scale.refresh()
+  }
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refit) : null
   ro?.observe(container)
-  game.events.once(Phaser.Core.Events.DESTROY, () => ro?.disconnect())
+  // belt and braces for the first seconds, while the HUD below the frame settles
+  const timers = [300, 1000, 2500, 5000].map((ms) => window.setTimeout(refit, ms))
+  game.events.once(Phaser.Core.Events.DESTROY, () => {
+    ro?.disconnect()
+    for (const t of timers) window.clearTimeout(t)
+  })
   if (DEV) (window as unknown as { __rfcGame?: Phaser.Game }).__rfcGame = game
   return game
 }
