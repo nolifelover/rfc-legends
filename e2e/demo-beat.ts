@@ -72,9 +72,12 @@ const deployments = JSON.parse(readFileSync(join(REPO, 'contracts', 'deployments
 const { HumanRegistry, RareItems, RareMarket, MockUSDC: UsdcAddr } = deployments;
 
 const GAME_KEY = env('GAME_SIGNER_PRIVATE_KEY') ?? ANVIL.game;
-const A_KEY = env('A_KEY') ?? (isAnvil ? ANVIL.a : randomKey());
-const B_KEY = env('B_KEY') ?? (isAnvil ? ANVIL.b : randomKey());
-const C_KEY = env('C_KEY') ?? (isAnvil ? ANVIL.c : randomKey());
+// A/B/C are fresh every run unless provided: re-running against a chain
+// that already verified the deterministic anvil wallets would break the
+// bot-rejection steps. Fresh wallets + a funder keep the script re-runnable.
+const A_KEY = env('A_KEY') ?? randomKey();
+const B_KEY = env('B_KEY') ?? randomKey();
+const C_KEY = env('C_KEY') ?? randomKey();
 const FUNDER_KEY = env('FUNDER_KEY') ?? env('DEPLOYER_PRIVATE_KEY') ?? (isAnvil ? ANVIL.funder : undefined);
 
 const gameSigner = privateKeyToAccount(GAME_KEY as `0x${string}`);
