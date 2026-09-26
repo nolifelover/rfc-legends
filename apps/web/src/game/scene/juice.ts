@@ -43,8 +43,8 @@ export const LAYOUT = {
   /** Spacing between queued pests behind the leader. */
   PACK_GAP: 175,
   SPAWN_X: 2020,
-  PACK_MIN: 5,
-  PACK_MAX: 8,
+  PACK_MIN: 8,
+  PACK_MAX: 12,
   WALK_SPEED: 420, // px/s while advancing
   /** Heroes. */
   TRAINER_X: 370,
