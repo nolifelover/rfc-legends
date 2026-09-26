@@ -241,6 +241,46 @@ describe("verifyHuman: proof shape is pinned (G-W1)", () => {
   });
 });
 
+describe("legacy World ID 3.0 Orb proofs (users not yet on 4.0)", () => {
+  const legacyResult = (address: Hex, nonce: string) => ({
+    protocol_version: "3.0",
+    nonce,
+    action: cfg.action,
+    environment: "staging",
+    responses: [
+      { identifier: "orb", signal_hash: expectedSignalHash(address), proof: "0xabc", merkle_root: "0x1", nullifier: NULLIFIER_HEX },
+    ],
+  });
+
+  it("are refused while WORLD_ALLOW_LEGACY_PROOFS is off", async () => {
+    const { deps } = await setup();
+    const req = await body(alice, "n1");
+    const out = await verifyHuman({ ...req, result: legacyResult(A, "n1") }, deps);
+    expect(out.body).toMatchObject({ code: "legacy_proof_not_allowed" });
+  });
+
+  it("verify and bind when legacy is allowed (identifier 'orb', Portal confirms 'orb')", async () => {
+    const fetchImpl = portalReturns({ success: true, results: [{ identifier: "orb", success: true, nullifier: NULLIFIER_HEX }] });
+    const { deps, store } = await setup({ fetchImpl });
+    deps.cfg = { ...cfg, allowLegacyProofs: true };
+    const req = await body(alice, "n1");
+    const out = await verifyHuman({ ...req, result: legacyResult(A, "n1") }, deps);
+    expect(out.status).toBe(200);
+    expect(out.body).toMatchObject({ verified: true, onchain: "marked" });
+    expect(await store.getVerifiedHuman(A)).toMatchObject({ nullifier: NULLIFIER });
+  });
+
+  it("still refuse other legacy credentials (e.g. device) even when legacy is allowed", async () => {
+    const { deps } = await setup();
+    deps.cfg = { ...cfg, allowLegacyProofs: true };
+    const req = await body(alice, "n1");
+    const r = legacyResult(A, "n1");
+    r.responses[0].identifier = "device";
+    const out = await verifyHuman({ ...req, result: r }, deps);
+    expect(out.body).toMatchObject({ code: "unexpected_proof_shape" });
+  });
+});
+
 describe("verifyHuman: wallet ownership (G-W3)", () => {
   it("rejects a request without a wallet signature", async () => {
     const { deps } = await setup();

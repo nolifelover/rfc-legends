@@ -27,6 +27,17 @@ const responseItem = z.looseObject({
  */
 export const EXPECTED_CREDENTIAL = { identifier: "proof_of_human", issuerSchemaId: 1 } as const;
 
+/**
+ * Legacy (World ID 3.0) Orb proofs, accepted only with WORLD_ALLOW_LEGACY_PROOFS=true:
+ * World App answers a proofOfHuman request with a 3.0 "orb" response for users
+ * who haven't upgraded to a 4.0 credential yet.
+ */
+const LEGACY_IDENTIFIERS: readonly string[] = ["orb", "proof_of_human"];
+
+function identifierAccepted(identifier: string | undefined, protocol: "3.0" | "4.0") {
+  return protocol === "3.0" ? LEGACY_IDENTIFIERS.includes(identifier ?? "") : identifier === EXPECTED_CREDENTIAL.identifier;
+}
+
 /** Only the fields we check; everything else is forwarded untouched. */
 export const idkitResultSchema = z.looseObject({
   protocol_version: z.enum(["3.0", "4.0"]),
@@ -86,7 +97,7 @@ export function precheckResult(result: IdkitResult, address: Hex, cfg: WorldIdCo
   }
   const item = result.responses[0];
   if (
-    item.identifier !== EXPECTED_CREDENTIAL.identifier ||
+    !identifierAccepted(item.identifier, result.protocol_version) ||
     (result.protocol_version === "4.0" && item.issuer_schema_id !== EXPECTED_CREDENTIAL.issuerSchemaId)
   ) {
     return {
@@ -138,6 +149,8 @@ const portalResponse = z.looseObject({
 });
 
 export type PortalOk = { ok: true; nullifier: string; identifier: string };
+
+const item0Identifier = (result: IdkitResult) => result.responses[0].identifier;
 
 export async function verifyWithPortal(
   result: IdkitResult,
@@ -195,7 +208,7 @@ export async function verifyWithPortal(
   // Bind only what the Portal itself says it verified: the result for our
   // credential with success === true. Never fall back to the client's copy.
   const verified = (payload.results ?? []).filter(
-    (r) => r.identifier === EXPECTED_CREDENTIAL.identifier && r.success === true && typeof r.nullifier === "string",
+    (r) => identifierAccepted(r.identifier, result.protocol_version) && r.success === true && typeof r.nullifier === "string",
   );
   if (verified.length !== 1) {
     return {
@@ -220,5 +233,5 @@ export async function verifyWithPortal(
   if (claimed !== nullifier) {
     return { ok: false, code: "proof_rejected", reason: "World ID's nullifier doesn't match the submitted proof." };
   }
-  return { ok: true, nullifier, identifier: EXPECTED_CREDENTIAL.identifier };
+  return { ok: true, nullifier, identifier: verified[0].identifier ?? item0Identifier(result) };
 }

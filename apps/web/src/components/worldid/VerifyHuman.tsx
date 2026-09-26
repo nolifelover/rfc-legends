@@ -71,7 +71,8 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
       const ctx = await fetchRpContext(address);
       // Prove this browser controls the wallet: sign (wallet, RP nonce, expiry).
       setPhase({ kind: "signing" });
-      const expiresAt = Math.floor(Date.now() / 1000) + 5 * 60;
+      // Signature must outlive a slow World App round trip (server accepts up to 10 min).
+      const expiresAt = Math.floor(Date.now() / 1000) + 9 * 60;
       let signature: `0x${string}`;
       try {
         signature = await signMessage(config, {
