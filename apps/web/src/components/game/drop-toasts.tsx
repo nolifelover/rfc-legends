@@ -32,7 +32,7 @@ type ActiveToast = { key: string; drop: Drop }
 
 const JACKPOT_MS = 2400
 
-export function DropToasts({ drops }: { drops: Drop[] }) {
+export function DropToasts({ drops, hold = false }: { drops: Drop[]; hold?: boolean }) {
   // Seeded on the first poll — drops that already existed are history, not news.
   const seen = useRef<Set<string> | null>(null)
   const [queue, setQueue] = useState<ActiveToast[]>([])
@@ -47,6 +47,9 @@ export function DropToasts({ drops }: { drops: Drop[] }) {
     const fresh = drops.filter((d) => !seenSet.has(d.dropId) && isToastable(d))
     if (fresh.length === 0) return
     for (const d of fresh) seenSet.add(d.dropId)
+    // While the welcome-back card is open, its summary already carries the
+    // drops ("Rare drops: N") — celebrating on top would stack two modals.
+    if (hold) return
     for (const drop of fresh) {
       if (isJackpotRarity(drop.rarity)) {
         // moment first; the toast joins the queue as the moment ends
@@ -59,7 +62,7 @@ export function DropToasts({ drops }: { drops: Drop[] }) {
         setQueue((q) => [...q, { key: drop.dropId, drop }].slice(-3))
       }
     }
-  }, [drops])
+  }, [drops, hold])
 
   const dismiss = (key: string): void => setQueue((q) => q.filter((t) => t.key !== key))
 

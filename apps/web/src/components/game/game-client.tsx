@@ -338,7 +338,7 @@ export function GameClient() {
         />
       ) : null}
 
-      <DropToasts drops={state.drops} />
+      <DropToasts drops={state.drops} hold={welcomeBack != null} />
 
       {notice ? (
         <div
