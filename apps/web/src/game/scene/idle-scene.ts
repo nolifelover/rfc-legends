@@ -39,7 +39,7 @@ import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './ove
 import type { Tier } from './overlays'
 import { Fx } from './fx'
 import type { DamageKind } from './fx'
-import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, zoneOf } from './juice'
+import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, fmt, zoneOf } from './juice'
 import type { ZoneSpec } from './juice'
 import type { SceneBridge, SceneMountOptions } from './scene-bridge'
 import { UiScene } from './ui-scene'
@@ -1780,12 +1780,17 @@ export class IdleScene extends Phaser.Scene {
 
   // ------------------------------------------------------------- ceremonies
 
-  private playLevelUp(from: number, to: number, n: number): void {
+  private playLevelUp(from: number, to: number, n: number, expGain = 0): void {
     // Base Lv 10/20/30 are server milestones; 30 unlocks minting in the Rare Market
     const crossed = [30, 20, 10].find((m) => from < m && to >= m)
     const label =
       crossed === 30 ? 'RARE DROPS UNLOCKED!' : crossed ? `LEVEL ${crossed}!` : n > 1 ? `LEVEL UP ×${n}!` : 'LEVEL UP!'
-    const sub = crossed === 30 ? `Lv ${from} → ${to} · mint & sell in the Rare Market` : `Lv ${from} → ${to}`
+    // one clean subline: the level step and this sync's real EXP (its pops are folded in here)
+    const exp = expGain > 0 ? ` · +${fmt(expGain)} EXP` : ''
+    const sub = crossed === 30 ? `Lv ${from} → ${to}${exp} · mint & sell in the Rare Market` : `Lv ${from} → ${to}${exp}`
+    // the nameplate hides while the banner is up so nothing layers over it
+    this.trainerPlate.setVisible(false)
+    this.time.delayedCall(1500, () => this.trainerPlate.setVisible(true))
     this.fx.levelUp(L.TRAINER_X, L.TRAINER_FEET, label, sub)
     if (crossed === 30) this.fx.confettiBurst(L.TRAINER_X, L.TRAINER_FEET - L.TRAINER_H, 40)
     this.time.delayedCall(1300, () => this.roosterCrow()) // after the slam sub-line fades
@@ -1911,8 +1916,10 @@ export class IdleScene extends Phaser.Scene {
       this.time.delayedCall(wait, () => this.changeZone(next))
     }
 
-    if (player.baseLevel > prev.baseLevel) {
-      this.playLevelUp(prev.baseLevel, player.baseLevel, player.baseLevel - prev.baseLevel)
+    const gain = this.expGain(prev, player)
+    const leveled = player.baseLevel > prev.baseLevel
+    if (leveled) {
+      this.playLevelUp(prev.baseLevel, player.baseLevel, player.baseLevel - prev.baseLevel, gain)
       this.bridge.emit('levelup', { level: player.baseLevel })
     }
     if (player.rooster.level > prev.rooster.level) {
@@ -1931,7 +1938,8 @@ export class IdleScene extends Phaser.Scene {
     const nextCoins = this.serverCoins(player)
     const coinGain = prevCoins !== null && nextCoins !== null ? Math.max(0, nextCoins - prevCoins) : 0
     if (nextCoins !== null && !this.coinsKnown) this.readCoins(player)
-    this.pushCredits(player.killCount - prevKills, this.expGain(prev, player), coinGain)
+    // on a level-up sync the EXP is shown once, in the banner's subline
+    this.pushCredits(player.killCount - prevKills, leveled ? 0 : gain, coinGain)
     if (this.killShown > this.killServer) {
       this.killShown = this.killServer
       this.killChip.setLabel(this.killLabel())
