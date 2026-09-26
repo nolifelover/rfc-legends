@@ -219,6 +219,18 @@ FARM_SIGNER_PRIVATE_KEY=
 ENS_OWNER_PRIVATE_KEY=
 ```
 
+## 8a. Temporary game-lane takeover (11:50 UTC until eth-dev2 returns ~13:19 UTC)
+
+eth-dev2 hit its 5-hour usage limit. Until it returns, these owners replace it:
+
+| Paths | Temporary owner |
+|---|---|
+| `apps/web/src/game/**` (Phaser scene, fx, art), except `types.ts` | lead's subagent `scene-builder` |
+| `apps/web/src/components/game/**`, `apps/web/src/game/types.ts`, `apps/web/src/app/page.tsx`, `apps/web/src/app/layout.tsx` | eth-dev1 |
+| `apps/web/src/server/game/**` (engine) | eth-dev3 |
+
+eth-dev2 takes the lane back when it returns, after a handoff message from the lead.
+
 ## 8b. Decisions made during the build
 
 - **English-first UI** (08:08 UTC). Judges are international. Thai stays as flavor: sire-line names with romanization, map and farm names.
