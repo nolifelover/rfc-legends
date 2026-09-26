@@ -108,7 +108,7 @@ function JackpotMoment({ drop }: { drop: Drop }) {
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-[70] flex flex-col items-center justify-center gap-4"
+      className="pointer-events-none fixed inset-0 z-[70] flex flex-col items-center justify-end gap-4 pb-[10vh]"
       role="alert"
       aria-live="assertive"
     >
@@ -120,7 +120,7 @@ function JackpotMoment({ drop }: { drop: Drop }) {
       {/* light pillar */}
       <div
         aria-hidden
-        className="absolute top-[-10%] h-[80%] w-[46vmin] rounded-full"
+        className="absolute bottom-[6%] top-auto h-[78%] w-[46vmin] rounded-full"
         style={{
           background: `linear-gradient(to bottom, ${meta.hex}00 0%, ${meta.hex}59 38%, ${meta.hex}2e 72%, transparent 100%)`,
           filter: "blur(6px)",
@@ -222,7 +222,7 @@ function DropToast({ toast, onDismiss }: { toast: ActiveToast; onDismiss: () => 
             >
               Mint &amp; sell →
             </a>
-            <span className="text-[10px] font-semibold text-bark/50">auto-hides</span>
+            <span className="text-xs font-bold text-bark/75">auto-hides</span>
           </div>
         </div>
       </div>
