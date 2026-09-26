@@ -1439,9 +1439,10 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private manualRoosterX(): number {
-    const behind = Phaser.Math.Clamp(this.manualX - this.manualFacing * 150, MANUAL_MIN_X, MANUAL_MAX_X)
-    if (Math.abs(behind - this.manualX) >= 100) return behind
-    return Phaser.Math.Clamp(this.manualX + this.manualFacing * 150, MANUAL_MIN_X, MANUAL_MAX_X)
+    const followDistance = 330
+    const behind = Phaser.Math.Clamp(this.manualX - this.manualFacing * followDistance, MANUAL_MIN_X, MANUAL_MAX_X)
+    if (Math.abs(behind - this.manualX) >= followDistance * 0.75) return behind
+    return Phaser.Math.Clamp(this.manualX + this.manualFacing * followDistance, MANUAL_MIN_X, MANUAL_MAX_X)
   }
 
   private placeHeroLabels(): void {
@@ -1452,8 +1453,9 @@ export class IdleScene extends Phaser.Scene {
 
   private layoutHeroLabels(): void {
     const view = this.fx.visibleWorld()
-    const trainerY = L.TRAINER_FEET - L.TRAINER_H - 64
-      + (this.manualMode ? -80 : (!this.ui.mobileProfile && this.mapChip ? 80 : 0))
+    const trainerBaseY = L.TRAINER_FEET - L.TRAINER_H - 64
+    const trainerY = trainerBaseY
+      + (this.manualMode ? -80 : this.desktopTrainerChromeOffset(trainerBaseY))
     const roosterY = L.ROOSTER_FEET - this.roosterSprite.displayHeight - 58 + (this.manualMode ? 20 : 0)
     this.trainerPlate.container.y = Math.round(trainerY)
     this.roosterPlate.container.y = Math.round(roosterY)
@@ -1472,6 +1474,23 @@ export class IdleScene extends Phaser.Scene {
       view.left + this.roosterPlate.width / 2 + 12,
       view.right - this.roosterPlate.width / 2 - 12,
     ))
+  }
+
+  /** Move the desktop trainer plate only when the temporary map chip covers it. */
+  private desktopTrainerChromeOffset(baseY: number): number {
+    const mapChip = this.mapChip
+    if (this.manualMode || this.ui.mobileProfile || !mapChip) return 0
+    const camera = this.cameras.main
+    const zoom = camera.zoom
+    if (!Number.isFinite(zoom) || zoom <= 0) return 0
+    const plateHeight = this.trainerPlate.container.getBounds().height
+    const plateLeft = (this.trainer.x - this.trainerPlate.width / 2 - camera.worldView.x) * zoom
+    const plateRight = (this.trainer.x + this.trainerPlate.width / 2 - camera.worldView.x) * zoom
+    const plateTop = (baseY - camera.worldView.y) * zoom
+    const plateBottom = (baseY + plateHeight - camera.worldView.y) * zoom
+    const map = mapChip.container.getBounds()
+    const overlaps = plateRight > map.left && plateLeft < map.right && plateBottom > map.top && plateTop < map.bottom
+    return overlaps ? Math.max(0, (map.bottom + 12 - plateTop) / zoom) : 0
   }
 
   private showManualActionResult(result: GameActionResult): void {
