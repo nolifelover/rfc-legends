@@ -205,13 +205,13 @@ export const ZONES: Record<string, ZoneSpec> = {
     groundTint: 0xa39a84,
     lotus: true,
     names: {
-      'tuk-tong': 'Monitor Lizard',
+      'hoi-cherry': 'Golden Apple Snail',
       'phak-tob-chawai-yak': 'Giant Hyacinth',
       'pla-chon-yak': 'Giant Snakehead',
       'jorakhe-thao-bueng': 'Marsh Crocodile',
     },
     skins: {
-      'tuk-tong': { key: 'art-monster-nu-na', tint: 0x9fb86a, h: 270 },
+      'hoi-cherry': { key: 'art-monster-nu-na', tint: 0xd9b86a, h: 270 },
       'phak-tob-chawai-yak': { key: 'art-monster-pu-na', tint: 0xb48cd9, h: 280 },
       'pla-chon-yak': { key: 'art-monster-takka-taen-yak', tint: 0x5fa8c4, h: 300 },
       'jorakhe-thao-bueng': { key: 'art-monster-raja-nu-na', tint: 0x6f9a52, h: 680 },

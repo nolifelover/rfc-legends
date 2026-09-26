@@ -67,7 +67,7 @@ const pondPest = (id: string, name: string, emoji: string, level: number, cardId
   const m = monster(id, name, emoji, level, cardId, materialItemId)
   return { ...m, stats: { ...m.stats, atk: MONSTER_ATK(Math.round(level / 2)) } }
 }
-const tukTong = pondPest('tuk-tong', 'ตัวเงินตัวทอง', '🐌', 24, 1004, 104)
+const hoiCherry = pondPest('hoi-cherry', 'หอยเชอรี่', '🐌', 24, 1004, 104)
 const phakTobChawai = pondPest('phak-tob-chawai-yak', 'ผักตบชวายักษ์', '🌿', 28, 1005, 102)
 const plaChonYak = pondPest('pla-chon-yak', 'ปลาช่อนยักษ์', '🐟', 32, 1006, 103)
 
@@ -77,7 +77,7 @@ export const BUENG_BUA: MapDef = {
   lvRange: [25, 40],
   element: 'water',
   monsters: [
-    { monster: tukTong, weight: 40 },
+    { monster: hoiCherry, weight: 40 },
     { monster: phakTobChawai, weight: 35 },
     { monster: plaChonYak, weight: 25 },
   ] satisfies MonsterSpawn[],

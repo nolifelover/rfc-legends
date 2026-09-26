@@ -177,12 +177,12 @@ export const ITEMS: ItemDef[] = [
   // --- 3xxx MVP Cards (mintable) ---
   {
     id: 1004,
-    name: 'การ์ดตัวเงินตัวทอง',
+    name: 'การ์ดหอยเชอรี่',
     rarity: 'monster_card',
     slot: 'armor',
     image: '/assets/items/1004.svg',
     emoji: '🐌',
-    desc: 'การ์ดตัวเงินตัวทองเปลือกมันวาว เสียบที่เกราะแล้ว DEF +8 ว่ายน้ำเร็วขึ้น',
+    desc: 'การ์ดหอยเชอรี่เปลือกทองมันวาว ศัตรูร้ายแห่งนาข้าว เสียบที่เกราะแล้ว DEF +8',
   },
   {
     id: 1005,
