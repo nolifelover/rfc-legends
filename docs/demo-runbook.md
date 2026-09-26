@@ -13,7 +13,7 @@ Everything below was rehearsed end to end through the real UI on Sepolia on 2026
 - [ ] **World App is open** on the presenter's phone: unlocked, up to date, signed in, with the **Orb-verified** World ID, on a good connection, notifications silenced.
 - [ ] **Demo mode badge is visible.** "⚡ Demo mode: boosted rates" shows under the nav on /game and /market.
 - [ ] **Production World ID.** Opening the verify widget shows a QR code but **no** "Testing in staging? Use the simulator" line. If that line appears, `WORLD_ENVIRONMENT` is still `staging` (see §1).
-- [ ] **Browser is 1920×1080 at 100% zoom.** Maximize on a 1920×1080 display, or open DevTools → device toolbar → Responsive 1920×1080 and then close DevTools. Reset zoom with Ctrl/Cmd + 0. Hide the bookmarks bar and close other tabs.
+- [ ] **Browser is 1920×1080 at 100% zoom.** Maximize the window on a 1920×1080 display. On a bigger screen, set the window to exactly 1920×1080 with a window-resizer extension or the OS; DevTools device mode doesn't work here because it switches off when DevTools closes. Reset zoom with Ctrl/Cmd + 0. Hide the bookmarks bar and close other tabs.
 - [ ] **Clean start.** Demo A has no character yet and isn't verified (see §6 if you're re-taking). Demo B holds test USDC. Demo C shows its unminted MVP Card #3001 on /market.
 
 ## 1. Environments
