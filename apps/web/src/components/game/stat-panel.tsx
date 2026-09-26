@@ -57,10 +57,10 @@ export function StatPanel({
         type="button"
         onClick={() => setOpen(true)}
         aria-expanded={open}
-        className={`inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-black shadow-sm transition ${
+        className={`inline-flex items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-black shadow-[0_2px_0_rgba(0,0,0,0.45)] transition ${
           player.statPoints > 0
-            ? "animate-pulse border-clay bg-sun-soft/80 text-clay-deep hover:bg-sun-soft hover:animate-none"
-            : "border-clay/40 bg-cream text-clay-deep hover:border-clay hover:bg-sun-soft/50"
+            ? "animate-pulse border-sun bg-sun/25 text-sun-soft hover:bg-sun/40 hover:animate-none"
+            : "border-sun/50 bg-[#1d130c]/70 text-cream/85 hover:border-sun hover:text-cream"
         }`}
       >
         <span aria-hidden>✦</span>
