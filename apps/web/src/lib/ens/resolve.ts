@@ -18,7 +18,7 @@ export const ENSV2 = {
 const registryAbi = parseAbi([
   "function getSubregistry(string label) view returns (address)",
   "function getResolver(string label) view returns (address)",
-  "event LabelRegistered(string label, address indexed owner, uint256 indexed tokenId)",
+  "event LabelRegistered(uint256 indexed tokenId, bytes32 indexed labelHash, string label, address owner, uint64 expiry, address indexed sender)",
 ]);
 
 // TODO: switch to the exported roosterRwaAbi when eth-dev1 lands it in lib/contracts/abis.
@@ -35,9 +35,20 @@ const SIRE_LINES = [
   { slug: "thepbut", roman: "Thepbut", thai: "เทพบุตร", emoji: "✨" },
   { slug: "raptor", roman: "Raptor", thai: "แร๊พเตอร์", emoji: "🦅" },
 ] as const;
-export const sireLineInfo = (slug: string) => SIRE_LINES.find((s) => s.slug === slug);
+/**
+ * Presentation map for sire-line display names (romanization + Thai flavor).
+ * The SOURCE OF TRUTH is always the onchain `rfc.sireLine` text record — an
+ * unknown slug renders as its raw onchain value, never masked or defaulted.
+ */
+export const sireLineInfo = (slug: string) => SIRE_LINES.find((s) => s.slug === slug) ?? null;
 
-export const PARENT_NAME = (process.env.NEXT_PUBLIC_ENS_PARENT_NAME ?? "rfclegends.eth").toLowerCase();
+const parentFromEnv = (process.env.NEXT_PUBLIC_ENS_PARENT_NAME ?? "").toLowerCase();
+if (!parentFromEnv || !parentFromEnv.endsWith(".eth")) {
+  throw new Error(
+    "NEXT_PUBLIC_ENS_PARENT_NAME must be set (e.g. 'rfclegends.eth') — names are never hard-coded",
+  );
+}
+export const PARENT_NAME = parentFromEnv;
 
 export function ensClient() {
   return createPublicClient({
@@ -102,14 +113,35 @@ export async function registryForParent(client: ReturnType<typeof ensClient>, pa
   return registry;
 }
 
-/** All labels ever registered in a registry (from LabelRegistered logs). */
+/** ENSv2 beta epoch on Sepolia — no rooster registry existed before this block. */
+const ENSV2_START_BLOCK = BigInt(11784970);
+const LOG_RANGE = BigInt(5_000); // stay under public-RPC block-range limits
+const labelCache = new Map<`0x${string}`, { at: number; labels: string[] }>();
+const CACHE_TTL_MS = 60_000;
+
+/**
+ * All labels ever registered in a registry, from LabelRegistered logs.
+ * Chunked (public RPCs cap log ranges) and cached briefly. Errors propagate
+ * so the UI can show a failure instead of silently rendering nothing.
+ */
 export async function labelsInRegistry(client: ReturnType<typeof ensClient>, registry: Hex): Promise<string[]> {
-  const logs = await client.getLogs({
-    address: registry,
-    event: parseAbi(["event LabelRegistered(string label, address indexed owner, uint256 indexed tokenId)"])[0],
-    fromBlock: BigInt(0), toBlock: "latest",
-  }).catch(() => []);
-  return logs.map((l) => (l.args as { label?: string }).label).filter((x): x is string => !!x);
+  const hit = labelCache.get(registry);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.labels;
+  const event = parseAbi([
+    "event LabelRegistered(uint256 indexed tokenId, bytes32 indexed labelHash, string label, address owner, uint64 expiry, address indexed sender)",
+  ])[0];
+  const labels: string[] = [];
+  const latest = await client.getBlockNumber();
+  for (let from = ENSV2_START_BLOCK; from <= latest; from += LOG_RANGE) {
+    const to = from + LOG_RANGE - 1n > latest ? latest : from + LOG_RANGE - 1n;
+    const logs = await client.getLogs({ address: registry, event, fromBlock: from, toBlock: to });
+    for (const l of logs) {
+      const label = (l.args as { label?: string }).label;
+      if (label) labels.push(label);
+    }
+  }
+  labelCache.set(registry, { at: Date.now(), labels });
+  return labels;
 }
 
 export type RoosterSummary = RoosterRecords & { offspringNames: string[] };
@@ -123,16 +155,18 @@ export async function listRoosters(client: ReturnType<typeof ensClient>): Promis
   const parentRegistry = await registryForParent(client, PARENT_NAME);
   if (!parentRegistry) return [];
   const foundationLabels = await labelsInRegistry(client, parentRegistry);
-  const out: RoosterSummary[] = [];
-  for (const label of foundationLabels) {
+  // parallel across birds — the list must render fast for the live demo
+  const rows = await Promise.all(foundationLabels.map(async (label) => {
     const name = `${label}.${PARENT_NAME}`;
-    const recs = await getRoosterRecords(client, name);
-    if (!recs.ringId && !recs.sireLine) continue; // not a rooster node
-    const child = await registryForParent(client, name);
+    const [recs, child] = await Promise.all([
+      getRoosterRecords(client, name),
+      registryForParent(client, name),
+    ]);
+    if (!recs.ringId && !recs.sireLine) return null; // not a rooster node
     const offspring = child ? (await labelsInRegistry(client, child)).map((l) => `${l}.${name}`) : [];
-    out.push({ ...recs, offspringNames: offspring });
-  }
-  return out;
+    return { ...recs, offspringNames: offspring } satisfies RoosterSummary;
+  }));
+  return rows.filter((r): r is RoosterSummary => r !== null);
 }
 
 /** Offspring names of a bird — labels registered in the bird's own child registry. */

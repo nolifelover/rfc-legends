@@ -11,7 +11,22 @@ export const metadata: Metadata = {
 
 export default async function RoostersPage() {
   const client = ensClient();
-  const roosters = await listRoosters(client);
+  const roosters = await listRoosters(client).catch((e: unknown) => ({
+    error: `Live ENSv2 read failed: ${String(e).slice(0, 160)}`,
+  }));
+  if ("error" in roosters) {
+    return (
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+        <h1 className="text-2xl font-bold text-bark">Roosters</h1>
+        <div className="mt-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+          {roosters.error}
+        </div>
+        <p className="mt-3 text-xs text-bark-soft">
+          The list renders only from live Sepolia reads — refresh in a moment.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10">

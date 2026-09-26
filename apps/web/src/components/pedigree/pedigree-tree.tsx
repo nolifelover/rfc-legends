@@ -9,29 +9,25 @@ import { sireLineInfo } from "@/lib/ens/resolve";
 export function PedigreeTree({
   name,
   sire,
+  dam,
   offspring,
-  sireExists,
+  parentExists,
 }: {
   name: string;
   sire: string | null;
+  dam?: string | null;
   offspring: string[];
-  sireExists: boolean;
+  parentExists: (name: string) => Promise<boolean>;
 }) {
   const short = (n: string) => n.replace(/\.eth$/, "");
   return (
     <div className="flex flex-col items-center gap-4">
-      {sire && sireExists ? (
-        <div className="flex flex-col items-center">
-          <Link
-            href={`/roosters/${encodeURIComponent(sire)}`}
-            className="rounded-xl border-2 border-clay/30 bg-cream px-4 py-2 text-center transition hover:border-clay"
-          >
-            <span className="text-sm font-bold text-bark">▲ {short(sire).split(".")[0]}</span>
-            <span className="block font-mono text-[10px] text-bark-soft">{sire}</span>
-          </Link>
-          <span className="text-bark-soft">│</span>
+      {(sire || dam) && (
+        <div className="flex flex-wrap items-start justify-center gap-3">
+          {sire ? <ParentNode name={sire} marker="▲" exists={parentExists(sire)} /> : null}
+          {dam ? <ParentNode name={dam} marker="△" exists={parentExists(dam)} /> : null}
         </div>
-      ) : null}
+      )}
 
       <div className="rounded-xl border-2 border-sun bg-sun-soft px-5 py-2.5 text-center shadow-sm">
         <span className="font-bold text-bark">{short(name).split(".")[0]}</span>
@@ -64,6 +60,28 @@ export function PedigreeTree({
         <p className="text-xs text-bark-soft">No offspring registered under this sire yet.</p>
       )}
     </div>
+  );
+}
+
+async function ParentNode({ name, marker, exists }: { name: string; marker: string; exists: Promise<boolean> }) {
+  const ok = await exists;
+  if (!ok) {
+    return (
+      <div className="rounded-xl border-2 border-dashed border-clay/30 px-4 py-2 text-center opacity-60">
+        <span className="text-sm font-bold text-bark">{marker} {name.replace(/\.eth$/, "").split(".")[0]}</span>
+        <span className="block font-mono text-[10px] text-bark-soft">{name}</span>
+        <span className="text-[9px] uppercase tracking-wider text-bark-soft">record pending</span>
+      </div>
+    );
+  }
+  return (
+    <Link
+      href={`/roosters/${encodeURIComponent(name)}`}
+      className="rounded-xl border-2 border-clay/30 bg-cream px-4 py-2 text-center transition hover:border-clay"
+    >
+      <span className="text-sm font-bold text-bark">{marker} {name.replace(/\.eth$/, "").split(".")[0]}</span>
+      <span className="block font-mono text-[10px] text-bark-soft">{name}</span>
+    </Link>
   );
 }
 

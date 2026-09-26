@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PedigreeTree, SireLineBadge } from "@/components/pedigree/pedigree-tree";
 import {
   ENS_APP, ETHERSCAN, ensClient, getAttestation, getRoosterByTokenId, getRoosterRecords,
-  listOffspring, nameExists, pedigreeOf, PARENT_NAME,
+  listOffspring, nameExists, pedigreeOf, roosterRwaAbi, PARENT_NAME,
 } from "@/lib/ens/resolve";
 import { getAddresses } from "@/lib/contracts/addresses";
 
@@ -41,10 +41,25 @@ export default async function RoosterDetailPage({ params }: Props) {
   const client = ensClient();
   const recs = await getRoosterRecords(client, name);
   const { sire } = pedigreeOf(name);
-  const [sireExists, offspring] = await Promise.all([
-    sire ? nameExists(client, sire) : Promise.resolve(false),
-    listOffspring(client, name),
-  ]);
+  const offspring = await listOffspring(client, name);
+
+  // dam comes from the contract's pedigree (damTokenId -> that bird's ENS name)
+  let dam: string | null = null;
+  try {
+    const rwaAddr = recs.contract && /^0x[0-9a-fA-F]{40}$/.test(recs.contract)
+      ? recs.contract
+      : getAddresses(11155111).RoosterRWA;
+    if (recs.tokenId && /^\d+$/.test(recs.tokenId)) {
+      const damId = await client.readContract({
+        address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "roosters", args: [BigInt(recs.tokenId)],
+      }).then((r) => r[5]).catch(() => 0n);
+      if (damId && damId > 0n) {
+        dam = (await client.readContract({
+          address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "roosters", args: [damId],
+        }).then((r) => r[6]).catch(() => null)) ?? null;
+      }
+    }
+  } catch { /* contracts pending — dam simply unknown */ }
 
   // contract-side attestation when the NFT is minted
   let attestation: Awaited<ReturnType<typeof getAttestation>> = null;
@@ -154,7 +169,7 @@ export default async function RoosterDetailPage({ params }: Props) {
             <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-bark">
               🌳 Pedigree <span className="text-xs font-normal text-bark-soft">(resolved live from ENSv2 — the name hierarchy is the family tree)</span>
             </h2>
-            <PedigreeTree name={name} sire={sire} offspring={offspring} sireExists={sireExists} />
+            <PedigreeTree name={name} sire={sire} dam={dam} offspring={offspring} parentExists={(n) => nameExists(client, n)} />
           </section>
 
           {/* links */}
