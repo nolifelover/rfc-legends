@@ -408,6 +408,38 @@ function drawItem(fill: number) {
   }
 }
 
+// --- cloud fallbacks (cream puffs, warm-tinted undersides) ---
+
+function drawCloudPuffy(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(0xfffdf6, 0.95)
+  g.fillCircle(100, 62, 26)
+  g.fillCircle(134, 50, 34)
+  g.fillCircle(170, 64, 24)
+  g.fillRoundedRect(74, 62, 122, 24, 12)
+  g.fillStyle(0xf3e3c2, 0.85)
+  g.fillRoundedRect(84, 76, 100, 10, 5)
+}
+
+function drawCloudStratus(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(0xfffdf6, 0.92)
+  g.fillRoundedRect(20, 28, 220, 26, 13)
+  g.fillCircle(90, 32, 18)
+  g.fillCircle(150, 30, 20)
+  g.fillCircle(200, 34, 15)
+  g.fillStyle(0xf3e3c2, 0.8)
+  g.fillRoundedRect(34, 44, 192, 9, 4.5)
+}
+
+function drawCloudTower(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(0xfffdf6, 0.95)
+  g.fillCircle(75, 95, 26)
+  g.fillCircle(75, 66, 30)
+  g.fillCircle(75, 40, 24)
+  g.fillRoundedRect(49, 86, 52, 24, 12)
+  g.fillStyle(0xf3e3c2, 0.85)
+  g.fillRoundedRect(53, 96, 44, 10, 5)
+}
+
 // --- the catalog ---
 
 const A = (key: string, url: string, w: number, h: number, draw: (g: Phaser.GameObjects.Graphics) => void, fb?: [number, number]): ArtSpec =>
@@ -429,11 +461,17 @@ export const MONSTER_KEYS: Record<string, string> = {
 }
 export const itemKey = (id: number): string => `art-item-${id}`
 
+export const CLOUD_KEYS = { puffy: 'art-cloud-1', stratus: 'art-cloud-2', tower: 'art-cloud-3' } as const
+
 export const ART: ArtSpec[] = [
   A('art-sky', '/assets/scene/sky.svg', 960, 540, drawSky, [960, 540]),
   A('art-hills', '/assets/scene/hills.svg', 960, 200, drawHills, [960, 200]),
   A('art-paddy', '/assets/scene/paddy.svg', 960, 140, drawPaddy, [960, 140]),
   A('art-ground', '/assets/scene/ground.svg', 960, 120, drawGround, [960, 120]),
+
+  A(CLOUD_KEYS.puffy, '/assets/scene/cloud1.svg', 400, 180, drawCloudPuffy, [200, 90]),
+  A(CLOUD_KEYS.stratus, '/assets/scene/cloud2.svg', 520, 140, drawCloudStratus, [260, 70]),
+  A(CLOUD_KEYS.tower, '/assets/scene/cloud3.svg', 300, 240, drawCloudTower, [150, 120]),
 
   A(TRAINER_KEY, '/assets/sprites/trainer.svg', 192, 192, drawTrainer, [96, 96]),
 
@@ -478,7 +516,6 @@ export const FX = {
   glow: 'fx-glow',
   ring: 'fx-ring',
   poof: 'fx-poof',
-  cloud: 'fx-cloud',
   bird: 'fx-bird',
   shimmer: 'fx-shimmer',
   card: 'fx-card',
@@ -525,14 +562,6 @@ export function makeFxTextures(scene: Phaser.Scene): void {
     g.fillCircle(48, 48, 32)
     g.fillStyle(0xffffff, 0.9)
     g.fillCircle(48, 48, 18)
-  })
-
-  make(FX.cloud, 128, 64, (g) => {
-    g.fillStyle(0xffffff, 0.92)
-    g.fillCircle(36, 36, 20)
-    g.fillCircle(64, 28, 25)
-    g.fillCircle(92, 38, 18)
-    g.fillRoundedRect(20, 36, 88, 18, 9)
   })
 
   make(FX.bird, 40, 20, (g) => {

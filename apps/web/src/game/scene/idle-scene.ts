@@ -9,6 +9,7 @@
 import Phaser from 'phaser'
 import {
   ART,
+  CLOUD_KEYS,
   FX,
   MONSTER_KEYS,
   ROOSTER_KEYS,
@@ -147,34 +148,35 @@ export class IdleScene extends Phaser.Scene {
   private buildBackground(): void {
     this.add.image(0, 0, 'art-sky').setOrigin(0, 0).setDepth(0)
 
-    // drifting clouds — slow x-tween loops
-    const clouds: Array<[number, number, number, number, number]> = [
-      // x, y, scale, alpha, duration(ms per crossing)
-      [-140, 74, 1.25, 0.92, 74000],
-      [430, 132, 0.85, 0.7, 96000],
-      [120, 48, 1.0, 0.8, 86000],
+    // drifting clouds (art lane's variants) — parallax at different speeds/altitudes
+    // (rasters are 2×, so scale ~0.6-0.8 shows clouds at slightly over design size)
+    const clouds: Array<[string, number, number, number, number, number]> = [
+      // key, x, y, scale, alpha, duration(ms per crossing)
+      [CLOUD_KEYS.stratus, -180, 46, 0.62, 0.8, 112000],
+      [CLOUD_KEYS.puffy, 360, 100, 0.7, 0.92, 80000],
+      [CLOUD_KEYS.tower, 740, 60, 0.7, 0.78, 94000],
     ]
-    for (const [x, y, s, a, dur] of clouds) {
-      const cloud = this.add.image(x, y, FX.cloud).setDepth(2).setScale(s).setAlpha(a)
+    for (const [key, x, y, s, a, dur] of clouds) {
+      const cloud = this.add.image(x, y, key).setOrigin(0, 0.5).setDepth(2).setScale(s).setAlpha(a)
       this.tweens.add({
         targets: cloud,
-        x: W + 160,
+        x: W + 80,
         duration: dur,
         repeat: -1,
-        onRepeat: () => cloud.setX(-160 + Phaser.Math.Between(-30, 30)),
+        onRepeat: () => cloud.setX(-260 + Phaser.Math.Between(-40, 40)),
       })
     }
 
-    // hills → paddy → ground bands, back to front
-    this.add.image(0, 168, 'art-hills').setOrigin(0, 0).setDepth(4)
-    this.add.image(0, 300, 'art-paddy').setOrigin(0, 0).setDepth(6)
+    // hills → paddy → ground bands, back to front (art-QA verified composite)
+    this.add.image(0, 240, 'art-hills').setOrigin(0, 0).setDepth(4)
+    this.add.image(0, 360, 'art-paddy').setOrigin(0, 0).setDepth(6)
 
     // water shimmer: alternating alpha tweens on soft highlight rects
     const shimmers: Array<[number, number, number, number]> = [
-      [130, 322, 1.4, 0],
-      [420, 352, 1.1, 400],
-      [700, 330, 1.6, 800],
-      [250, 392, 1.2, 200],
+      [130, 376, 1.4, 0],
+      [420, 392, 1.1, 400],
+      [700, 372, 1.6, 800],
+      [250, 404, 1.2, 200],
     ]
     for (const [x, y, s, delay] of shimmers) {
       const sh = this.add.image(x, y, FX.shimmer).setDepth(7).setScale(s, s * 0.9).setAlpha(0)

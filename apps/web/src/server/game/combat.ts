@@ -54,11 +54,21 @@ export const OFFLINE_EFFICIENCY = 0.7
 export const KILL_RATE_MIN = 3 // kills/min analytic clamp
 export const KILL_RATE_MAX = 8
 
-// --- Demo-mode boosts (interfaces.md §5): tuned so a fresh player reaches Base Lv 30
-// and gets ≥1 mvp_card within ~6 min of live sim — see demo.test.ts. Never shown as real rates.
+// --- Demo-mode boosts (interfaces.md §5): tuned so a fresh player reaches Base Lv 30 with a
+// reliable MVP jackpot but NO card shower — mintables land on ≤ ~12% of kills steady-state
+// (was ~78% when a single boost+cap rode every tier to 60%). Boss kills are 1/8 of kills and
+// carry ~64% mintable chance, so short boss-heavy windows still stay under the 15% bar.
+// See demo.test.ts for the asserted bars.
+//   legendary   0.1%   ×20    → 2%/kill
+//   monsterCard 0.05%  ×50    → 2.5%/kill
+//   mvpCard     0.005% ×11000 → 55% per MVP-boss kill (boss every 8th kill in demo → first
+//                               jackpot well inside the first minute of boss kills)
 export const DEMO_EXP_MULT = 800
-export const DEMO_DROP_BOOST = 12000
-export const DEMO_DROP_CAP = 0.6 // per-roll cap 60%
+export const DEMO_DROP_RARE_MULT = 5
+export const DEMO_DROP_EPIC_MULT = 5
+export const DEMO_DROP_LEGENDARY_MULT = 20
+export const DEMO_MONSTER_CARD_MULT = 50
+export const DEMO_MVP_CARD_MULT = 11000
 export const DEMO_MVP_EVERY_KILLS = 8
 
 export interface EngineOpts {
@@ -75,7 +85,13 @@ export const NORMAL_OPTS: EngineOpts = {
 
 export const DEMO_OPTS: EngineOpts = {
   expMult: DEMO_EXP_MULT,
-  dropOpts: { boost: DEMO_DROP_BOOST, cap: DEMO_DROP_CAP },
+  dropOpts: {
+    rare: DEMO_DROP_RARE_MULT,
+    epic: DEMO_DROP_EPIC_MULT,
+    legendary: DEMO_DROP_LEGENDARY_MULT,
+    monsterCard: DEMO_MONSTER_CARD_MULT,
+    mvpCard: DEMO_MVP_CARD_MULT,
+  },
   mvpEveryKills: DEMO_MVP_EVERY_KILLS,
 }
 

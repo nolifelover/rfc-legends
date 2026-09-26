@@ -19,13 +19,20 @@ export const RARE_EQUIP_POOL: readonly number[] = [205, 206]
 export const EPIC_EQUIP_POOL: readonly number[] = [207, 208]
 export const LEGENDARY_POOL: readonly number[] = [2001, 2002, 2003]
 
+/**
+ * Per-tier multipliers over the GDD base rates — normal play is all 1. Demo mode uses one
+ * multiplier per tier because the old single boost (+cap) pushed EVERY tier to the cap and
+ * showered mintables on ~78% of kills; the demo feel we want is a rare trickle plus a
+ * reliable MVP jackpot, so tiers need different magnitudes (see DEMO_OPTS in combat.ts).
+ */
 export interface DropOpts {
-  /** Multiplier on rare/epic/legendary/card chances (demo boost). Commons are never boosted. */
-  boost: number
-  /** Per-roll cap after boosting (demo caps at 60%). */
-  cap: number
+  rare: number
+  epic: number
+  legendary: number
+  monsterCard: number
+  mvpCard: number // only rolls on MVP-boss kills (base 0.005%)
 }
-export const NORMAL_DROP_OPTS: DropOpts = { boost: 1, cap: 1 }
+export const NORMAL_DROP_OPTS: DropOpts = { rare: 1, epic: 1, legendary: 1, monsterCard: 1, mvpCard: 1 }
 
 export interface RolledDrop {
   itemId: number
@@ -47,8 +54,8 @@ function pick(pool: readonly number[], rng: Rng): number {
  */
 export function rollDrops(monster: MonsterDef, rng: Rng, opts: DropOpts = NORMAL_DROP_OPTS): DropRollResult {
   const out: DropRollResult = { mintable: [], inventory: {} }
-  const boosted = (base: number) => Math.min(base * opts.boost, opts.cap)
   const isMvp = monster.isMvp === true
+  const roll = (chance: number, mult: number) => rng() < Math.min(chance * mult, 1)
   const add = (id: number) => {
     out.inventory[id] = (out.inventory[id] ?? 0) + 1
   }
@@ -59,22 +66,22 @@ export function rollDrops(monster: MonsterDef, rng: Rng, opts: DropOpts = NORMAL
   }
 
   // 2. rare equipment
-  if (rng() < boosted(RARE_EQUIP_CHANCE * (isMvp ? 5 : 1))) {
+  if (roll(RARE_EQUIP_CHANCE * (isMvp ? 5 : 1), opts.rare)) {
     add(pick(RARE_EQUIP_POOL, rng))
   }
 
   // 3. epic equipment
-  if (rng() < boosted(EPIC_EQUIP_CHANCE * (isMvp ? 8 : 1))) {
+  if (roll(EPIC_EQUIP_CHANCE * (isMvp ? 8 : 1), opts.epic)) {
     add(pick(EPIC_EQUIP_POOL, rng))
   }
 
   // 4. legendary (mintable)
-  if (rng() < boosted(isMvp ? MVP_LEGENDARY_CHANCE : LEGENDARY_CHANCE)) {
+  if (roll(isMvp ? MVP_LEGENDARY_CHANCE : LEGENDARY_CHANCE, opts.legendary)) {
     out.mintable.push({ itemId: pick(LEGENDARY_POOL, rng), rarity: 'legendary' })
   }
 
   // 5. card (mintable): own 1xxx card, or the 3xxx MVP card from an MVP boss
-  if (monster.cardId !== undefined && rng() < boosted(isMvp ? MVP_CARD_CHANCE : OWN_CARD_CHANCE)) {
+  if (monster.cardId !== undefined && roll(isMvp ? MVP_CARD_CHANCE : OWN_CARD_CHANCE, isMvp ? opts.mvpCard : opts.monsterCard)) {
     out.mintable.push({ itemId: monster.cardId, rarity: isMvp ? 'mvp_card' : 'monster_card' })
   }
 
