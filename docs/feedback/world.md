@@ -97,3 +97,29 @@ docs.world.org (integrate, react, API reference `verify`), the official
 | `WORLD_ENVIRONMENT` | server | `production` (default) or `staging` (simulator); pinned server-side |
 | `WORLD_STAGING_VERIFICATION_TOKEN` | server, secret | only for staging; sent as `x-staging-verification-token` |
 | `WORLD_VERIFY_BASE_URL` | server, optional | defaults to `https://developer.world.org` |
+
+## How we integrated it (for the README's file pointers)
+
+| Piece | File |
+|---|---|
+| RP signature (backend), nonce bound to the wallet | `apps/web/src/server/worldid/rp-context.ts`, route `apps/web/src/app/api/worldid/rp-context/route.ts` |
+| IDKit widget, `proofOfHuman({ signal: wallet })`, states | `apps/web/src/components/worldid/WorldIdWidget.tsx`, `apps/web/src/components/worldid/VerifyHuman.tsx` |
+| Server-side verify: pin action/env/signal, call `/api/v4/verify/{rp_id}` | `apps/web/src/server/worldid/portal.ts` |
+| Nonce check, nullifier to one wallet, onchain mirror | `apps/web/src/server/worldid/verify.ts`, `apps/web/src/server/worldid/nullifier.ts`, `apps/web/src/server/worldid/store.ts` |
+| `HumanRegistry.markVerified` with GAME_SIGNER | `apps/web/src/server/worldid/registry.ts` |
+| Mint gate (verified human → Base Lv 30 → drop → daily limit) | `apps/web/src/server/worldid/voucher.ts` |
+| Tests (41) | `apps/web/src/server/worldid/verify.test.ts`, `apps/web/src/server/worldid/voucher.test.ts` |
+
+What we do beyond the official example (which forwards the widget result verbatim):
+
+- We overwrite `signal_hash` with `hashSignal(wallet)` and reject a mismatch before calling World, so a proof made for wallet A can't verify wallet B.
+- `action` and `environment` come from server config, never from the body.
+- Every RP nonce is issued for one wallet and consumed on first use, so a proof can't be replayed.
+- The nullifier is taken from the Portal's response, stored as a canonical decimal, and bound to one wallet. The binding is reserved under a lock before the onchain write, so two wallets racing with the same World ID can't both win. `HumanRegistry` enforces the same rule onchain.
+- Every rejection is non-2xx with a `code` and a readable `reason`, which the UI shows as is.
+
+## Feedback for World (draft, final numbers pending the first live verify)
+
+- **What was missing:** the docs don't cover the staging-verification window and token (#2307). A testing page is also missing (404). And the docs never say that `signal_hash` in the verify body is caller-controlled. The examples forward the client payload verbatim, which never checks the signal.
+- **What worked well:** the `.d.ts` files in `@worldcoin/idkit` are excellent and read like documentation. `signRequest` is pure JS (no WASM on the server). The widget runs `handleVerify` automatically and fails cleanly when it throws. Thai (`language: "th"`) is built in.
+- **Top improvement request:** add a `signal` (or `expected_signal_hash`) parameter to `POST /api/v4/verify` that the Portal checks. Also make the Next.js example pin `action`/`environment`/`signal` server-side instead of forwarding the widget result.
