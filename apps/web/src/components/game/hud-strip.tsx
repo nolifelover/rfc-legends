@@ -157,11 +157,19 @@ export function HudStrip({
         {/* Row A — trainer card + the HP/SP/EXP trio */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
-            <span className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-sun-soft bg-cream">
+            <span className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-sun-soft bg-cream">
               <RoosterMark size={30} />
               <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border-2 border-bark/40 bg-sun px-1.5 text-sm font-black leading-tight text-bark">
                 {player.baseLevel}
               </span>
+              {player.statPoints > 0 ? (
+                <span
+                  title={`${player.statPoints.toLocaleString()} stat points to spend`}
+                  className="absolute -right-2 -top-1.5 z-10 grid min-w-7 place-items-center rounded-full border-2 border-cream bg-red-600 px-1 text-sm font-black leading-tight text-cream shadow-[0_2px_0_rgba(0,0,0,0.5)] animate-pulse"
+                >
+                  {player.statPoints > 999 ? `${Math.floor(player.statPoints / 100) / 10}k` : player.statPoints}
+                </span>
+              ) : null}
             </span>
             <div className="min-w-0 leading-tight">
               <p className="truncate text-xl font-black text-cream">{player.name}</p>
