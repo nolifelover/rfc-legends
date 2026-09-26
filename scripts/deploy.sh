@@ -34,12 +34,28 @@ WEB="$STAGE/web"
 PORT="${RFC_PROD_PORT:-3100}"
 PB_PORT="${POCKETBASE_HTTP:-127.0.0.1:8091}"
 
-echo "==> staging apps/web -> $WEB"
+echo "==> building from a clean HEAD worktree (dirty trees never ship)"
+WT=$(mktemp -d /tmp/rfc-deploy-XXXXXX)
+git worktree add --detach "$WT" HEAD >/dev/null
+trap 'git worktree remove --force "$WT" >/dev/null 2>&1 || rm -rf "$WT"' EXIT
+cp apps/web/.env.production.local "$WT/apps/web/.env.production.local"
+if [ ! -d "$WT/apps/web/node_modules" ]; then
+  cp -al "$REPO/apps/web/node_modules" "$WT/apps/web/node_modules" 2>/dev/null \
+    || rsync -a "$REPO/apps/web/node_modules/" "$WT/apps/web/node_modules/"
+fi
+
+echo "==> building (next build, from HEAD)"
+cd "$WT/apps/web"
+npx next build
+
+echo "==> staging the built app -> $WEB"
 mkdir -p "$STAGE"
+# the worktree holds the fresh .next: ship it (no .next exclude), it is the
+# entire point of the worktree build
 rsync -a --delete \
-  --exclude node_modules --exclude .next --exclude .data \
+  --exclude node_modules --exclude .data \
   --exclude '.env*' \
-  "$REPO/apps/web/" "$WEB/"
+  "$WT/apps/web/" "$WEB/"
 # secrets stay out of rsync; the production env is copied explicitly
 if [ ! -f "$REPO/apps/web/.env.production.local" ]; then
   echo "!! apps/web/.env.production.local missing — see header of this script" >&2
@@ -53,10 +69,6 @@ if [ -L "$WEB/node_modules" ] || [ ! -d "$WEB/node_modules" ] || [ -n "${RFC_PRO
   cp -al "$REPO/apps/web/node_modules" "$WEB/node_modules" 2>/dev/null \
     || rsync -a "$REPO/apps/web/node_modules/" "$WEB/node_modules/"
 fi
-
-echo "==> building (next build)"
-cd "$WEB"
-npx next build
 
 echo "==> (re)starting under pm2"
 # startOrReload takes an ecosystem file (raw script + `--` args trips pm2's
