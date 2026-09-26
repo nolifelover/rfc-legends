@@ -51,7 +51,7 @@ function Bar({
   );
 }
 
-export function HudStrip({ player }: { player: Player }) {
+export function HudStrip({ player, rareDropCount }: { player: Player; rareDropCount?: number }) {
   const info = sireLineInfo(player.sireLine);
   const hp = maxHp(player);
   const sp = maxSp(player);
@@ -121,6 +121,19 @@ export function HudStrip({ player }: { player: Player }) {
               <span title="Monsters defeated">⚔ {player.killCount.toLocaleString()}</span>
               <span title="Rare drops found">✨ {player.dropCounter.toLocaleString()}</span>
             </p>
+            {typeof rareDropCount === "number" ? (
+              <a
+                href="/market"
+                title="Open the Rare Market"
+                className={`mt-1.5 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black transition ${
+                  rareDropCount > 0
+                    ? "border-clay/50 bg-sun-soft/80 text-clay-deep hover:bg-sun-soft"
+                    : "border-bark/20 bg-cream/60 text-bark-soft"
+                }`}
+              >
+                ✨ Rare drops ({rareDropCount})
+              </a>
+            ) : null}
           </div>
         </div>
       </div>

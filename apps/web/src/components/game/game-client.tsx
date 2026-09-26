@@ -8,10 +8,12 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConnection } from "wagmi";
 import type { Drop, Player, SireLine, StatKey } from "@/game/types";
+import { MINTABLE_RARITIES } from "@/game/data/items";
 import type { SyncResult } from "@/server/game";
 import { reasonText } from "./api-messages";
 import { ConnectButton } from "./connect-button";
 import { CreateCharacter, type CreateOutcome } from "./create-character";
+import { DropToasts } from "./drop-toasts";
 import { HudStrip } from "./hud-strip";
 import { IdleScene } from "./idle-scene";
 import { SceneFrame } from "./scene-frame";
@@ -129,6 +131,11 @@ export function GameClient() {
     onError: (err) => setNotice({ kind: "error", text: reasonText(err.message) }),
   });
 
+  // Unminted mintable drops → the HUD pill count (fresh ones also toast).
+  const rareDropCount = (stateQuery.data?.drops ?? []).filter(
+    (d) => d.status === "unminted" && (MINTABLE_RARITIES as readonly string[]).includes(d.rarity),
+  ).length
+
   // 1. No wallet connected → invite to connect.
   if (!isConnected || !address) {
     return (
@@ -211,7 +218,9 @@ export function GameClient() {
         <StatPanel player={player} onAllocate={handleAllocate} />
       </div>
 
-      <HudStrip player={player} />
+      <HudStrip player={player} rareDropCount={rareDropCount} />
+
+      <DropToasts drops={state.drops} />
 
       {notice ? (
         <div
