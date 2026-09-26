@@ -227,7 +227,8 @@ export class Fx {
     this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
     this.lastDmgAt = now
     const t = this.acquire()
-    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 14 : 12 })
+    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 16 : 14 })
+    t.setShadow(4, 6, '#000000', 8, true, true) // reads on the boss's grey fur and the pale sky alike
     t.setText(crit ? `★ ${fmt(value)}` : fmt(value))
     const sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
     const sy = topY - JUICE.DMG_ABOVE_HEAD - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
@@ -280,6 +281,7 @@ export class Fx {
     }
     const t = this.acquire()
     t.setStyle({ fontSize: `${TYPE.exp}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 10 })
+    t.setShadow(3, 5, '#000000', 6, true, true)
     t.setText(`+${fmt(exp)} EXP`)
     const sy = y + Phaser.Math.Between(-20, 20)
     t.setPosition(x + Phaser.Math.Between(-30, 30), sy).setDepth(53).setScale(0.7)
