@@ -84,11 +84,11 @@ export default function GuildPanel({
     }
     refresh()
 
-    // The 5s poll ALWAYS runs (F1: realtime through some proxies — Cloudflare
+    // The 3s poll ALWAYS runs (F1: realtime through some proxies — Cloudflare
     // in front of SSE — silently never delivers, so polling is the safety
     // net, not a fallback). Realtime, when it connects, upgrades the dot to
     // "live" and makes updates instant; its first failure is logged.
-    poll = window.setInterval(refresh, 5000)
+    poll = window.setInterval(refresh, 3000)
 
     try {
       const base = process.env.NEXT_PUBLIC_POCKETBASE_URL ?? '/pb/'
@@ -103,7 +103,7 @@ export default function GuildPanel({
       const firstFailure = (what: string) => (err: unknown) => {
         if (!loggedFirstFailure) {
           loggedFirstFailure = true
-          console.warn('[guild] realtime subscribe failed, 5s polling carries it', what, err)
+          console.warn('[guild] realtime subscribe failed, 3s polling carries it', what, err)
         }
         setLive(false)
       }
@@ -253,7 +253,7 @@ export default function GuildPanel({
             💬 Guild chat <span className="text-stone-500">#{guild}</span>
           </span>
           <span
-            title={live ? ' realtime' : ' polling every 5s'}
+            title={live ? ' realtime' : ' polling every 3s'}
             className="flex items-center gap-1 text-stone-500"
           >
             <span
