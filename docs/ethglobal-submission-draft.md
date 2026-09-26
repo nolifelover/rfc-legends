@@ -6,7 +6,7 @@ Project page: https://ethglobal.com/events/tokyo2026/project
 
 - [x] Project created: name "RFC Legends", category Gaming, emoji 🐓
 - [x] Typed into the "Project details" step (NOT saved yet): short description, description, how it's made
-- [ ] **Blocked:** "GitHub Repositories" is required and the `fortun3-guru` GitHub account shows "No repositories found". Create a public repo, then use "Review GitHub Permissions" so ETHGlobal can see it
+- [x] Public repo created: https://github.com/nolifelover/rfc-legends (owned by `nolifelover`, the GitHub account linked to ETHGlobal). Next: use "Review GitHub Permissions" on the form and select it.
 - [ ] Demo link (required field): empty, no live demo yet
 - [ ] Remaining steps: Images, Tech stack, Select prizes, Video, Future, Final
 - [ ] Final submit: do it only after the text is trimmed to what the repo and demo actually show
