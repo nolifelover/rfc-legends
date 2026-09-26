@@ -140,7 +140,10 @@ export function GameClient() {
     (d) => d.status === "unminted" && (MINTABLE_RARITIES as readonly string[]).includes(d.rarity),
   )
   const rareDropCount = unminted.length
-  const newestDropId = unminted.length > 0 ? unminted[unminted.length - 1].dropId : undefined
+  const newestDropId =
+    unminted.length > 0
+      ? [...unminted].sort((a, b) => b.droppedAt - a.droppedAt)[0].dropId
+      : undefined
 
   // 1. No wallet connected → invite to connect.
   if (!isConnected || !address) {
