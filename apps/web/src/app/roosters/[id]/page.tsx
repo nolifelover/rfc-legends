@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { recoverTypedDataAddress } from "viem";
 import { PedigreeTree, SireLineBadge } from "@/components/pedigree/pedigree-tree";
+import { SireLineArt } from "@/components/game/sire-line-art";
+import { ATTESTATION_TYPE, roosterRwaDomain } from "@/lib/contracts/eip712";
 import {
-  ENS_APP, ETHERSCAN, ensClient, getAttestation, getRoosterByTokenId, getRoosterRecords,
-  listOffspring, nameExists, pedigreeOf, roosterRwaAbi, PARENT_NAME,
+  ENS_APP, ETHERSCAN, ensClient, getAttestation, getAttestationTx, getRoosterByTokenId,
+  getRoosterRecords, listOffspring, nameExists, pedigreeOf, roosterRwaAbi, sireLineInfo, PARENT_NAME,
 } from "@/lib/ens/resolve";
 import { getAddresses } from "@/lib/contracts/addresses";
 
@@ -33,6 +36,14 @@ async function resolveName(id: string): Promise<string | null> {
   return (await nameExists(client, name)) ? name : null;
 }
 
+function ProofLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a className="font-medium underline decoration-sun decoration-2 underline-offset-2 hover:decoration-clay" href={href} target="_blank" rel="noreferrer">
+      {children}
+    </a>
+  );
+}
+
 export default async function RoosterDetailPage({ params }: Props) {
   const { id } = await params;
   const name = await resolveName(decodeURIComponent(id));
@@ -43,53 +54,84 @@ export default async function RoosterDetailPage({ params }: Props) {
   const { sire } = pedigreeOf(name);
   const offspring = await listOffspring(client, name);
 
-  // dam comes from the contract's pedigree (damTokenId -> that bird's ENS name)
+  // dam + attestation + tx proof, all read live from the contracts
   let dam: string | null = null;
-  try {
-    const rwaAddr = recs.contract && /^0x[0-9a-fA-F]{40}$/.test(recs.contract)
-      ? recs.contract
-      : getAddresses(11155111).RoosterRWA;
-    if (recs.tokenId && /^\d+$/.test(recs.tokenId)) {
-      const damId = await client.readContract({
-        address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "getRooster", args: [BigInt(recs.tokenId)],
-      }).then((r) => r.damTokenId).catch(() => 0n);
-      if (damId && damId > 0n) {
-        dam = (await client.readContract({
-          address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "getRooster", args: [damId],
-        }).then((r) => r.ensName).catch(() => null)) ?? null;
-      }
-    }
-  } catch { /* contracts pending — dam simply unknown */ }
-
-  // contract-side attestation when the NFT is minted
   let attestation: Awaited<ReturnType<typeof getAttestation>> = null;
+  let attestationTx: Awaited<ReturnType<typeof getAttestationTx>> = null;
+  let sigRecovers: boolean | null = null;
   let rwaAddress: string | null = null;
+  let tokenId: bigint | null = null;
   try {
     rwaAddress = recs.contract && /^0x[0-9a-fA-F]{40}$/.test(recs.contract)
       ? recs.contract
       : getAddresses(11155111).RoosterRWA;
     if (recs.tokenId && /^\d+$/.test(recs.tokenId)) {
-      attestation = await getAttestation(client, rwaAddress as `0x${string}`, BigInt(recs.tokenId));
+      tokenId = BigInt(recs.tokenId);
+      const r = await client.readContract({
+        address: rwaAddress as `0x${string}`, abi: roosterRwaAbi, functionName: "getRooster", args: [tokenId],
+      });
+      if (r.damTokenId && r.damTokenId > 0n) {
+        dam = (await client.readContract({
+          address: rwaAddress as `0x${string}`, abi: roosterRwaAbi, functionName: "getRooster", args: [r.damTokenId],
+        }).then((x) => x.ensName).catch(() => null)) ?? null;
+      }
+      [attestation, attestationTx] = await Promise.all([
+        getAttestation(client, rwaAddress as `0x${string}`, tokenId),
+        getAttestationTx(client, rwaAddress as `0x${string}`, tokenId),
+      ]);
+      if (attestation) {
+        // client-side proof: the stored attestation's EIP-712 signature recovers to the farm key
+        const recovered = attestationTx
+          ? await recoverTypedDataAddress({
+              domain: roosterRwaDomain(11155111, rwaAddress as `0x${string}`),
+              types: { Attestation: ATTESTATION_TYPE },
+              primaryType: "Attestation",
+              message: {
+                tokenId, weightGrams: attestation.weightGrams, healthScore: attestation.healthScore,
+                note: attestation.note, checkedAt: attestation.checkedAt, nonce: attestation.nonce,
+              },
+              signature: attestationTx.signature,
+            } as unknown as Parameters<typeof recoverTypedDataAddress>[0]).catch(() => null)
+          : null;
+        sigRecovers = !!recovered && recovered.toLowerCase() === attestation.farmSigner.toLowerCase();
+      }
     }
-  } catch { /* contracts not deployed yet — ENS-only mode */ }
+  } catch { /* contracts pending — ENS-only mode */ }
 
+  const line = sireLineInfo(recs.sireLine ?? "");
   const short = name.replace(/\.eth$/, "").split(".")[0];
+  const hatched = recs.hatchedAt ? new Date(Number(recs.hatchedAt) * 1000).toISOString().slice(0, 10) : null;
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10">
-      <nav className="mb-6 text-sm">
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">
+      <nav className="mb-4 text-sm">
         <Link href="/roosters" className="text-bark-soft underline">← All roosters</Link>
       </nav>
 
-      <div className="rounded-2xl border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        <strong>Sample data</strong> — placeholder ring ID until Ninlanee Farm&apos;s real records arrive.
-      </div>
+      {/* onchain proof bar */}
+      {rwaAddress && tokenId !== null ? (
+        <section className="mb-6 rounded-2xl border border-emerald-700/30 bg-emerald-50 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-emerald-900">
+            <span className="font-bold uppercase tracking-wider">Onchain proof</span>
+            <ProofLink href={ETHERSCAN(rwaAddress)}>RoosterRWA {rwaAddress.slice(0, 6)}…{rwaAddress.slice(-4)}</ProofLink>
+            <ProofLink href={`${ETHERSCAN(rwaAddress, "token")}/${tokenId}`}>token #{tokenId.toString()}</ProofLink>
+            {attestationTx ? <ProofLink href={ETHERSCAN(attestationTx.txHash, "tx")}>attestation tx</ProofLink> : null}
+            {attestation ? <ProofLink href={ETHERSCAN(attestation.farmSigner)}>farm signer {attestation.farmSigner.slice(0, 6)}…{attestation.farmSigner.slice(-4)}</ProofLink> : null}
+            {sigRecovers === true ? (
+              <span className="rounded-full bg-emerald-600 px-2 py-0.5 font-bold text-white">✓ signature recovers to farm key</span>
+            ) : sigRecovers === false ? (
+              <span className="rounded-full bg-red-600 px-2 py-0.5 font-bold text-white">✗ signature mismatch</span>
+            ) : null}
+            <ProofLink href={ENS_APP(name)}>{name} on ENS ↗</ProofLink>
+          </div>
+        </section>
+      ) : null}
 
-      <section className="mt-6 grid gap-8 md:grid-cols-[280px_1fr]">
+      <section className="grid gap-8 md:grid-cols-[280px_1fr]">
         {/* RWA card */}
         <div className="overflow-hidden rounded-2xl border border-clay/20 bg-cream shadow-sm">
-          <div className="relative flex h-48 items-center justify-center bg-gradient-to-br from-amber-300 to-orange-400">
-            <span className="text-8xl drop-shadow-sm">🐓</span>
+          <div className="relative flex h-56 items-center justify-center bg-gradient-to-br from-sun-soft to-sun/60">
+            {recs.sireLine ? <SireLineArt line={recs.sireLine as "kumarnjeen"} size={176} /> : <span className="text-7xl">🐓</span>}
             <span className="absolute left-2 top-2 rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-bark">
               Mythic · RWA
             </span>
@@ -97,16 +139,34 @@ export default async function RoosterDetailPage({ params }: Props) {
               ✓ Verified
             </span>
           </div>
-          <div className="space-y-2 p-4">
+          <div className="space-y-3 p-4">
             <h1 className="text-xl font-bold text-bark">{recs.displayName ?? short}</h1>
             <SireLineBadge slug={recs.sireLine} />
-            <dl className="space-y-1 font-mono text-xs text-bark-soft">
-              <div className="flex justify-between gap-2"><dt>ring ID</dt><dd className="text-bark">{recs.ringId ?? "—"}</dd></div>
-              <div className="flex justify-between gap-2"><dt>hatched</dt><dd>{recs.hatchedAt ? new Date(Number(recs.hatchedAt) * 1000).toISOString().slice(0, 10) : "—"}</dd></div>
-              {recs.tokenId && /^\d+$/.test(recs.tokenId) ? (
-                <div className="flex justify-between gap-2"><dt>token</dt><dd className="text-bark">#{recs.tokenId}</dd></div>
+            <dl className="space-y-1.5 text-xs">
+              <div className="flex items-baseline justify-between gap-2">
+                <dt className="text-bark-soft">ring ID</dt>
+                <dd className="font-mono text-bark">
+                  {recs.ringId ?? "—"}
+                  {recs.ringId?.startsWith("NL-") ? <span className="ml-1 text-[9px] uppercase text-amber-700">(sample)</span> : null}
+                </dd>
+              </div>
+              {hatched ? (
+                <div className="flex items-baseline justify-between gap-2"><dt className="text-bark-soft">hatched</dt><dd>{hatched}</dd></div>
+              ) : null}
+              {attestation ? (
+                <div className="flex items-baseline justify-between gap-2"><dt className="text-bark-soft">weight</dt><dd><strong>{attestation.weightGrams}</strong> g</dd></div>
+              ) : recs.weight ? (
+                <div className="flex items-baseline justify-between gap-2"><dt className="text-bark-soft">weight</dt><dd><strong>{recs.weight}</strong> g</dd></div>
+              ) : null}
+              {attestation ? (
+                <div className="flex items-baseline justify-between gap-2"><dt className="text-bark-soft">health</dt><dd><strong>{attestation.healthScore}</strong>/100</dd></div>
+              ) : null}
+              {tokenId !== null ? (
+                <div className="flex items-baseline justify-between gap-2"><dt className="text-bark-soft">token</dt><dd>#{tokenId.toString()}</dd></div>
               ) : null}
             </dl>
+            <p className="break-all font-mono text-[10px] leading-relaxed text-bark-soft/80">{name}</p>
+            {line ? <p className="text-[11px] italic leading-snug text-bark-soft">{line.personality}</p> : null}
           </div>
         </div>
 
@@ -128,19 +188,14 @@ export default async function RoosterDetailPage({ params }: Props) {
                     <div className="text-[10px] uppercase tracking-wider text-emerald-800/70">health</div>
                   </div>
                   <div className="rounded-xl bg-sky-100 p-3">
-                    <div className="text-sm font-bold text-sky-900">
+                    <div className="text-sm font-bold text-sky-900 pt-1.5">
                       {new Date(Number(attestation.checkedAt) * 1000).toISOString().slice(0, 10)}
                     </div>
                     <div className="text-[10px] uppercase tracking-wider text-sky-900/70">checked</div>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-bark-soft">
-                  <span className="rounded-full border border-clay/20 px-2 py-0.5">signed by farm key{" "}
-                    <a className="font-mono underline" href={ETHERSCAN(attestation.farmSigner)} target="_blank" rel="noreferrer">
-                      {attestation.farmSigner.slice(0, 8)}…{attestation.farmSigner.slice(-4)}
-                    </a>
-                  </span>
-                  <span className="text-bark-soft/60">EIP-712 · nonce {attestation.nonce.toString()}</span>
+                  <span>EIP-712 · nonce {attestation.nonce.toString()}</span>
                   {attestation.note ? <span className="italic">“{attestation.note}”</span> : null}
                 </div>
                 <div className="rounded-lg bg-bark/5 p-2.5 text-[11px] leading-relaxed text-bark-soft">
@@ -151,15 +206,12 @@ export default async function RoosterDetailPage({ params }: Props) {
               </div>
             ) : (
               <div className="space-y-2 text-sm text-bark-soft">
-                <p>ENS-side records (written only by the farm key):</p>
+                <p>ENS-side records (writable only by the farm key):</p>
                 <div className="flex gap-3 text-center font-mono text-xs">
                   <div className="flex-1 rounded-xl bg-sun-soft p-3"><span className="block text-xl font-bold text-bark">{recs.weight ?? "—"}</span> g weight</div>
                   <div className="flex-1 rounded-xl bg-emerald-100 p-3"><span className="block text-xl font-bold text-emerald-800">{recs.health ?? "—"}</span> health</div>
                   <div className="flex-1 rounded-xl bg-sky-100 p-3"><span className="block text-sm font-bold text-sky-900 pt-1.5">{recs.attestedAt ? new Date(Number(recs.attestedAt) * 1000).toISOString().slice(0, 10) : "—"}</span> checked</div>
                 </div>
-                {recs.tokenId !== null && recs.contract === "pending-deployment" ? (
-                  <p className="text-xs text-bark-soft/70">RoosterRWA not deployed yet — attestation shown from ENS text records.</p>
-                ) : null}
               </div>
             )}
           </section>
@@ -170,26 +222,6 @@ export default async function RoosterDetailPage({ params }: Props) {
               🌳 Pedigree <span className="text-xs font-normal text-bark-soft">(resolved live from ENSv2 — the name hierarchy is the family tree)</span>
             </h2>
             <PedigreeTree name={name} sire={sire} dam={dam} offspring={offspring} parentExists={(n) => nameExists(client, n)} />
-          </section>
-
-          {/* links */}
-          <section className="flex flex-wrap gap-2 text-xs">
-            <a className="rounded-full border border-clay/30 bg-cream px-3 py-1.5 font-medium text-bark underline-offset-2 hover:underline" href={ENS_APP(name)} target="_blank" rel="noreferrer">
-              ENS app ↗
-            </a>
-            {rwaAddress && recs.tokenId && /^\d+$/.test(recs.tokenId) ? (
-              <a className="rounded-full border border-clay/30 bg-cream px-3 py-1.5 font-medium text-bark underline-offset-2 hover:underline" href={ETHERSCAN(rwaAddress, "token")} target="_blank" rel="noreferrer">
-                Etherscan token #{recs.tokenId} ↗
-              </a>
-            ) : null}
-            {recs.contract && /^0x/.test(recs.contract) ? (
-              <a className="rounded-full border border-clay/30 bg-cream px-3 py-1.5 font-mono text-bark underline-offset-2 hover:underline" href={ETHERSCAN(recs.contract)} target="_blank" rel="noreferrer">
-                RoosterRWA {recs.contract.slice(0, 6)}…{recs.contract.slice(-4)} ↗
-              </a>
-            ) : null}
-            <span className="rounded-full bg-emerald-100 px-3 py-1.5 font-medium text-emerald-800">
-              records above = live getEnsText reads
-            </span>
           </section>
         </div>
       </section>
