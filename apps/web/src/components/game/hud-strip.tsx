@@ -44,7 +44,7 @@ function Bar({
     <div className="flex min-w-0 items-center gap-2">
       <span className="w-11 shrink-0 text-xl font-black leading-none tracking-wide text-bark">{label}</span>
       <div
-        className="relative h-7 min-w-0 flex-1 overflow-hidden rounded-full border-2 border-bark/25 bg-bark/15"
+        className="relative h-7 min-w-0 flex-1 overflow-hidden rounded-full border-2 border-bark/30 bg-bark/50"
         role="meter"
         aria-valuenow={value}
         aria-valuemin={0}
@@ -55,11 +55,11 @@ function Bar({
           className={`h-full rounded-full ${gradient} transition-[width] duration-500`}
           style={{ width: `${pct}%` }}
         />
-        <span className="absolute inset-y-0 left-2.5 flex items-center text-xl font-bold leading-none text-white [text-shadow:0_2px_3px_rgba(0,0,0,0.75)]">
+        <span className="absolute inset-y-0 left-2.5 flex items-center text-xl font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)]">
           {curMax}
         </span>
         {showPercent ? (
-          <span className="absolute inset-y-0 right-2.5 flex items-center text-xl font-black leading-none text-white [text-shadow:0_2px_3px_rgba(0,0,0,0.85)]">
+          <span className="absolute inset-y-0 right-2.5 flex items-center text-xl font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)]">
             {pct.toFixed(1)}%
           </span>
         ) : null}
