@@ -31,7 +31,7 @@ type Phase =
   | { kind: "scanning"; ctx: RpContextResponse }
   | { kind: "verifying"; ctx: RpContextResponse }
   | { kind: "verified"; res: Extract<VerifyResponse, { verified: true }> }
-  | { kind: "rejected"; code: string; reason: string; detail?: string }
+  | { kind: "rejected"; code: string; reason: string; detail?: string; boundTo?: string }
   | { kind: "cancelled"; why: string }
   | { kind: "error"; message: string };
 
@@ -108,6 +108,7 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
         code: rejection.current.code,
         reason: rejection.current.reason,
         detail: rejection.current.detail,
+        boundTo: rejection.current.boundTo,
       });
       setOpen(false);
       // Throwing fails the IDKit flow; handleError then closes it so our reason is what's on screen.
@@ -199,7 +200,11 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
               }
               code={phase.code}
             >
-              <p>{phase.reason}</p>
+              <p>
+                {phase.code === "nullifier_bound_to_other_wallet"
+                  ? `${phase.boundTo ? `Bound to wallet ${phase.boundTo}. ` : ""}One human, one wallet: a second wallet can't verify with the same World ID.`
+                  : phase.reason}
+              </p>
               {phase.detail ? <p className="mt-1 text-xs opacity-80">{phase.detail}</p> : null}
             </Banner>
           ) : phase.kind === "cancelled" ? (
@@ -318,8 +323,8 @@ function Banner({
   }[tone];
   return (
     <div className={`rounded-2xl border-2 px-4 py-3 text-sm ${styles}`} role={tone === "bad" ? "alert" : undefined}>
-      <p className="flex items-center justify-between gap-2 font-bold">
-        <span>{title}</span>
+      <p className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1 font-bold">
+        <span className="min-w-0">{title}</span>
         {code ? <code className="rounded bg-black/5 px-1.5 py-0.5 text-[11px] font-mono font-normal">{code}</code> : null}
       </p>
       <div className="mt-1 leading-relaxed">{children}</div>
