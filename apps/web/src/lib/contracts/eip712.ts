@@ -110,7 +110,12 @@ export function mintVoucherTypedData(
   chainId: number,
   verifyingContract: Hex,
   voucher: MintVoucher,
-) {
+): {
+  domain: ReturnType<typeof rareItemsDomain>;
+  types: { EIP712Domain: typeof EIP712_DOMAIN_TYPE; MintVoucher: typeof MINT_VOUCHER_TYPE };
+  primaryType: 'MintVoucher';
+  message: MintVoucher;
+} {
   return {
     domain: rareItemsDomain(chainId, verifyingContract),
     types: { EIP712Domain: EIP712_DOMAIN_TYPE, MintVoucher: MINT_VOUCHER_TYPE },

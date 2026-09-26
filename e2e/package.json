@@ -1,0 +1,15 @@
+{
+  "name": "rfc-legends-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo": "node --experimental-strip-types demo-beat.ts"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "typescript": "^7.0.2"
+  }
+}
