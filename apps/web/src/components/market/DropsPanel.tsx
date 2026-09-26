@@ -5,6 +5,8 @@
 // level + ownership + daily limit) and then calls RareItems.mintWithVoucher.
 
 import { useEffect, useRef, useState } from "react";
+
+const COLLAPSED_COUNT = 6;
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useConfig } from "wagmi";
 import { signMessage } from "wagmi/actions";
@@ -15,7 +17,7 @@ import type { Hex, VoucherResponse } from "@/lib/worldid/types";
 import { describeError, itemInfo, runTx } from "./chain";
 import { RejectionCard } from "./RejectionCard";
 
-type Drop = { dropId: Hex; itemId: number; rarity: string; status: "unminted" | "minting" | "minted" };
+type Drop = { dropId: Hex; itemId: number; rarity: string; status: "unminted" | "minting" | "minted"; txHash?: string };
 type DropsResponse = {
   player: { name: string | null; baseLevel: number } | null;
   minBaseLevel: number;
@@ -47,7 +49,12 @@ type MintState =
 export function DropsPanel({ address, focusDropId }: { address?: Hex; focusDropId?: Hex }) {
   const drops = useDrops(address);
   const data = drops.data;
-  const list = data?.drops.filter((d) => d.status !== "minted") ?? [];
+  const [showAll, setShowAll] = useState(false);
+  const isFocus = (d: Drop) => focusDropId?.toLowerCase() === d.dropId.toLowerCase();
+  // Linked drop first, then drops still to mint, then minted ones (kept so the tx stays visible).
+  const rank = (d: Drop) => (isFocus(d) ? 0 : d.status === "minted" ? 2 : 1);
+  const sorted = [...(data?.drops ?? [])].sort((a, b) => rank(a) - rank(b));
+  const list = showAll ? sorted : sorted.slice(0, COLLAPSED_COUNT);
   // A drop linked from the game popup that the server doesn't list for this
   // wallet still gets a card, so trying to mint it shows the real reason.
   const orphan =
@@ -87,11 +94,21 @@ export function DropsPanel({ address, focusDropId }: { address?: Hex; focusDropI
               dropId={d.dropId}
               itemId={d.itemId}
               rarity={d.rarity}
-              focused={focusDropId?.toLowerCase() === d.dropId.toLowerCase()}
+              focused={isFocus(d)}
+              mintedTx={d.status === "minted" ? (d.txHash ?? "") : undefined}
             />
           ))}
         </ul>
       )}
+      {sorted.length > COLLAPSED_COUNT ? (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="mt-3 text-sm font-bold text-clay-deep underline hover:text-clay"
+        >
+          {showAll ? "Show fewer" : `Show all ${sorted.length} drops`}
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -102,12 +119,15 @@ function DropCard({
   itemId,
   rarity,
   focused,
+  mintedTx,
 }: {
   address: Hex;
   dropId: Hex;
   itemId?: number;
   rarity?: string;
   focused?: boolean;
+  /** Set when the game already records this drop as minted ("" if the tx hash is unknown). */
+  mintedTx?: string;
 }) {
   const config = useConfig();
   const queryClient = useQueryClient();
@@ -215,12 +235,19 @@ function DropCard({
         />
       ) : null}
 
-      {state.kind === "minted" ? (
+      {state.kind === "minted" || (mintedTx !== undefined && state.kind !== "busy") ? (
         <p className="rounded-2xl border-2 border-field/40 bg-field/10 px-4 py-3 text-sm font-bold text-field-deep">
           Minted as ERC-1155 ✓{" "}
-          <a className="font-normal underline" href={txUrl(state.txHash)} target="_blank" rel="noreferrer">
-            view tx ↗
-          </a>
+          {(state.kind === "minted" ? state.txHash : mintedTx) ? (
+            <a
+              className="font-normal underline"
+              href={txUrl(state.kind === "minted" ? state.txHash : mintedTx!)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              view tx ↗
+            </a>
+          ) : null}
         </p>
       ) : (
         <button
