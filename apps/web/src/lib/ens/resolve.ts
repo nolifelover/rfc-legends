@@ -101,7 +101,8 @@ export async function nameExists(client: ReturnType<typeof ensClient>, name: str
 
 /** The registry that holds `label` entries, walking from the ETH registry down. */
 export async function registryForParent(client: ReturnType<typeof ensClient>, parentName: string): Promise<Hex | null> {
-  const labels = parentName.replace(/\.eth$/, "").split(".");
+  // walk top-down: the name's LAST label before .eth hangs off the ETH registry
+  const labels = parentName.replace(/\.eth$/, "").split(".").reverse();
   let registry: Hex = ENSV2.ethRegistry;
   for (const label of labels) {
     const next = (await client.readContract({
