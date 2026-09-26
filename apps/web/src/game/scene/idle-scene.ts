@@ -47,7 +47,8 @@ import { MAPS, THUNG_NA } from '@/game/data/maps'
 import type { MapDef } from '@/game/types'
 import { getItem } from '@/game/data/items'
 import type { Drop, MonsterDef, Player, Rarity } from '@/game/types'
-import { aspdOf, atkOf, critChance, expToNext, roosterAspd, roosterAtk, roosterCrit } from '@/server/game/stats'
+import { aspdOf, atkOf, critChance, expToNext, hitChance, hitOf, roosterAspd, roosterAtk, roosterCrit } from '@/server/game/stats'
+import { CRIT_MULT } from '@/server/game/combat'
 
 const MINTABLE: readonly Rarity[] = ['legendary', 'monster_card', 'mvp_card']
 const DEV = process.env.NODE_ENV !== 'production'
@@ -119,7 +120,6 @@ export class IdleScene extends Phaser.Scene {
   private killServer = 0
   private killShown = 0
   private credits: Array<{ exp: number; kills: number; coins: number }> = []
-  private syncLog: Array<{ t: number; kills: number }> = []
   private forceBoss = false
 
   // chips
@@ -197,7 +197,6 @@ export class IdleScene extends Phaser.Scene {
   private roosterCd = 1300
   private nextTrainerAt = 0
   private nextRoosterAt = 0
-  private hitsToKill = 2
   private lastJackpotAt = -99999
   private lastSparkleAt = 0
 
@@ -1019,43 +1018,39 @@ export class IdleScene extends Phaser.Scene {
     const rAspd = Phaser.Math.Clamp(roosterAspd(this.player.rooster), 0.6, 1.4)
     this.trainerCd = Phaser.Math.Clamp(Math.round(1150 / tAspd), JUICE.ATTACK_MIN, JUICE.ATTACK_MAX)
     this.roosterCd = Phaser.Math.Clamp(Math.round(1150 / rAspd), JUICE.ATTACK_MIN, JUICE.ATTACK_MAX)
-
-    // visual kill pace follows the server's measured kill rate
-    const rate = this.serverKillRate()
-    const [lo, hi] = this.demoMode ? [600, 1000] : [1500, 4000]
-    const killMs = rate > 0 ? Phaser.Math.Clamp(1000 / rate, lo, hi) : this.demoMode ? 800 : 2500
-    const swingMs = (this.trainerCd + this.roosterCd) / 4 // two attackers alternate
-    this.hitsToKill = Phaser.Math.Clamp(Math.round(killMs / swingMs), 1, 4)
   }
 
-  /** Kills per second seen across the last syncs (0 when unknown). */
-  private serverKillRate(): number {
-    const log = this.syncLog
-    if (log.length < 2) return 0
-    const a = log[0]
-    const b = log[log.length - 1]
-    const dt = (b.t - a.t) / 1000
-    if (dt < 3) return 0
-    return Math.max(0, b.kills - a.kills) / dt
+  /**
+   * One hit exactly as the engine rolls it (combat.ts): crit first (CRIT_MULT),
+   * else a hit roll against FLEE, then ATK × 100/(100+DEF) × rand(0.95–1.05).
+   * A miss returns 0 and prints MISS. Nothing here is scaled for show.
+   */
+  private rollHit(atk: number, critP: number, hit: number, def: MonsterDef): { value: number; crit: boolean } {
+    const mit = 100 / (100 + def.stats.def)
+    const variance = Phaser.Math.FloatBetween(0.95, 1.05)
+    if (Math.random() < critP) return { value: Math.max(1, Math.round(atk * CRIT_MULT * mit * variance)), crit: true }
+    if (Math.random() >= hitChance(hit, def.stats.flee)) return { value: 0, crit: false }
+    return { value: Math.max(1, Math.round(atk * mit * variance)), crit: false }
   }
 
-  private trainerHit(): { value: number; crit: boolean } {
-    const atk = atkOf(this.player) + this.player.baseLevel * 2
-    // real critChance is ~1–3% at low LUK, which reads as "never" on camera
-    const crit = Math.random() < Math.max(critChance(this.player), 0.08)
-    return { value: Math.max(4, Math.round(atk * (0.95 + Math.random() * 0.1) * (crit ? 1.5 : 1))), crit }
+  private trainerHit(def: MonsterDef): { value: number; crit: boolean } {
+    return this.rollHit(atkOf(this.player), critChance(this.player), hitOf(this.player), def)
   }
 
-  private roosterHit(): { value: number; crit: boolean } {
-    const atk = roosterAtk(this.player.rooster) + this.player.rooster.level * 1.5
-    const crit = Math.random() < Math.max(roosterCrit(this.player.rooster), 0.06)
-    return { value: Math.max(3, Math.round(atk * (0.95 + Math.random() * 0.1) * (crit ? 1.5 : 1))), crit }
+  private roosterHit(def: MonsterDef): { value: number; crit: boolean } {
+    const r = this.player.rooster
+    return this.rollHit(roosterAtk(r), roosterCrit(r), r.level + r.stats.tec, def)
   }
 
-  private avgHit(): number {
-    const t = atkOf(this.player) + this.player.baseLevel * 2
-    const r = roosterAtk(this.player.rooster) + this.player.rooster.level * 1.5
-    return (t + r) / 2
+  /** A swing lands `n` engine-rolled hits 70ms apart (stacked numbers); stops when the pest dies. */
+  private multiHit(p: Pest, who: 'trainer' | 'rooster', n: number, time: number): void {
+    for (let i = 0; i < n; i++) {
+      this.time.delayedCall(i * 70, () => {
+        if (p.dead) return
+        const { value, crit } = who === 'trainer' ? this.trainerHit(p.def) : this.roosterHit(p.def)
+        this.hitPest(p, value, crit ? 'crit' : who, time)
+      })
+    }
   }
 
   // --------------------------------------------------------------------- pack
@@ -1137,9 +1132,7 @@ export class IdleScene extends Phaser.Scene {
       depth: ROW_DEPTH[row] + 0.5,
     })
     const bar = new HpBar(this, boss ? 220 : 160, 12, ROW_DEPTH[row] + 0.5)
-    const maxHp = boss
-      ? Math.round(this.avgHit() * (this.demoMode ? 20 : 30))
-      : Math.max(1, Math.round(this.avgHit() * this.hitsToKill * (0.9 + Math.random() * 0.2)))
+    const maxHp = def.stats.hp // the server's monster HP, boss included
     const pest: Pest = {
       def,
       row,
@@ -1250,7 +1243,6 @@ export class IdleScene extends Phaser.Scene {
     }
     this.setFocus(target)
     this.nextTrainerAt = time + this.trainerCd
-    const { value, crit } = this.trainerHit()
     const sp = this.trainerSprite
     const body = this.trainerBody
     this.killTween(this.trainerChain)
@@ -1294,7 +1286,7 @@ export class IdleScene extends Phaser.Scene {
               if (target.dead) return
               // burst on the hit side of the body, low, never on the face
               this.fx.impactStar(tx - rsz * 0.42, ty + rsz * 0.12, target.boss ? 1.1 : 0.7, 0xbff2ff)
-              this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
+              this.multiHit(target, 'trainer', 3, time)
             })
           },
         },
@@ -1318,7 +1310,6 @@ export class IdleScene extends Phaser.Scene {
       cd = Math.round(cd / 1.5)
     }
     this.nextRoosterAt = time + cd
-    const { value, crit } = this.roosterHit()
     const body = this.roosterBody
     const rs = ROW_SCALE[target.row]
     this.resetRoosterPose()
@@ -1351,8 +1342,7 @@ export class IdleScene extends Phaser.Scene {
             // the peck is its own small directional arc plus a low burst on the hit side
             this.fx.slash(tx - 60, ty + 10, 1, target.boss ? 0.9 : 0.55)
             this.fx.impactStar(tx - target.h * rs * 0.42, ty + target.h * rs * 0.2, target.boss ? 1 : 0.6, 0xffd8a8)
-            if (crit) this.fx.sparkle(dashX + 40, dashY - L.ROOSTER_H * 0.55, 8)
-            this.hitPest(target, value, crit ? 'crit' : 'rooster', time)
+            this.multiHit(target, 'rooster', Phaser.Math.Between(3, 5), time)
           },
         },
         { targets: this.rooster, x: dashX + 8, y: dashY, duration: JUICE.HOLD },
@@ -1371,6 +1361,13 @@ export class IdleScene extends Phaser.Scene {
 
   private hitPest(p: Pest, value: number, kind: DamageKind, time: number): void {
     if (p.dead) return
+    if (value <= 0) {
+      // a miss (engine hit roll): grey MISS, no flinch
+      const rsz0 = p.h * ROW_SCALE[p.row]
+      this.fx.damage(p.container.x - rsz0 * 0.2, this.topYOf(p) + rsz0 * 0.4, 0, kind)
+      return
+    }
+    if (kind === 'crit') this.fx.sparkle(p.container.x - p.h * 0.3, this.topYOf(p) + p.h * 0.3, 8)
     // the boss only dies when the server says so; cosmetic hits stop at 1 HP
     p.hp = Math.max(p.boss && !this.bossServerDead ? 1 : 0, p.hp - value)
     const lethal = p.hp <= 0
@@ -1902,8 +1899,6 @@ export class IdleScene extends Phaser.Scene {
     const prev = this.player
     this.player = player
     this.demoMode = demoMode
-    this.syncLog.push({ t: this.time.now, kills: player.killCount })
-    if (this.syncLog.length > 8) this.syncLog.shift()
     this.tuneCadence()
 
     this.trainerPlate.setMain(this.trainerLabel())

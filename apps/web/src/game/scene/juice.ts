@@ -257,7 +257,7 @@ export const SIRE_TINT: Record<string, number> = {
 export const TYPE = {
   dmgTrainer: 64,
   dmgRooster: 56,
-  dmgCritMult: 1.4,
+  dmgCritMult: 1.6,
   exp: 44,
   lootTick: 30,
   plateTrainer: 30,

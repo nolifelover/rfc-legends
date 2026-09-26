@@ -235,15 +235,16 @@ export class Fx {
    */
   damage(x: number, y: number, value: number, kind: DamageKind): void {
     const crit = kind === 'crit'
+    const miss = value <= 0
     const size = crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster
-    const color = crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
+    const color = miss ? '#d9d2cc' : crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
     const now = performance.now()
     this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
     this.lastDmgAt = now
     const t = this.acquire()
     t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 10 : 8 })
     t.setShadow(3, 4, '#000000', 6, true, true)
-    t.setText(crit ? `★ ${fmt(value)}` : fmt(value))
+    t.setText(miss ? 'MISS' : crit ? `★ ${fmt(value)}` : fmt(value))
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
     let sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
     let sy = y - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
