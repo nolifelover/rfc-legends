@@ -31,13 +31,15 @@ export const LAYOUT = {
   HORIZON_Y: 378,
   /** Top of the clay lane where everyone stands. */
   GROUND_Y: 660,
-  /** Pest rows: feet lines. Back row is drawn smaller and behind. */
-  FEET_BACK: 800,
-  FEET_FRONT: 870,
-  BACK_SCALE: 0.84,
-  /** Where the leader of each row stops and gets hit. */
+  /** Pest lanes (back → front): feet lines, draw scale and where each leader stops. */
+  FEET_BACK: 796,
+  FEET_MID: 838,
+  FEET_FRONT: 880,
+  BACK_SCALE: 0.8,
+  MID_SCALE: 0.9,
   ENGAGE_FRONT_X: 1080,
-  ENGAGE_BACK_X: 1250,
+  ENGAGE_MID_X: 1190,
+  ENGAGE_BACK_X: 1300,
   /** Spacing between queued pests behind the leader. */
   PACK_GAP: 175,
   SPAWN_X: 2020,

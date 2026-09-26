@@ -53,7 +53,7 @@ const EN_NAMES: Record<string, string> = {
 const MINTABLE: readonly Rarity[] = ['legendary', 'monster_card', 'mvp_card']
 const DEV = process.env.NODE_ENV !== 'production'
 
-type Row = 0 | 1 // 0 = back row (smaller, behind), 1 = front row
+type Row = 0 | 1 | 2 // 0 = back lane (smallest, behind), 1 = middle, 2 = front
 
 interface Pest {
   def: MonsterDef
@@ -83,10 +83,11 @@ interface LootEntry {
   n: number
 }
 
-const ROW_FEET: Record<Row, number> = { 0: L.FEET_BACK, 1: L.FEET_FRONT }
-const ROW_ENGAGE: Record<Row, number> = { 0: L.ENGAGE_BACK_X, 1: L.ENGAGE_FRONT_X }
-const ROW_SCALE: Record<Row, number> = { 0: L.BACK_SCALE, 1: 1 }
-const ROW_DEPTH: Record<Row, number> = { 0: 21, 1: 23 }
+const ROWS: readonly Row[] = [0, 1, 2]
+const ROW_FEET: Record<Row, number> = { 0: L.FEET_BACK, 1: L.FEET_MID, 2: L.FEET_FRONT }
+const ROW_ENGAGE: Record<Row, number> = { 0: L.ENGAGE_BACK_X, 1: L.ENGAGE_MID_X, 2: L.ENGAGE_FRONT_X }
+const ROW_SCALE: Record<Row, number> = { 0: L.BACK_SCALE, 1: L.MID_SCALE, 2: 1 }
+const ROW_DEPTH: Record<Row, number> = { 0: 21, 1: 22, 2: 23 }
 
 export class IdleScene extends Phaser.Scene {
   private bridge!: SceneBridge
@@ -144,6 +145,9 @@ export class IdleScene extends Phaser.Scene {
   private nextSpawnAt = 0
   private nextPackRollAt = 0
   private victim: Pest | null = null
+  /** the pest whose plate and HP bar are shown — the one being attacked right now */
+  private focus: Pest | null = null
+  private bossShadow: Phaser.GameObjects.Image | null = null
   private lastKillX: number = L.ENGAGE_FRONT_X
   private lastKillY: number = L.FEET_FRONT
 
@@ -204,7 +208,7 @@ export class IdleScene extends Phaser.Scene {
     this.packTarget = Phaser.Math.Between(L.PACK_MIN, L.PACK_MAX)
     this.nextPackRollAt = this.time.now + 20000
     // seed the stage: pests already mid-walk so the first frame is a fight
-    for (let i = 0; i < 4; i++) this.spawnPest(i % 2 === 0 ? 1 : 0, 700 + i * 260)
+    for (let i = 0; i < 5; i++) this.spawnPest(ROWS[i % 3], 700 + i * 220)
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.fx.dispose())
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.fx.dispose())
@@ -704,7 +708,7 @@ export class IdleScene extends Phaser.Scene {
       this.roosterWide()
     })
     kb.on('keydown-K', () => {
-      const t = this.leader(1) ?? this.leader(0)
+      const t = this.leaderIn([2, 1, 0])
       if (t) this.killPest(t, this.time.now)
     })
   }
@@ -766,6 +770,28 @@ export class IdleScene extends Phaser.Scene {
     return p && p.ready && !p.dead ? p : null
   }
 
+  /** First hittable leader in lane order (front-first for the trainer, back-first for the rooster). */
+  private leaderIn(order: readonly Row[]): Pest | null {
+    for (const r of order) {
+      const p = this.leader(r)
+      if (p) return p
+    }
+    return null
+  }
+
+  /** Only the pest under attack shows its plate and HP bar (the pile stays readable). */
+  private setFocus(p: Pest): void {
+    if (this.focus === p) return
+    if (this.focus && !this.focus.dead) {
+      this.focus.plate.setVisible(false)
+      this.focus.bar.setVisible(false)
+    }
+    this.focus = p
+    const s = ROW_SCALE[p.row]
+    p.bar.place(p.baseX, p.feetY + 12 * s)
+    p.plate.place(p.baseX, p.feetY + 20 * s)
+  }
+
   private pickMonster(): MonsterDef {
     const total = THUNG_NA.monsters.reduce((sum, s) => sum + s.weight, 0)
     let roll = Math.random() * total
@@ -790,7 +816,7 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private makePest(def: MonsterDef, row: Row, slot: number, startX: number, boss: boolean): Pest {
-    const h = L.PEST_H[def.id] ?? 240
+    const h = Math.round((L.PEST_H[def.id] ?? 240) * (boss ? 1 : Phaser.Math.FloatBetween(0.9, 1.15)))
     const key = MONSTER_KEYS[def.id] ?? MONSTER_KEYS['nu-na']
     const feetY = ROW_FEET[row]
     const container = this.add.container(startX, feetY).setDepth(ROW_DEPTH[row]).setScale(ROW_SCALE[row])
@@ -867,10 +893,8 @@ export class IdleScene extends Phaser.Scene {
   private engage(pest: Pest): void {
     pest.ready = true
     pest.baseX = pest.container.x
-    const s = ROW_SCALE[pest.row]
-    pest.bar.place(pest.baseX, pest.feetY + 12 * s)
-    pest.plate.place(pest.baseX, pest.feetY + 20 * s)
     this.fx.dustKick(pest.baseX, pest.feetY, 3)
+    if (pest.boss) this.setFocus(pest)
   }
 
   /** Re-number a row after a death; everyone steps up one slot. */
@@ -885,6 +909,7 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private removePest(pest: Pest): void {
+    if (this.focus === pest) this.focus = null
     this.pests = this.pests.filter((p) => p !== pest)
     pest.walk?.remove()
     pest.hop?.remove()
@@ -906,11 +931,12 @@ export class IdleScene extends Phaser.Scene {
   // ------------------------------------------------------------------ attacks
 
   private trainerAttack(time: number): void {
-    const target = this.leader(1) ?? this.leader(0)
+    const target = this.leaderIn([2, 1, 0])
     if (!target) {
       this.nextTrainerAt = time + 120
       return
     }
+    this.setFocus(target)
     this.nextTrainerAt = time + this.trainerCd
     const { value, crit } = this.trainerHit()
     const s0 = this.trainerS0
@@ -960,11 +986,12 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private roosterAttack(time: number): void {
-    const target = this.leader(0) ?? this.leader(1)
+    const target = this.leaderIn([0, 1, 2])
     if (!target) {
       this.nextRoosterAt = time + 120
       return
     }
+    this.setFocus(target)
     let cd = this.roosterCd
     if (this.cheerBoostLeft > 0) {
       this.cheerBoostLeft -= 1
@@ -1187,6 +1214,7 @@ export class IdleScene extends Phaser.Scene {
     this.bossActive = true
     this.bossServerDead = false
     this.forceBoss = false
+    this.updateBossShadow()
     new Ribbon(this, 'BOSS APPROACHING', this.font).play(700, this.reduced)
     this.tweens.add({ targets: this.bossDim, alpha: 0.24, duration: 400 })
     if (!this.reduced) {
@@ -1229,7 +1257,7 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private dropBoss(def: MonsterDef, pendingKill: boolean): void {
-    const boss = this.makePest(def, 1, 0, L.ENGAGE_FRONT_X + 220, true)
+    const boss = this.makePest(def, 2, 0, L.ENGAGE_FRONT_X + 220, true)
     boss.baseX = L.ENGAGE_FRONT_X + 220
     boss.container.setPosition(boss.baseX, -520)
     this.tweens.add({
@@ -1257,6 +1285,30 @@ export class IdleScene extends Phaser.Scene {
         if (pendingKill) this.time.delayedCall(2600, () => this.slayBoss())
       },
     })
+  }
+
+  /** Two kills before the boss, a dark Rat King silhouette looms behind the far fields. */
+  private updateBossShadow(): void {
+    const every = this.bossEvery()
+    const near = !this.bossActive && this.killServer % every >= every - 2
+    if (near && !this.bossShadow) {
+      const key = MONSTER_KEYS['raja-nu-na'] ?? MONSTER_KEYS['nu-na']
+      // feet sunk behind the paddy (depth 5 < 6) so the head looms in the sky
+      const sh = this.add
+        .image(1560, L.HORIZON_Y + 220, key)
+        .setOrigin(0.5, 1)
+        .setDisplaySize(560, 560)
+        .setTint(INK.outline)
+        .setAlpha(0)
+        .setDepth(5)
+      this.tweens.add({ targets: sh, alpha: 0.32, duration: 1200 })
+      this.tweens.add({ targets: sh, y: L.HORIZON_Y + 206, duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.bossShadow = sh
+    } else if (!near && this.bossShadow) {
+      const sh = this.bossShadow
+      this.bossShadow = null
+      this.tweens.add({ targets: sh, alpha: 0, duration: 600, onComplete: () => sh.destroy() })
+    }
   }
 
   private bossPest(): Pest | null {
@@ -1476,6 +1528,7 @@ export class IdleScene extends Phaser.Scene {
       this.pinChips()
     }
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
+    this.updateBossShadow()
 
     // every 10th server-confirmed kill gets a slam (after a level-up slam, if any)
     if (Math.floor(this.killServer / 10) > Math.floor(prevKills / 10)) {
@@ -1549,9 +1602,10 @@ export class IdleScene extends Phaser.Scene {
         this.packTarget = Phaser.Math.Between(L.PACK_MIN, L.PACK_MAX)
       }
       if (this.pests.length < this.packTarget && time >= this.nextSpawnAt) {
-        const back = this.rowPests(0).length
-        const front = this.rowPests(1).length
-        this.spawnPest(front <= back ? 1 : 0)
+        const counts = ROWS.map((r) => this.rowPests(r).length)
+        const min = Math.min(...counts)
+        const lanes = ROWS.filter((r) => counts[r] === min)
+        this.spawnPest(Phaser.Utils.Array.GetRandom(lanes))
         this.nextSpawnAt = time + Phaser.Math.Between(350, 650)
       }
     }
