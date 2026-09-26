@@ -10,9 +10,9 @@ Only edit paths your lane owns. If you need something in another lane's path, me
 
 | Lane | Owner | Paths |
 |---|---|---|
-| Contracts + MultiBaas | eth-dev1 | `contracts/**`, `apps/web/src/lib/contracts/**` (ABIs, addresses, viem helpers) |
+| Contracts + MultiBaas | eth-dev1 | `contracts/**`, `e2e/**`, `apps/web/src/app/api/items/**`, `apps/web/src/lib/contracts/**` (ABIs, addresses, viem helpers) |
 | Game (shell, idle engine, Phaser) | eth-dev2 | `apps/web/src/app/layout.tsx`, `apps/web/src/app/page.tsx`, `apps/web/src/app/(game)/**`, `apps/web/src/app/api/game/**`, `apps/web/src/game/**`, `apps/web/src/server/game/**`, `apps/web/src/components/game/**`, `apps/web/src/components/providers.tsx`, `apps/web/src/lib/wagmi.ts`, `apps/web/public/assets/**`, `apps/web/src/app/globals.css` |
-| RWA + ENSv2 pedigree | eth-dev3 | `ens/**`, `apps/web/src/app/roosters/**`, `apps/web/src/app/api/ens/**`, `apps/web/src/lib/ens/**`, `apps/web/src/components/pedigree/**` |
+| RWA + ENSv2 pedigree | eth-dev3 | `ens/**`, `apps/web/src/app/roosters/**`, `apps/web/src/app/api/ens/**`, `apps/web/src/app/api/roosters/**`, `apps/web/src/lib/ens/**`, `apps/web/src/components/pedigree/**` |
 | Drop economy (World ID, voucher, mint, Rare Market UI) | manager's subagent | `apps/web/src/app/api/worldid/**`, `apps/web/src/app/api/voucher/**`, `apps/web/src/server/worldid/**`, `apps/web/src/lib/worldid/**`, `apps/web/src/components/worldid/**`, `apps/web/src/components/market/**`, `apps/web/src/app/market/**` |
 | Manager | eth-tokyo-8f | `docs/**`, `README.md`, root files, `apps/web/package.json`, `apps/web/package-lock.json`, `.gitignore`, `**/.env.example` |
 
@@ -96,7 +96,12 @@ One token = one real rooster at Ninlanee Farm. The farm signs weekly attestation
 ```solidity
 struct Rooster { string name; string ringId; uint8 sireLine; uint64 hatchedAt; uint256 sireTokenId; uint256 damTokenId; string ensName; }
 // sireLine: 0 กุมารจีน (kumarnjeen), 1 คิงคอง (kingkong), 2 เจ้าขุนทอง (chaokhunthong), 3 เทพบุตร (thepbut), 4 แร๊พเตอร์ (raptor)
-function mintRooster(address to, Rooster calldata r) external returns (uint256 tokenId); // onlyOwner (RFC Club)
+function mintRooster(address to, Rooster calldata r, uint64 nonce, bytes calldata farmSig) external returns (uint256 tokenId);
+//   onlyOwner (RFC Club issues) AND farmSigner co-signs (Ninlanee attests the bird exists)
+//   EIP-712 typehash: keccak256("Registration(string ringId,uint8 sireLine,uint64 hatchedAt,uint256 sireTokenId,uint256 damTokenId,address to,uint64 nonce)")
+//   reverts DuplicateRing (one ringId = one token), unknown/self parent, parent hatched after child, sireLine > 4
+function setFarmSigner(address newSigner) external;                                       // onlyOwner, emits FarmSignerRotated
+function tokenURI(uint256 tokenId) public view returns (string memory);                   // <ROOSTER_BASE_URI><id> -> /api/roosters/{id}
 function setEnsName(uint256 tokenId, string calldata ensName) external;                 // onlyOwner
 address public farmSigner;                                                                // Ninlanee key
 struct Attestation { uint256 tokenId; uint32 weightGrams; uint8 healthScore; string note; uint64 checkedAt; uint64 nonce; }
@@ -105,7 +110,10 @@ struct Attestation { uint256 tokenId; uint32 weightGrams; uint8 healthScore; str
 function submitAttestation(Attestation calldata a, bytes calldata signature) external;    // anyone can relay; signer must be farmSigner; nonce strictly increasing per token
 function latestAttestation(uint256 tokenId) external view returns (Attestation memory);
 event AttestationRecorded(uint256 indexed tokenId, uint32 weightGrams, uint8 healthScore, uint64 checkedAt, uint64 nonce);
-event RoosterMinted(uint256 indexed tokenId, address indexed to, uint8 sireLine, uint256 sireTokenId, string ensName);
+event RoosterMinted(uint256 indexed tokenId, address indexed to, uint8 sireLine, uint256 sireTokenId, uint256 damTokenId, string ringId, uint64 hatchedAt, string ensName);
+event EnsNameSet(uint256 indexed tokenId, string ensName);
+event FarmSignerRotated(address indexed previous, address indexed current);
+// AttestationRecorded also carries note and the EIP-712 digest
 ```
 
 ### 4.6 Deployment output
@@ -197,6 +205,12 @@ SEPOLIA_RPC_URL=
 FARM_SIGNER_PRIVATE_KEY=
 ENS_OWNER_PRIVATE_KEY=
 ```
+
+## 8b. Decisions made during the build
+
+- **English-first UI** (08:08 UTC). Judges are international. Thai stays as flavor: sire-line names with romanization, map and farm names.
+- **World ID 4** needs an RP (`WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY`). The demo uses `WORLD_ENVIRONMENT=production` with a real World App. Staging needs a 24h token (World portal PR #2307).
+- **RoosterRWA mint is co-signed by the farm key** (08:20 UTC, from the blind RWA critic): one ringId = one token.
 
 ## 9. Hard rules (from CLAUDE.md)
 
