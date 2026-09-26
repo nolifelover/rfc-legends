@@ -1,9 +1,8 @@
 "use client";
 
 // Thin next-goal ribbon above the HUD (research #15). Derived from real
-// engine state only: the World ID mint gate (Base Lv 30), the MVP cadence
-// (every mvpEveryKills kills, demo or normal), and the rooster stat-point
-// bumps (statPointsForLevel grows at levels ≡ 1 mod 5).
+// engine state only: the World ID mint gate (Base Lv 30) and the rooster
+// stat-point bumps (statPointsForLevel grows at levels ≡ 1 mod 5).
 
 import { statPointsForLevel } from "@/server/game/stats";
 import type { Player } from "@/game/types";
