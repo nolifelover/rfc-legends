@@ -52,11 +52,11 @@ export default async function RoosterDetailPage({ params }: Props) {
     if (recs.tokenId && /^\d+$/.test(recs.tokenId)) {
       const damId = await client.readContract({
         address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "roosters", args: [BigInt(recs.tokenId)],
-      }).then((r) => r[5]).catch(() => 0n);
+      }).then((r) => r.damTokenId).catch(() => 0n);
       if (damId && damId > 0n) {
         dam = (await client.readContract({
           address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "roosters", args: [damId],
-        }).then((r) => r[6]).catch(() => null)) ?? null;
+        }).then((r) => r.ensName).catch(() => null)) ?? null;
       }
     }
   } catch { /* contracts pending — dam simply unknown */ }

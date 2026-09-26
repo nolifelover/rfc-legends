@@ -15,7 +15,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { existsSync } from 'node:fs';
-import { namehash, parseAbi, type Hex } from 'viem';
+import { keccak256, namehash, parseAbi, toHex, type Hex } from 'viem';
 import { PARENT_NAME, FARM_SIGNER_PRIVATE_KEY } from '../src/config';
 import { registryAbi, resolverAbi } from '../src/abis';
 import { publicClient, ownerWallet, send, walletFor } from '../src/client';
@@ -32,7 +32,8 @@ const roosterRwaAbi = parseAbi([
   'function setEnsName(uint256 tokenId, string ensName)',
   'function roosters(uint256 tokenId) view returns (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName)',
   'function farmSigner() view returns (address)',
-  'event RoosterMinted(uint256 indexed tokenId, address indexed to, uint8 sireLine, uint256 sireTokenId, string ensName)',
+  'event RoosterMinted(uint256 indexed tokenId, address indexed to, uint8 sireLine, uint256 sireTokenId, uint256 damTokenId, uint64 hatchedAt, string ringId, string ensName)',
+  'function ringToken(bytes32 ringHash) view returns (uint256 tokenId)',
 ]);
 
 // TODO: import from apps/web/src/lib/contracts/eip712.ts once eth-dev1 exports it.
@@ -108,6 +109,16 @@ async function main() {
       const ensName = b.sireLabel ? `${b.label}.${b.sireLabel}.${PARENT_NAME}` : `${b.label}.${PARENT_NAME}`;
       const sireTid = b.sireLabel ? (tokenIds[b.sireLabel] ?? 0n) : 0n;
       const to = ownerWallet.account.address;
+      // idempotency: one ring = one token (the contract enforces it; we check first)
+      const existing = await publicClient.readContract({
+        address: rwa.address, abi: roosterRwaAbi, functionName: 'ringToken',
+        args: [keccak256(toHex(b.ringId))],
+      }).catch(() => 0n);
+      if (existing !== 0n) {
+        tokenIds[b.label] = existing;
+        console.log(`mintRooster ${b.label}: already token ${existing}, skipping`);
+        continue;
+      }
       // custodian co-signature: RFC Club issues, Ninlanee Farm attests the bird is real
       const farmSig = await farm.signTypedData({
         domain,

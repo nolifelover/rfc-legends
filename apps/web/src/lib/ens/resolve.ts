@@ -23,8 +23,8 @@ const registryAbi = parseAbi([
 
 // TODO: switch to the exported roosterRwaAbi when eth-dev1 lands it in lib/contracts/abis.
 export const roosterRwaAbi = parseAbi([
-  "function roosters(uint256 tokenId) view returns (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName)",
-  "function latestAttestation(uint256 tokenId) view returns (uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce)",
+  "function roosters(uint256 tokenId) view returns ((string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName))",
+  "function latestAttestation(uint256 tokenId) view returns ((uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce))",
   "function farmSigner() view returns (address)",
 ]);
 
@@ -183,7 +183,7 @@ export async function getRoosterByTokenId(
 ): Promise<{ ensName: string } | null> {
   try {
     const r = await client.readContract({ address: rwa, abi: roosterRwaAbi, functionName: "roosters", args: [tokenId] });
-    const ensName = r[6];
+    const ensName = r.ensName;
     return ensName ? { ensName } : null;
   } catch { return null; }
 }
@@ -197,8 +197,8 @@ export async function getAttestation(
       client.readContract({ address: rwa, abi: roosterRwaAbi, functionName: "latestAttestation", args: [tokenId] }),
       client.readContract({ address: rwa, abi: roosterRwaAbi, functionName: "farmSigner" }),
     ]);
-    if (a[4] === BigInt(0)) return null;
-    return { weightGrams: a[1], healthScore: a[2], note: a[3], checkedAt: a[4], farmSigner, nonce: a[5] };
+    if (a.checkedAt === BigInt(0)) return null;
+    return { weightGrams: a.weightGrams, healthScore: a.healthScore, note: a.note, checkedAt: a.checkedAt, farmSigner, nonce: a.nonce };
   } catch { return null; }
 }
 

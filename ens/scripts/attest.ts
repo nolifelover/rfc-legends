@@ -26,7 +26,7 @@ import { ATTESTATION_TYPE, roosterRwaDomain, type Attestation } from '../../apps
 
 const roosterRwaAbi = parseAbi([
   'function submitAttestation((uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce) a, bytes signature)',
-  'function latestAttestation(uint256 tokenId) view returns (uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce)',
+  'function latestAttestation(uint256 tokenId) view returns ((uint256 tokenId, uint32 weightGrams, uint8 healthScore, string note, uint64 checkedAt, uint64 nonce))',
   'function farmSigner() view returns (address)',
 ]);
 
@@ -38,7 +38,8 @@ async function main() {
     throw new Error(`usage: attest.ts <label|[label.sire].${PARENT_NAME}> [weightGrams] [healthScore] [note] [--ens-only]`);
   }
   const state = loadState();
-  if (!state.resolver) throw new Error('run setup-parent first');
+  const resolverAddr = (state.resolverV2 ?? state.resolver)!;
+  if (!state.resolver && !state.resolverV2) throw new Error('run setup-parent first');
   const weightGrams = Number(weightArg ?? 4000);
   const healthScore = Number(healthArg ?? 95);
   const note = noteArg ?? 'weekly check';
@@ -63,7 +64,7 @@ async function main() {
     const prev = await publicClient.readContract({
       address: rwa, abi: roosterRwaAbi, functionName: 'latestAttestation', args: [tokenId],
     });
-    const nonce = prev[5] + 1n;
+    const nonce = prev.nonce + 1n;
     const attestation: Attestation = { tokenId, weightGrams, healthScore, note, checkedAt, nonce };
     const domain = roosterRwaDomain(11155111, rwa);
     const signature = await farm.signTypedData({ domain, types: { Attestation: ATTESTATION_TYPE }, primaryType: 'Attestation', message: attestation });
@@ -92,7 +93,7 @@ async function main() {
   const farmClient = walletFor(FARM_SIGNER_PRIVATE_KEY as Hex);
   for (const [key, value] of [['rfc.weight', String(weightGrams)], ['rfc.health', String(healthScore)], ['rfc.attestedAt', String(checkedAt)]] as const) {
     await send(`farm setText ${name} ${key}`, farmClient, {
-      address: state.resolver, abi: resolverAbi, functionName: 'setText', args: [node, key, value],
+      address: resolverAddr, abi: resolverAbi, functionName: 'setText', args: [node, key, value],
     });
   }
 
@@ -111,7 +112,7 @@ async function main() {
     const latest = await publicClient.readContract({
       address: rwa, abi: roosterRwaAbi, functionName: 'latestAttestation', args: [tokenId],
     });
-    console.log(`contract: ${latest[1]}g health=${latest[2]} nonce=${latest[5]} checkedAt=${latest[4]}`);
+    console.log(`contract: ${latest.weightGrams}g health=${latest.healthScore} nonce=${latest.nonce} checkedAt=${latest.checkedAt}`);
   }
   const [w, h, at] = await Promise.all(['rfc.weight', 'rfc.health', 'rfc.attestedAt'].map((key) => publicClient.getEnsText({ name, key })));
   console.log(`ens:      ${name} weight=${w} health=${h} attestedAt=${at}`);

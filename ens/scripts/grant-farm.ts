@@ -36,11 +36,12 @@ async function expectRevert(label: string, to: `0x${string}`, data: `0x${string}
 async function main() {
   const verify = process.argv.includes('--verify');
   const state = loadState();
-  if (!state.resolver) throw new Error('run setup-parent first');
+  const resolverAddr = (state.resolverV2 ?? state.resolver)!;
+  if (!state.resolver && !state.resolverV2) throw new Error('run setup-parent first');
   const farm = privateKeyToAccount(FARM_SIGNER_PRIVATE_KEY as `0x${string}`);
   state.farmSignerAddress = farm.address;
   saveState(state);
-  const resolver = state.resolver;
+  const resolver = resolverAddr;
 
   for (const key of FARM_KEYS) {
     await send(`authorizeTextRoles ${key} -> farm key`, ownerWallet, {

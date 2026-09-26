@@ -30,12 +30,13 @@ export const registryAbi = parseAbi([
   'function getState(uint256 anyId) view returns ((uint8 status, uint64 expiry, address latestOwner, uint256 tokenId, uint256 resource) state)',
   'function getExpiry(uint256 anyId) view returns (uint64 expiry)',
   'function ownerOf(uint256 tokenId) view returns (address)',
-  'event LabelRegistered(string label, address indexed owner, uint256 indexed tokenId)',
+  'event LabelRegistered(uint256 indexed tokenId, bytes32 indexed labelHash, string label, address owner, uint64 expiry, address indexed sender)',
 ]);
 
 export const resolverAbi = parseAbi([
   'function setText(bytes32 node, string key, string value)',
   'function text(bytes32 node, string key) view returns (string)',
+  'function setAddr(bytes32 node, address a)',
   'function setAddr(bytes32 node, uint64 coinType, bytes a)',
   'function authorizeTextRoles(bytes toName, string key, address account, bool grant) returns (bool)',
   'function authorizeNameRoles(bytes toName, uint256 roleBitmap, address account, bool grant) returns (bool)',
