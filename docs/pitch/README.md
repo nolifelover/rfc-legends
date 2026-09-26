@@ -3,13 +3,13 @@
 A 12-slide narrated presentation for the World, ENS and Curvegrid judges.
 
 **Files**
-- `rfc-legends-pitch.mp4`: the whole deck as a video, 1920×1080, 5:49.
+- `rfc-legends-pitch.mp4`: the whole deck as a video, 1920×1080, 4:22.
 - `index.html`: the self-playing presentation. Open it in a browser and press **Play narration**; the slides advance on their own. Arrow keys also work.
 - `narration.json`: the narration script, one entry per slide.
 - `audio/`: narration clips, one per slide.
 - `img/`: images used in the slides.
 
-**Voice.** The narration was generated with Google Gemini TTS (`google/gemini-3.8-flash-tts`, voice "Leda") through the OpenRouter API. The slides, the script and the narration were produced with Claude.
+**Voice.** The narration was generated with Google Gemini TTS (`google/gemini-3.8-flash-tts`, voice "Leda") through the OpenRouter API, with no style prompt, so only the script is spoken. The slides, the script and the narration were produced with Claude.
 
 **Slides in order**
 1. Cover
