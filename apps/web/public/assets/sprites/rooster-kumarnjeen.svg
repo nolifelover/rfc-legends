@@ -3,11 +3,12 @@
     <!-- comb -->
     <path d="M45,18 Q41,5 49,10 Q48,2 55,7 Q56,1 61,7 Q67,5 63,15 Q59,20 45,18 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="3"/>
     <!-- sleek tail feathers -->
-    <path d="M26,42 Q10,26 6,12 Q14,20 22,32 Q26,38 26,42 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
-    <path d="M24,46 Q6,36 2,24 Q12,30 20,38 Q24,42 24,46 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
-    <path d="M23,50 Q4,46 2,36 Q10,42 19,46 Q23,48 23,50 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
-    <path d="M7,13 Q12,19 17,25" stroke="#9DB3C2" stroke-width="1.8" fill="none"/>
-    <path d="M3,25 Q9,31 15,37" stroke="#9DB3C2" stroke-width="1.8" fill="none"/>
+    <path d="M27,42 C16,38 8,28 5,14 C14,22 22,28 26,35 C28,38 28,41 27,42 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M26,46 C14,44 5,36 2,23 C11,31 19,36 25,40 C27,42.5 27,45 26,46 Z" fill="#5E7182" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M24,50 C13,50 4,44 1,33 C9,40 17,44 24,46 C26,47.5 25.5,49.5 24,50 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M7,17 Q14,24 20,30" stroke="#9DB3C2" stroke-width="1.6" fill="none"/>
+    <path d="M4,26 Q11,32 18,37" stroke="#9DB3C2" stroke-width="1.6" fill="none"/>
+    <path d="M3,36 Q10,41 16,44" stroke="#9DB3C2" stroke-width="1.6" fill="none"/>
     <!-- legs -->
     <path d="M38,64 L38,75" stroke="#2B1B12" stroke-width="7"/>
     <path d="M38,64 L38,75" stroke="#E8933F" stroke-width="3.6"/>
@@ -26,6 +27,7 @@
     <path d="M31,45 Q27,52 31,59" stroke="#9DB3C2" stroke-width="1.6" fill="none" opacity="0.8"/>
     <!-- head sheen -->
     <path d="M48,17.5 Q54,14.5 60,16.5" stroke="#9DB3C2" stroke-width="2.2" fill="none" opacity="0.9"/>
+    <path d="M48,36.5 Q53,41.5 58,39" stroke="#4A5D6C" stroke-width="2.2" fill="none"/>
     <!-- beak + wattle -->
     <path d="M66,21 L76,26 L66,30.5 Q68.5,26 66,21 Z" fill="#EDA614" stroke="#2B1B12" stroke-width="2.8"/>
     <path d="M67,26 L73,26" stroke="#2B1B12" stroke-width="1.4"/>

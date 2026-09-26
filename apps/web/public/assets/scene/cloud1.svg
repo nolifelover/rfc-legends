@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 90">
+  <!-- puffy cumulus -->
+  <g fill="#FFFDF6" opacity="0.95">
+    <ellipse cx="100" cy="56" rx="60" ry="21"/>
+    <ellipse cx="70" cy="42" rx="26" ry="18"/>
+    <ellipse cx="112" cy="37" rx="30" ry="20"/>
+    <ellipse cx="146" cy="48" rx="22" ry="15"/>
+  </g>
+  <ellipse cx="100" cy="68" rx="48" ry="8" fill="#F7E8C8" opacity="0.85"/>
+</svg>

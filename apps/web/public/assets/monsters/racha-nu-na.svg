@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">
   <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- boss ground shadow -->
+    <ellipse cx="72" cy="128" rx="44" ry="9" fill="#2B1B12" opacity="0.22"/>
     <!-- boss aura -->
     <circle cx="72" cy="76" r="64" fill="#FFD766" opacity="0.16"/>
     <circle cx="72" cy="76" r="52" fill="#FFD766" opacity="0.14"/>
     <!-- royal maroon cape: flared shoulders, deep asymmetric pointed hem -->
     <path d="M34,62 Q16,96 22,130 L36,114 L47,132 L56,116 L66,136 L76,116 L86,131 L94,113 L102,126 Q120,94 108,62 Q90,50 71,50 Q52,50 34,62 Z" fill="#7A1F4B" stroke="#2B1B12" stroke-width="5"/>
-    <path d="M22,130 L36,114 L47,132 L56,116 L66,136 L76,116 L86,131 L94,113 L102,126" fill="none" stroke="#FFD766" stroke-width="3.5"/>
     <!-- cloth folds -->
     <path d="M44,66 Q36,94 40,122" fill="none" stroke="#5E1540" stroke-width="4"/>
     <path d="M100,64 Q110,92 103,118" fill="none" stroke="#5E1540" stroke-width="4"/>
@@ -16,19 +17,20 @@
     <path d="M108,62 Q112,68 109,74" fill="none" stroke="#93315F" stroke-width="3" opacity="0.9"/>
     <!-- tail -->
     <path d="M110,94 Q136,86 134,62 Q133,50 122,50" fill="none" stroke="#2B1B12" stroke-width="11"/>
-    <path d="M110,94 Q136,86 134,62 Q133,50 122,50" fill="none" stroke="#D99A91" stroke-width="6"/>
+    <path d="M110,94 Q136,86 134,62 Q133,50 122,50" fill="none" stroke="#C98C82" stroke-width="6"/>
     <!-- royal body -->
-    <path d="M36,104 Q32,54 72,42 Q112,42 109,84 Q106,120 72,124 Q38,124 36,104 Z" fill="#8D6E63" stroke="#2B1B12" stroke-width="5.5"/>
-    <ellipse cx="72" cy="94" rx="28" ry="21" fill="#C9B2A6"/>
+    <path d="M36,104 Q32,54 72,42 Q112,42 109,84 Q106,120 72,124 Q38,124 36,104 Z" fill="#6D4F43" stroke="#2B1B12" stroke-width="5.5"/>
+    <ellipse cx="72" cy="94" rx="28" ry="21" fill="#B99F92"/>
     <!-- ears -->
-    <circle cx="44" cy="40" r="17" fill="#8D6E63" stroke="#2B1B12" stroke-width="5"/>
-    <circle cx="44" cy="40" r="8.5" fill="#E8A0A0"/>
-    <circle cx="100" cy="34" r="18" fill="#8D6E63" stroke="#2B1B12" stroke-width="5"/>
-    <circle cx="100" cy="34" r="9" fill="#E8A0A0"/>
-    <!-- golden crown -->
-    <path d="M54,44 L54,18 L62,30 L72,12 L82,30 L90,18 L90,44 Z" fill="#FFC93C" stroke="#2B1B12" stroke-width="4"/>
-    <path d="M54,38 L90,38" stroke="#C97F12" stroke-width="2.5"/>
-    <circle cx="72" cy="32" r="3" fill="#D14B3D" stroke="#2B1B12" stroke-width="1.8"/>
+    <circle cx="44" cy="40" r="17" fill="#6D4F43" stroke="#2B1B12" stroke-width="5"/>
+    <circle cx="44" cy="40" r="8.5" fill="#D98C8C"/>
+    <circle cx="100" cy="34" r="18" fill="#6D4F43" stroke="#2B1B12" stroke-width="5"/>
+    <circle cx="100" cy="34" r="9" fill="#D98C8C"/>
+    <!-- Thai spired mongkut crown -->
+    <path d="M54,44 C56,31 61,29.5 65,31 C65,22 68,15 72,7 C76,15 79,22 79,31 C83,29.5 88,31 90,44 Z" fill="#FFC93C" stroke="#2B1B12" stroke-width="4"/>
+    <path d="M56,38 L88,38" stroke="#C97F12" stroke-width="2.5"/>
+    <circle cx="72" cy="26" r="3" fill="#D14B3D" stroke="#2B1B12" stroke-width="1.8"/>
+    <circle cx="72" cy="10" r="1.6" fill="#FFF6D8"/>
     <!-- majestic whiskers -->
     <path d="M50,74 Q28,66 12,70" fill="none" stroke="#2B1B12" stroke-width="3.2"/>
     <path d="M50,80 Q30,84 18,94" fill="none" stroke="#2B1B12" stroke-width="3.2"/>
@@ -55,12 +57,12 @@
     <!-- paws with giant rice grain -->
     <ellipse cx="73" cy="105" rx="8.5" ry="4.5" transform="rotate(-18 73 105)" fill="#F2C94C" stroke="#2B1B12" stroke-width="3.5"/>
     <path d="M68.5,103.3 L77.5,106.8" stroke="#2B1B12" stroke-width="1.8"/>
-    <circle cx="58" cy="108" r="9" fill="#8D6E63" stroke="#2B1B12" stroke-width="4.5"/>
-    <circle cx="89" cy="108" r="9" fill="#8D6E63" stroke="#2B1B12" stroke-width="4.5"/>
+    <circle cx="58" cy="108" r="9" fill="#6D4F43" stroke="#2B1B12" stroke-width="4.5"/>
+    <circle cx="89" cy="108" r="9" fill="#6D4F43" stroke="#2B1B12" stroke-width="4.5"/>
     <path d="M54,105.5 L55.5,108.5" stroke="#2B1B12" stroke-width="2"/>
     <path d="M85,105.5 L86.5,108.5" stroke="#2B1B12" stroke-width="2"/>
     <!-- feet -->
-    <ellipse cx="48" cy="122" rx="10" ry="6.5" fill="#C9B2A6" stroke="#2B1B12" stroke-width="4.5"/>
-    <ellipse cx="98" cy="122" rx="10" ry="6.5" fill="#C9B2A6" stroke="#2B1B12" stroke-width="4.5"/>
+    <ellipse cx="48" cy="122" rx="10" ry="6.5" fill="#B99F92" stroke="#2B1B12" stroke-width="4.5"/>
+    <ellipse cx="98" cy="122" rx="10" ry="6.5" fill="#B99F92" stroke="#2B1B12" stroke-width="4.5"/>
   </g>
 </svg>

@@ -3,9 +3,9 @@
     <!-- comb, swept back -->
     <path d="M53,20 Q50,7 57,11 Q57,3 63,8 Q64,2 68,8 Q73,6 69,16 Q65,21.5 53,20 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="3"/>
     <!-- striped tail swept straight back -->
-    <path d="M26,46 Q10,38 3,40 Q10,45 22,50 Q26,50.5 26,46 Z" fill="#22462A" stroke="#2B1B12" stroke-width="3.2"/>
-    <path d="M25,52 Q7,48 2,52 Q9,56 23,57 Q26,56 25,52 Z" fill="#17251A" stroke="#2B1B12" stroke-width="3.2"/>
-    <path d="M25,58 Q10,58 6,63 Q13,64 23,62 Q26,61 25,58 Z" fill="#22462A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M26,46 Q12,37 4,39 Q2,39.5 2.5,41 Q3.5,42.5 6,42.5 Q14,44.5 22,50 Q26,51 26,46 Z" fill="#22462A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M25,52 Q9,47 3,51 Q1.5,52 2.5,53.5 Q4,55 7,55 Q14,56.5 23,57 Q26,56 25,52 Z" fill="#17251A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M25,58 Q11,57 6,62 Q5,63.5 6.5,64.5 Q8.5,65 11,64.5 Q17,64.5 23,62 Q26,61 25,58 Z" fill="#22462A" stroke="#2B1B12" stroke-width="3.2"/>
     <path d="M12,40.5 L11,45.5" stroke="#101820" stroke-width="2.8"/>
     <path d="M17.5,42 L16.5,47" stroke="#101820" stroke-width="2.8"/>
     <path d="M7.5,42.5 L7,46" stroke="#101820" stroke-width="2.8"/>
@@ -34,6 +34,7 @@
     <path d="M29,46 Q26,52 29,58" stroke="#4C9B4C" stroke-width="1.6" fill="none"/>
     <!-- head sheen -->
     <path d="M52,20 Q58,17 64,19" stroke="#4C9B4C" stroke-width="2.2" fill="none" opacity="0.9"/>
+    <path d="M52,38 Q57,42.5 62,40" stroke="#1B4C21" stroke-width="2.2" fill="none"/>
     <!-- beak + wattle -->
     <path d="M69,22 L78,27 L69,31.5 Q71.5,27 69,22 Z" fill="#EDA614" stroke="#2B1B12" stroke-width="2.8"/>
     <path d="M70,27 L76,27" stroke="#2B1B12" stroke-width="1.4"/>

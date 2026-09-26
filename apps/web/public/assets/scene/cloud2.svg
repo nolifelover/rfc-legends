@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 70">
+  <!-- long stretched stratus, for wide parallax drift -->
+  <g fill="#FFFDF6" opacity="0.92">
+    <ellipse cx="130" cy="40" rx="95" ry="13"/>
+    <ellipse cx="88" cy="30" rx="40" ry="10"/>
+    <ellipse cx="180" cy="31" rx="45" ry="11"/>
+    <ellipse cx="38" cy="46" rx="24" ry="7" opacity="0.8"/>
+    <ellipse cx="226" cy="46" rx="22" ry="7" opacity="0.8"/>
+  </g>
+  <ellipse cx="130" cy="48" rx="70" ry="6" fill="#F7E8C8" opacity="0.8"/>
+</svg>

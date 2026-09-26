@@ -19,3 +19,10 @@ packs were used, traced or embedded.
 - **Format:** all files are plain vector SVG with honest viewBoxes, transparent
   backgrounds (except the full-bleed scene layers `sky/paddy/ground/hills`),
   no embedded raster data and no external references.
+- **Card rarity gem code:** the corner gems on framed cards encode rarity —
+  violet `#7C4DBE` = Monster Card (1001-1003), gold `#FFD766` = Legendary
+  trim (2001-2003), red `#D14B3D` = MVP (3001). Same code across the family.
+- **Cloud variants:** `scene/cloud1.svg` (puffy cumulus), `scene/cloud2.svg`
+  (long stratus for wide parallax drift), `scene/cloud3.svg` (tall cotton
+  cluster) are standalone transparent clouds for the engine lane; `sky.svg`
+  keeps its own embedded clouds for the static backdrop.

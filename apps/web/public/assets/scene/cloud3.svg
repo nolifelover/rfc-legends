@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 120">
+  <!-- tall cotton tower, distinctly vertical -->
+  <g fill="#FFFDF6" opacity="0.95">
+    <ellipse cx="75" cy="98" rx="42" ry="14"/>
+    <ellipse cx="50" cy="80" rx="22" ry="14"/>
+    <ellipse cx="86" cy="66" rx="26" ry="16"/>
+    <ellipse cx="62" cy="48" rx="20" ry="13"/>
+    <ellipse cx="90" cy="40" rx="15" ry="11"/>
+    <ellipse cx="72" cy="24" rx="13" ry="9"/>
+  </g>
+  <ellipse cx="75" cy="107" rx="34" ry="6" fill="#F7E8C8" opacity="0.85"/>
+</svg>
