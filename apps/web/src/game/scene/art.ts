@@ -446,6 +446,7 @@ const A = (key: string, url: string, w: number, h: number, draw: (g: Phaser.Game
   ({ key, url, w, h, draw, fb })
 
 export const TRAINER_KEY = 'art-trainer'
+export const TRAINER_WALK_KEY = 'art-trainer-walk'
 export const ROOSTER_KEYS: Record<string, string> = {
   kumarnjeen: 'art-rooster-kumarnjeen',
   kingkong: 'art-rooster-kingkong',
@@ -464,35 +465,41 @@ export const itemKey = (id: number): string => `art-item-${id}`
 export const CLOUD_KEYS = { puffy: 'art-cloud-1', stratus: 'art-cloud-2', tower: 'art-cloud-3' } as const
 
 export const ART: ArtSpec[] = [
-  A('art-sky', '/assets/scene/sky.svg', 960, 540, drawSky, [960, 540]),
-  A('art-hills', '/assets/scene/hills.svg', 960, 200, drawHills, [960, 200]),
-  A('art-paddy', '/assets/scene/paddy.svg', 960, 140, drawPaddy, [960, 140]),
-  A('art-ground', '/assets/scene/ground.svg', 960, 120, drawGround, [960, 120]),
+  // Backgrounds are rasterized at the 1920×1080 stage size (the canvas renders 1:1
+  // at 1080p, so 1× is crisp; fallbacks draw at the old 960 design units and upscale).
+  A('art-sky', '/assets/scene/sky.svg', 1920, 1080, drawSky, [960, 540]),
+  A('art-hills', '/assets/scene/hills.svg', 1920, 400, drawHills, [960, 200]),
+  A('art-paddy', '/assets/scene/paddy.svg', 1920, 280, drawPaddy, [960, 140]),
+  A('art-ground', '/assets/scene/ground.svg', 1920, 240, drawGround, [960, 120]),
 
   A(CLOUD_KEYS.puffy, '/assets/scene/cloud1.svg', 400, 180, drawCloudPuffy, [200, 90]),
   A(CLOUD_KEYS.stratus, '/assets/scene/cloud2.svg', 520, 140, drawCloudStratus, [260, 70]),
   A(CLOUD_KEYS.tower, '/assets/scene/cloud3.svg', 300, 240, drawCloudTower, [150, 120]),
 
-  A(TRAINER_KEY, '/assets/sprites/trainer.svg', 192, 192, drawTrainer, [96, 96]),
+  // Actors raster at about their 1080p display size (trainer 400, rooster 480,
+  // pests 230–290, boss 660) with a little headroom for squash/stretch.
+  A(TRAINER_KEY, '/assets/sprites/trainer.svg', 440, 440, drawTrainer, [96, 96]),
+  A(TRAINER_WALK_KEY, '/assets/sprites/trainer-walk.svg', 440, 440, drawTrainer, [96, 96]),
 
-  A(ROOSTER_KEYS.kumarnjeen, '/assets/sprites/rooster-kumarnjeen.svg', 176, 176, drawRooster(0xc96f3b, 0xa85628), [80, 80]),
-  A(ROOSTER_KEYS.kingkong, '/assets/sprites/rooster-kingkong.svg', 176, 176, drawRooster(0x8a5a33, 0x6d4426), [80, 80]),
-  A(ROOSTER_KEYS.chaokhunthong, '/assets/sprites/rooster-chaokhunthong.svg', 176, 176, drawRooster(0xe0a93e, 0xc48a28), [80, 80]),
-  A(ROOSTER_KEYS.thepbut, '/assets/sprites/rooster-thepbut.svg', 176, 176, drawRooster(0xede3cc, 0xcdbf9d), [80, 80]),
-  A(ROOSTER_KEYS.raptor, '/assets/sprites/rooster-raptor.svg', 176, 176, drawRooster(0x56624c, 0x3f4a39), [80, 80]),
+  A(ROOSTER_KEYS.kumarnjeen, '/assets/sprites/rooster-kumarnjeen.svg', 520, 520, drawRooster(0xc96f3b, 0xa85628), [80, 80]),
+  A(ROOSTER_KEYS.kingkong, '/assets/sprites/rooster-kingkong.svg', 520, 520, drawRooster(0x8a5a33, 0x6d4426), [80, 80]),
+  A(ROOSTER_KEYS.chaokhunthong, '/assets/sprites/rooster-chaokhunthong.svg', 520, 520, drawRooster(0xe0a93e, 0xc48a28), [80, 80]),
+  A(ROOSTER_KEYS.thepbut, '/assets/sprites/rooster-thepbut.svg', 520, 520, drawRooster(0xede3cc, 0xcdbf9d), [80, 80]),
+  A(ROOSTER_KEYS.raptor, '/assets/sprites/rooster-raptor.svg', 520, 520, drawRooster(0x56624c, 0x3f4a39), [80, 80]),
 
-  A(MONSTER_KEYS['nu-na'], '/assets/monsters/nu-na.svg', 176, 176, drawNuNa, [88, 88]),
-  A(MONSTER_KEYS['takka-taen-yak'], '/assets/monsters/takkaek-yak.svg', 176, 176, drawLocust, [88, 88]),
-  A(MONSTER_KEYS['pu-na'], '/assets/monsters/pu-na.svg', 160, 160, drawCrab, [80, 80]),
-  A(MONSTER_KEYS['raja-nu-na'], '/assets/monsters/racha-nu-na.svg', 288, 288, drawRaja, [144, 144]),
+  A(MONSTER_KEYS['nu-na'], '/assets/monsters/nu-na.svg', 320, 320, drawNuNa, [88, 88]),
+  A(MONSTER_KEYS['takka-taen-yak'], '/assets/monsters/takkaek-yak.svg', 320, 320, drawLocust, [88, 88]),
+  A(MONSTER_KEYS['pu-na'], '/assets/monsters/pu-na.svg', 280, 280, drawCrab, [80, 80]),
+  A(MONSTER_KEYS['raja-nu-na'], '/assets/monsters/racha-nu-na.svg', 720, 720, drawRaja, [144, 144]),
 
-  A('art-prop-hay-bale', '/assets/scene/props/hay-bale.svg', 128, 128, drawHayBale, [64, 64]),
-  A('art-prop-scarecrow', '/assets/scene/props/scarecrow.svg', 128, 128, drawScarecrow, [64, 64]),
-  A('art-prop-water-jar', '/assets/scene/props/water-jar.svg', 128, 128, drawJar, [64, 64]),
-  A('art-prop-fence', '/assets/scene/props/fence.svg', 128, 128, drawFence, [64, 64]),
-  A('art-prop-rice-bundle', '/assets/scene/props/rice-bundle.svg', 128, 128, drawRiceBundle, [64, 64]),
+  A('art-prop-hay-bale', '/assets/scene/props/hay-bale.svg', 200, 200, drawHayBale, [64, 64]),
+  A('art-prop-scarecrow', '/assets/scene/props/scarecrow.svg', 200, 200, drawScarecrow, [64, 64]),
+  A('art-prop-water-jar', '/assets/scene/props/water-jar.svg', 200, 200, drawJar, [64, 64]),
+  A('art-prop-fence', '/assets/scene/props/fence.svg', 200, 200, drawFence, [64, 64]),
+  A('art-prop-rice-bundle', '/assets/scene/props/rice-bundle.svg', 200, 200, drawRiceBundle, [64, 64]),
 
-  ...[101, 102, 103, 104, 1001, 1002, 1003, 2001, 2002, 2003, 3001].map((id) =>
+  // every non-mintable item can arrive through the inventory diff, so load all of them
+  ...[101, 102, 103, 104, 201, 202, 203, 204, 205, 206, 207, 208, 1001, 1002, 1003, 2001, 2002, 2003, 3001].map((id) =>
     A(itemKey(id), `/assets/items/${id}.svg`, 96, 96, drawItem(0xc9a24b), [48, 48]),
   ),
 ]
@@ -520,6 +527,11 @@ export const FX = {
   shimmer: 'fx-shimmer',
   card: 'fx-card',
   coin: 'fx-coin',
+  pillar: 'fx-pillar',
+  dust: 'fx-dust',
+  tuft: 'fx-tuft',
+  confetti: 'fx-confetti',
+  aura: 'fx-aura',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -587,15 +599,65 @@ export function makeFxTextures(scene: Phaser.Scene): void {
     g.strokeRoundedRect(1.5, 1.5, 53, 69, 7)
   })
 
-  // gold coin (kill-reward litter)
-  make(FX.coin, 28, 28, (g) => {
+  // gold coin (kill-reward sparkle)
+  make(FX.coin, 40, 40, (g) => {
     g.fillStyle(0xf2c14e)
-    g.fillCircle(14, 14, 12)
-    g.lineStyle(3, OUTLINE)
-    g.strokeCircle(14, 14, 12)
-    g.lineStyle(2, 0xb8860b)
-    g.strokeCircle(14, 14, 7.5)
+    g.fillCircle(20, 20, 17)
+    g.lineStyle(4, OUTLINE)
+    g.strokeCircle(20, 20, 17)
+    g.lineStyle(3, 0xb8860b)
+    g.strokeCircle(20, 20, 10.5)
     g.fillStyle(0xfff3c9, 0.9)
-    g.fillCircle(10, 10, 3)
+    g.fillCircle(14, 14, 4)
+  })
+
+  // light pillar: white column fading upward, drawn as stacked slices because
+  // generateTexture rasterizes through a canvas (no gradient alpha). Tint per use.
+  make(FX.pillar, 200, 1080, (g) => {
+    const slices = 36
+    for (let i = 0; i < slices; i++) {
+      const t = i / slices // 0 at the top
+      const a = 0.04 + 0.86 * t * t
+      const w = 200 * (0.55 + 0.45 * t)
+      g.fillStyle(0xffffff, a)
+      g.fillRect((200 - w) / 2, (1080 / slices) * i, w, 1080 / slices + 1)
+    }
+  })
+
+  // soft dust puff (tinted clay per use)
+  make(FX.dust, 48, 48, (g) => {
+    g.fillStyle(0xffffff, 0.35)
+    g.fillCircle(24, 24, 22)
+    g.fillStyle(0xffffff, 0.5)
+    g.fillCircle(20, 26, 14)
+    g.fillStyle(0xffffff, 0.6)
+    g.fillCircle(28, 22, 9)
+  })
+
+  // a single rice tuft that can sway (origin at its base)
+  make(FX.tuft, 56, 72, (g) => {
+    stroke(g, [[28, 70], [12, 22]], 0x55803c, 7)
+    stroke(g, [[28, 70], [28, 8]], 0x7cb342, 7)
+    stroke(g, [[28, 70], [44, 20]], 0x9ccc65, 7)
+    stroke(g, [[28, 70], [8, 40]], 0x7cb342, 6)
+    stroke(g, [[28, 70], [48, 42]], 0x55803c, 6)
+    g.fillStyle(0xe3b341)
+    for (const [x, y] of [[12, 22], [28, 8], [44, 20]] as const) g.fillEllipse(x, y, 10, 16)
+  })
+
+  // confetti square
+  make(FX.confetti, 16, 16, (g) => {
+    g.fillStyle(0xffffff)
+    g.fillRect(2, 2, 12, 12)
+  })
+
+  // flat aura ellipse under the rooster's feet
+  make(FX.aura, 240, 80, (g) => {
+    g.fillStyle(0xffffff, 0.18)
+    g.fillEllipse(120, 40, 236, 76)
+    g.fillStyle(0xffffff, 0.22)
+    g.fillEllipse(120, 40, 180, 56)
+    g.lineStyle(4, 0xffffff, 0.75)
+    g.strokeEllipse(120, 40, 220, 70)
   })
 }

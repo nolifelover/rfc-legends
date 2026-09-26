@@ -1,90 +1,73 @@
-// Canvas overlays that live above the actors: nameplates, monster mini HP
-// bars, the MVP boss bar and the small top chips (map banner, kill counter).
-// The bottom HUD is React-only — nothing here draws near the bottom edge.
+// Canvas overlays that live above the actors: nameplates, HP bars under the feet,
+// the MVP boss bar (with a ghost-HP trail), the top chips (map, KILL, Harvest),
+// the boss countdown pips and the warning ribbon. All sizes are on the 1920×1080
+// frame. The bottom HUD is React-only — nothing here draws near the bottom edge.
 
 import Phaser from 'phaser'
+import { INK, TYPE, fmt } from './juice'
 
-const PLATE_BG = 0x3d2817
+const PLATE_BG = INK.plate
 const PLATE_ALPHA = 0.86
 
 export interface LabelStyle {
   fontSize?: number
   color?: string
-  sub?: string
-  subColor?: string
   fontFamily?: string
+  depth?: number
 }
 
-/**
- * Dark pill with one bold line (and an optional smaller second line), e.g.
- * "Verify Guy · Lv.5" over the trainer or "Field Rat (หนูนา)" over a monster.
- */
+/** Dark pill with one bold line, e.g. "Verify Guy · Lv.5" or "Field Rat · Lv.2". */
 export class Nameplate {
   readonly container: Phaser.GameObjects.Container
 
-  private readonly scene: Phaser.Scene
   private readonly bg: Phaser.GameObjects.Graphics
   private readonly main: Phaser.GameObjects.Text
-  private readonly sub: Phaser.GameObjects.Text
-  private subGiven = false
 
   constructor(scene: Phaser.Scene, main: string, style: LabelStyle = {}) {
-    this.scene = scene
-    this.container = scene.add.container(0, 0).setDepth(50)
+    this.container = scene.add.container(0, 0).setDepth(style.depth ?? 50)
     this.bg = scene.add.graphics()
     this.main = scene.add
       .text(0, 0, main, {
         fontFamily: style.fontFamily ?? 'Arial',
-        fontSize: `${style.fontSize ?? 15}px`,
+        fontSize: `${style.fontSize ?? 26}px`,
         fontStyle: 'bold',
         color: style.color ?? '#fff8ec',
       })
-      .setResolution(2)
       .setOrigin(0.5, 0)
-    this.sub = scene.add
-      .text(0, 0, style.sub ?? '', {
-        fontFamily: style.fontFamily ?? 'Arial',
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: style.subColor ?? '#f3dfb2',
-      })
-      .setResolution(2)
-      .setOrigin(0.5, 0)
-    this.subGiven = !!style.sub
-    this.container.add([this.bg, this.main, this.sub])
+    this.container.add([this.bg, this.main])
     this.redraw()
     this.container.setVisible(false)
   }
 
   setMain(text: string): void {
+    if (this.main.text === text) return
     this.main.setText(text)
     this.redraw()
   }
 
-  setSub(text: string): void {
-    this.sub.setText(text)
-    this.subGiven = text.length > 0
-    this.redraw()
+  get width(): number {
+    return this.main.width + 30
   }
 
   private redraw(): void {
-    const w = Math.max(this.main.width, this.subGiven ? this.sub.width : 0) + 18
-    const mainH = this.main.height
-    const subH = this.subGiven ? this.sub.height + 1 : 0
-    const h = mainH + subH + 8
-    this.main.setPosition(0, 4)
-    this.sub.setPosition(0, 4 + mainH + 1)
+    const w = this.main.width + 30
+    const h = this.main.height + 12
+    this.main.setPosition(0, 6)
     this.bg.clear()
     this.bg.fillStyle(PLATE_BG, PLATE_ALPHA)
-    this.bg.fillRoundedRect(-w / 2, 0, w, h, 7)
-    this.bg.lineStyle(1.5, 0xf3dfb2, 0.35)
-    this.bg.strokeRoundedRect(-w / 2, 0, w, h, 7)
+    this.bg.fillRoundedRect(-w / 2, 0, w, h, 10)
+    this.bg.lineStyle(2, 0xf3dfb2, 0.35)
+    this.bg.strokeRoundedRect(-w / 2, 0, w, h, 10)
   }
 
-  /** Attach above a sprite of the given on-screen height, centered on x. */
-  placeAbove(x: number, topY: number): void {
+  /** Top-centre anchor. */
+  place(x: number, topY: number): void {
     this.container.setPosition(Math.round(x), Math.round(topY))
     this.container.setVisible(true)
+  }
+
+  setVisible(v: boolean): void {
+    this.container.setVisible(v)
   }
 
   destroy(): void {
@@ -92,46 +75,51 @@ export class Nameplate {
   }
 }
 
-/** Current-HP bar floating over a monster (exact numbers live on the boss bar). */
-export class MiniHpBar {
+/** Current-HP bar drawn under a pest's feet (160×12 by default). */
+export class HpBar {
   readonly container: Phaser.GameObjects.Container
 
-  private readonly bg: Phaser.GameObjects.Graphics
+  private readonly g: Phaser.GameObjects.Graphics
   private readonly width: number
-  private readonly h = 14
+  private readonly h: number
+  private pct = 1
 
-  constructor(scene: Phaser.Scene, width = 58) {
-    this.container = scene.add.container(0, 0).setDepth(50)
-    this.bg = scene.add.graphics()
+  constructor(scene: Phaser.Scene, width = 160, height = 12, depth = 50) {
+    this.container = scene.add.container(0, 0).setDepth(depth)
+    this.g = scene.add.graphics()
     this.width = width
-    this.container.add(this.bg)
-    this.drawFill(1)
+    this.h = height
+    this.container.add(this.g)
+    this.draw()
     this.container.setVisible(false)
   }
 
-  private drawFill(pct: number): void {
-    const { bg, width, h } = this
-    const w = Math.max(4, (width - 4) * Phaser.Math.Clamp(pct, 0, 1))
-    bg.clear()
-    bg.fillStyle(0x2b1b12, 0.92)
-    bg.fillRoundedRect(-width / 2, -h / 2, width, h, 6)
-    bg.fillStyle(0x57301f)
-    bg.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, width - 4, h - 4, 4)
-    bg.fillStyle(pct > 0.5 ? 0x62b04e : pct > 0.25 ? 0xe0a93e : 0xe2574c, 1)
-    bg.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, w, h - 4, 4)
-    bg.fillStyle(0xffffff, 0.22)
-    bg.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, w, (h - 4) / 2.4, 4)
-    bg.lineStyle(1.5, 0xfff8ec, 0.4)
-    bg.strokeRoundedRect(-width / 2, -h / 2, width, h, 6)
+  private draw(): void {
+    const { g, width, h, pct } = this
+    const w = Math.max(3, (width - 4) * Phaser.Math.Clamp(pct, 0, 1))
+    g.clear()
+    g.fillStyle(INK.outline, 0.92)
+    g.fillRoundedRect(-width / 2, -h / 2, width, h, h / 2)
+    g.fillStyle(0x57301f)
+    g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, width - 4, h - 4, (h - 4) / 2)
+    g.fillStyle(pct > 0.5 ? 0x62b04e : pct > 0.25 ? 0xe0a93e : 0xe2574c, 1)
+    g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, w, h - 4, (h - 4) / 2)
+    g.fillStyle(0xffffff, 0.22)
+    g.fillRoundedRect(-width / 2 + 2, -h / 2 + 2, w, (h - 4) / 2.4, (h - 4) / 2.4)
   }
 
   setPct(pct: number): void {
-    this.drawFill(pct)
+    this.pct = pct
+    this.draw()
   }
 
-  placeAbove(x: number, topY: number): void {
-    this.container.setPosition(Math.round(x), Math.round(topY))
+  place(x: number, y: number): void {
+    this.container.setPosition(Math.round(x), Math.round(y))
     this.container.setVisible(true)
+  }
+
+  setVisible(v: boolean): void {
+    this.container.setVisible(v)
   }
 
   destroy(): void {
@@ -139,7 +127,7 @@ export class MiniHpBar {
   }
 }
 
-/** Ornate top-center boss bar: gold-trimmed, big name + current/max HP text. */
+/** Ornate top-centre boss bar: gold trim, name, compact cur/max and a pale ghost trail. */
 export class BossBar {
   readonly container: Phaser.GameObjects.Container
 
@@ -147,67 +135,87 @@ export class BossBar {
   private readonly g: Phaser.GameObjects.Graphics
   private readonly nameText: Phaser.GameObjects.Text
   private readonly hpText: Phaser.GameObjects.Text
-  private readonly width = 460
-  private readonly height = 40
+  private readonly width = 920
+  private readonly height = 64
+  private readonly restY = 70
+  private pct = 1
+  private ghost = 1
+  private ghostTween: Phaser.Tweens.Tween | null = null
   private shown = false
 
   constructor(scene: Phaser.Scene, name: string, fontFamily: string) {
     this.scene = scene
-    this.container = scene.add.container(480, -70).setDepth(60).setAlpha(0)
+    this.container = scene.add.container(960, -120).setDepth(60).setAlpha(0)
     this.g = scene.add.graphics()
     this.nameText = scene.add
       .text(0, 0, name, {
         fontFamily,
-        fontSize: '17px',
+        fontSize: `${TYPE.bossName}px`,
         fontStyle: 'bold',
         color: '#ffe9a8',
-        stroke: '#2b1b12',
-        strokeThickness: 4,
+        stroke: INK.stroke,
+        strokeThickness: 6,
       })
-      .setResolution(2)
       .setOrigin(0, 0.5)
     this.hpText = scene.add
       .text(0, 0, '', {
         fontFamily,
-        fontSize: '17px',
+        fontSize: `${TYPE.bossName}px`,
         fontStyle: 'bold',
         color: '#ffffff',
-        stroke: '#2b1b12',
-        strokeThickness: 4,
+        stroke: INK.stroke,
+        strokeThickness: 6,
       })
-      .setResolution(2)
       .setOrigin(1, 0.5)
     this.container.add([this.g, this.nameText, this.hpText])
-    this.draw(1)
+    this.draw()
   }
 
-  private draw(pct: number): void {
+  private draw(): void {
     const w = this.width
     const h = this.height
     const x = -w / 2
     const g = this.g
     g.clear()
-    // outer gold frame + dark plate
     g.fillStyle(0xd9a441)
-    g.fillRoundedRect(x - 4, -h / 2 - 4, w + 8, h + 8, 10)
-    g.fillStyle(0x2b1b12, 0.94)
-    g.fillRoundedRect(x, -h / 2, w, h, 8)
-    // HP fill
-    const inner = w - 12
+    g.fillRoundedRect(x - 6, -h / 2 - 6, w + 12, h + 12, 16)
+    g.fillStyle(INK.outline, 0.94)
+    g.fillRoundedRect(x, -h / 2, w, h, 12)
+    const inner = w - 20
+    const innerH = h - 20
     g.fillStyle(0x57301f)
-    g.fillRoundedRect(x + 6, -h / 2 + 6, inner, h - 12, 5)
-    const fillW = Math.max(4, inner * Phaser.Math.Clamp(pct, 0, 1))
+    g.fillRoundedRect(x + 10, -h / 2 + 10, inner, innerH, 8)
+    // ghost trail (what was just lost), then the live red fill on top
+    const ghostW = Math.max(4, inner * Phaser.Math.Clamp(this.ghost, 0, 1))
+    g.fillStyle(0xffe9a8, 0.9)
+    g.fillRoundedRect(x + 10, -h / 2 + 10, ghostW, innerH, 8)
+    const fillW = Math.max(4, inner * Phaser.Math.Clamp(this.pct, 0, 1))
     g.fillStyle(0xe2574c, 1)
-    g.fillRoundedRect(x + 6, -h / 2 + 6, fillW, h - 12, 5)
+    g.fillRoundedRect(x + 10, -h / 2 + 10, fillW, innerH, 8)
     g.fillStyle(0xffffff, 0.18)
-    g.fillRoundedRect(x + 6, -h / 2 + 6, fillW, (h - 12) / 2.6, 5)
-    this.nameText.setPosition(x + 12, -2)
-    this.hpText.setPosition(x + w - 12, -2)
+    g.fillRoundedRect(x + 10, -h / 2 + 10, fillW, innerH / 2.6, 8)
+    this.nameText.setPosition(x + 22, -1)
+    this.hpText.setPosition(x + w - 22, -1)
   }
 
   setHp(cur: number, max: number): void {
-    this.hpText.setText(`${Math.max(0, Math.round(cur))} / ${Math.round(max)}`)
-    this.draw(max > 0 ? cur / max : 0)
+    this.hpText.setText(`${fmt(Math.max(0, cur))} / ${fmt(max)}`)
+    this.pct = max > 0 ? cur / max : 0
+    if (this.ghost < this.pct) this.ghost = this.pct
+    this.draw()
+    // the pale segment lingers 400ms, then catches up
+    this.ghostTween?.remove()
+    this.ghostTween = this.scene.tweens.addCounter({
+      from: this.ghost,
+      to: this.pct,
+      delay: 400,
+      duration: 350,
+      ease: 'Cubic.easeOut',
+      onUpdate: (tw) => {
+        this.ghost = tw.getValue() ?? this.pct
+        this.draw()
+      },
+    })
   }
 
   show(reduced: boolean): void {
@@ -215,50 +223,49 @@ export class BossBar {
     this.shown = true
     this.scene.tweens.killTweensOf(this.container)
     this.container.setAlpha(1)
-    this.container.y = -70
+    this.container.y = -120
     if (reduced) {
-      this.container.y = 34
+      this.container.y = this.restY
       return
     }
-    this.scene.tweens.add({
-      targets: this.container,
-      y: 34,
-      duration: 480,
-      ease: 'Back.easeOut',
-    })
+    this.scene.tweens.add({ targets: this.container, y: this.restY, duration: 480, ease: 'Back.easeOut' })
   }
 
   hide(): void {
     if (!this.shown) return
     this.shown = false
-    const tween = this.scene.tweens.add({
+    this.ghostTween?.remove()
+    this.scene.tweens.add({
       targets: this.container,
-      y: -70,
+      y: -120,
       alpha: 0,
       duration: 320,
       ease: 'Cubic.easeIn',
+      onComplete: () => this.container.destroy(),
     })
-    this.scene.time.delayedCall(tween.duration ?? 320, () => this.container.destroy())
   }
 
   destroy(): void {
+    this.ghostTween?.remove()
     this.container.destroy()
   }
 }
 
-/** Small dark chip with bold text — map banner (top-left) and KILL counter (top-right). */
+/** Small dark chip with bold text (and an optional 44px icon on the left). */
 export class Chip {
   readonly container: Phaser.GameObjects.Container
 
   private readonly scene: Phaser.Scene
   private readonly g: Phaser.GameObjects.Graphics
   private readonly text: Phaser.GameObjects.Text
-  private accent = 0xd9a441
+  private readonly icon: Phaser.GameObjects.Image | null
+  private readonly accent: number
+  private readonly iconSize = 44
 
   constructor(
     scene: Phaser.Scene,
     label: string,
-    opts: { fontSize?: number; accent?: number; fontFamily?: string } = {},
+    opts: { fontSize?: number; accent?: number; fontFamily?: string; iconKey?: string } = {},
   ) {
     this.scene = scene
     this.accent = opts.accent ?? 0xd9a441
@@ -267,24 +274,38 @@ export class Chip {
     this.text = scene.add
       .text(0, 0, label, {
         fontFamily: opts.fontFamily ?? 'Arial',
-        fontSize: `${opts.fontSize ?? 15}px`,
+        fontSize: `${opts.fontSize ?? TYPE.chip}px`,
         fontStyle: 'bold',
         color: '#fff8ec',
       })
-      .setResolution(2)
       .setOrigin(0.5, 0.5)
-    this.container.add([this.g, this.text])
+    this.icon = opts.iconKey ? scene.add.image(0, 0, opts.iconKey).setDisplaySize(this.iconSize, this.iconSize) : null
+    this.container.add(this.icon ? [this.g, this.icon, this.text] : [this.g, this.text])
     this.redraw()
   }
 
   setLabel(label: string): void {
+    if (this.text.text === label) return
     this.text.setText(label)
     this.redraw()
   }
 
   /** Current pill width — lets callers pin the chip to a screen corner. */
   get boxWidth(): number {
-    return this.text.width + 26
+    return this.text.width + 40 + (this.icon ? this.iconSize + 8 : 0)
+  }
+
+  get boxHeight(): number {
+    return Math.max(this.text.height, this.icon ? this.iconSize : 0) + 16
+  }
+
+  /** Centre of the icon (or the chip) in world space — the loot flight target. */
+  get anchor(): { x: number; y: number } {
+    const w = this.boxWidth
+    return {
+      x: this.container.x - w / 2 + 20 + (this.icon ? this.iconSize / 2 : w / 2 - 20),
+      y: this.container.y,
+    }
   }
 
   pop(): void {
@@ -294,16 +315,149 @@ export class Chip {
   }
 
   private redraw(): void {
-    const w = this.text.width + 26
-    const h = this.text.height + 12
+    const w = this.boxWidth
+    const h = this.boxHeight
     this.g.clear()
     this.g.fillStyle(PLATE_BG, PLATE_ALPHA)
     this.g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
-    this.g.lineStyle(2, this.accent, 0.9)
+    this.g.lineStyle(3, this.accent, 0.9)
     this.g.strokeRoundedRect(-w / 2, -h / 2, w, h, h / 2)
+    if (this.icon) {
+      this.icon.setPosition(-w / 2 + 20 + this.iconSize / 2, 0)
+      this.text.setPosition(this.iconSize / 2 + 4, 0)
+    } else {
+      this.text.setPosition(0, 0)
+    }
   }
 
   destroy(): void {
     this.container.destroy()
+  }
+}
+
+/** Countdown pips toward the next boss (8 in demo mode); the last one pulses red. */
+export class BossPips {
+  readonly container: Phaser.GameObjects.Container
+
+  private readonly scene: Phaser.Scene
+  private readonly g: Phaser.GameObjects.Graphics
+  private readonly label: Phaser.GameObjects.Text
+  private total: number
+  private filled = 0
+  private pulse: Phaser.Tweens.Tween | null = null
+
+  constructor(scene: Phaser.Scene, total: number, fontFamily: string) {
+    this.scene = scene
+    this.total = total
+    this.container = scene.add.container(0, 0).setDepth(54)
+    this.g = scene.add.graphics()
+    this.label = scene.add
+      .text(0, 0, '', {
+        fontFamily,
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#ffe9a8',
+        stroke: INK.stroke,
+        strokeThickness: 4,
+      })
+      .setOrigin(1, 0.5)
+    this.container.add([this.g, this.label])
+    this.draw()
+  }
+
+  /** Right-aligned at (rightX, y). */
+  place(rightX: number, y: number): void {
+    this.container.setPosition(rightX, y)
+  }
+
+  set(filled: number, total: number): void {
+    this.total = total
+    this.filled = Phaser.Math.Clamp(filled, 0, total)
+    this.draw()
+    const oneLeft = this.filled === this.total - 1
+    if (oneLeft && !this.pulse) {
+      this.pulse = this.scene.tweens.add({
+        targets: this.container,
+        alpha: { from: 1, to: 0.45 },
+        duration: 400,
+        yoyo: true,
+        repeat: -1,
+      })
+    } else if (!oneLeft && this.pulse) {
+      this.pulse.remove()
+      this.pulse = null
+      this.container.setAlpha(1)
+    }
+  }
+
+  private draw(): void {
+    const g = this.g
+    g.clear()
+    const pipW = 22
+    const gap = 8
+    const n = Math.min(this.total, 12)
+    const totalW = n * pipW + (n - 1) * gap
+    const oneLeft = this.filled === this.total - 1
+    for (let i = 0; i < n; i++) {
+      const x = -totalW + i * (pipW + gap)
+      const on = i < this.filled
+      g.fillStyle(on ? (oneLeft ? 0xe2574c : 0xffd24a) : 0x57301f, on ? 1 : 0.85)
+      g.fillRoundedRect(x, -7, pipW, 14, 5)
+      g.lineStyle(2, INK.outline, 0.9)
+      g.strokeRoundedRect(x, -7, pipW, 14, 5)
+    }
+    this.label.setText(this.total > 12 ? `BOSS ${this.filled}/${this.total}` : 'BOSS')
+    this.label.setPosition(-totalW - 12, 0)
+  }
+
+  destroy(): void {
+    this.pulse?.remove()
+    this.container.destroy()
+  }
+}
+
+/** Full-width warning ribbon ("BOSS APPROACHING") that slides in from the left. */
+export class Ribbon {
+  readonly container: Phaser.GameObjects.Container
+  private readonly scene: Phaser.Scene
+
+  constructor(scene: Phaser.Scene, text: string, fontFamily: string, y = 250) {
+    this.scene = scene
+    this.container = scene.add.container(-1200, y).setDepth(66)
+    const g = scene.add.graphics()
+    g.fillStyle(INK.warn, 0.94)
+    g.fillRect(-560, -44, 1120, 88)
+    g.fillStyle(0xffe9a8, 0.9)
+    g.fillRect(-560, -44, 1120, 5)
+    g.fillRect(-560, 39, 1120, 5)
+    const t = scene.add
+      .text(0, 0, text, {
+        fontFamily,
+        fontSize: '52px',
+        fontStyle: 'bold',
+        color: '#fff3d6',
+        stroke: INK.stroke,
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5, 0.5)
+    this.container.add([g, t])
+  }
+
+  /** Slide in (300ms Back), hold, slide out right, then destroy. */
+  play(holdMs: number, reduced: boolean): void {
+    if (reduced) {
+      this.container.setX(960)
+      this.scene.time.delayedCall(holdMs + 300, () => this.container.destroy())
+      return
+    }
+    this.scene.tweens.chain({
+      targets: this.container,
+      tweens: [
+        { x: 960, duration: 300, ease: 'Back.easeOut' },
+        { x: 960, duration: holdMs },
+        { x: 3200, duration: 320, ease: 'Cubic.easeIn' },
+      ],
+      onComplete: () => this.container.destroy(),
+    })
   }
 }

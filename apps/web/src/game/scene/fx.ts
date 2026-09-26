@@ -1,379 +1,576 @@
-// Combat juice: damage numbers (the rubric's loudest signal), slash arcs,
-// impact stars, cartoon poofs, level-up bursts and the rare-drop meteor.
-// Everything no-ops gracefully under prefers-reduced-motion (no shake,
-// roughly half the particles).
+// Combat juice on the 1920×1080 frame: hit-stop, pooled damage numbers, the slash
+// arc, afterimages, particle bursts, loot arcs/vacuums, light pillars, text slams
+// and the level-up / jackpot ceremonies. Everything is pooled or created once
+// (emitters, the slash Graphics, 16 Text objects, 3 afterimages) so the hot path
+// never allocates. Under prefers-reduced-motion: no shake, no slow-mo, half the
+// particles, hit-stop at half duration with no jitter.
 
 import Phaser from 'phaser'
-import { FX, OUTLINE, RARITY_COLORS } from './art'
+import { FX, RARITY_COLORS } from './art'
+import { INK, JUICE, TYPE, fmt } from './juice'
 import type { Rarity } from '../types'
 
-const GOLD = 0xffd24a
+export type DamageKind = 'trainer' | 'crit' | 'rooster'
 
-type DamageKind = 'trainer' | 'crit' | 'rooster'
+type Emitter = Phaser.GameObjects.Particles.ParticleEmitter
+
+const TEXT_POOL = 16
+const AFTERIMAGES = 3
 
 export class Fx {
   private readonly scene: Phaser.Scene
   private readonly font: string
-  private readonly reduced: boolean
-  private activeDamage = 0
+  readonly reduced: boolean
+
+  private readonly pool: Phaser.GameObjects.Text[] = []
+  private poolIdx = 0
+  private readonly ghosts: Phaser.GameObjects.Image[] = []
+  private ghostIdx = 0
+  private readonly slashG: Phaser.GameObjects.Graphics
+  private slashTween: Phaser.Tweens.Tween | null = null
+  private readonly dimRect: Phaser.GameObjects.Rectangle
+
+  private readonly stars: Emitter
+  private readonly dust: Emitter
+  private readonly coins: Emitter
+  private readonly confetti: Emitter
+  private readonly fountain: Emitter
+
+  // time control (hit-stop + slow-mo). Restored by window timers, never by
+  // delayedCall — those would be frozen too.
+  private freezeEnd = 0
+  private slowEnd = 0
+  private slowScale = 1
+  private freezeTimer = 0
+  private slowTimer = 0
 
   constructor(scene: Phaser.Scene, font: string, reduced: boolean) {
     this.scene = scene
     this.font = font
     this.reduced = reduced
-  }
 
-  // --- damage numbers: big, solid, gold; stack 2-3 over the monster's head ---
-
-  damage(x: number, y: number, value: number, kind: DamageKind): void {
-    const crit = kind === 'crit'
-    const size = crit ? 60 : kind === 'trainer' ? 48 : 38
-    const color = crit ? '#ffd24a' : kind === 'trainer' ? '#ffcc4d' : '#ffffff'
-    const tint = crit ? 0xffd24a : kind === 'trainer' ? 0xffcc4d : 0xffffff
-    const label = crit ? `CRIT! ${value.toLocaleString('en-US')}` : value.toLocaleString('en-US')
-    const stack = this.activeDamage % 3
-    this.activeDamage += 1
-    const spawnX = x + Phaser.Math.Between(-14, 14)
-    const spawnY = y - stack * (size + 6)
-
-    // soft glow halo so the number reads as an effect, not text, in stills
-    const halo = this.scene.add
-      .image(spawnX, spawnY - size * 0.5, FX.glow)
-      .setTint(tint)
-      .setAlpha(crit ? 0.5 : 0.32)
-      .setDepth(51)
-      .setScale(crit ? 1.5 : 1.2)
-
-    const text = this.scene.add
-      .text(spawnX, spawnY, label, {
-        fontFamily: this.font,
-        fontSize: `${size}px`,
-        fontStyle: 'bold',
-        color,
-        stroke: '#2b1b12',
-        strokeThickness: crit ? 6 : 4,
-      })
-      .setResolution(2)
-      .setOrigin(0.5, 1)
-      .setDepth(52) // above nameplates — Idleon numbers float over everything
-      .setScale(1.25)
-    text.setShadow(1, 2, '#1b100a', 3, false, true)
-
-    // solid pop → hold → quick fade: readable in ANY frame of its life
-    const rise = (targets: Phaser.GameObjects.GameObject, hold: number) =>
-      this.scene.tweens.chain({
-        targets,
-        tweens: [
-          { y: spawnY - 10, duration: hold, ease: 'Sine.easeOut' },
-          { y: spawnY - 26, alpha: 0, duration: 300, ease: 'Sine.easeIn' },
-        ],
-      })
-    this.scene.tweens.add({ targets: text, scale: 1, duration: 140, ease: 'Back.easeOut' })
-    rise(text, 620)
-    this.scene.tweens.add({ targets: halo, scale: halo.scale * 0.75, duration: 140 })
-    rise(halo, 680)
-
-    this.scene.time.delayedCall(1150, () => {
-      this.activeDamage = Math.max(0, this.activeDamage - 1)
-      text.destroy()
-      halo.destroy()
-    })
-
-    if (crit) {
-      this.burst(x, y - 30, 0xffe28a, this.reduced ? 2 : 3, 40)
-      this.shake(0.0016, 90)
+    for (let i = 0; i < TEXT_POOL; i++) {
+      const t = scene.add
+        .text(0, 0, '', { fontFamily: font, fontSize: '48px', fontStyle: 'bold', color: '#ffffff' })
+        .setOrigin(0.5, 1)
+        .setDepth(52)
+        .setVisible(false)
+      this.pool.push(t)
     }
-  }
-
-  /** Gold coins arc out of a killed monster and litter the ground. */
-  coinBurst(x: number, y: number, groundY: number): void {
-    const n = this.reduced ? 3 : Phaser.Math.Between(6, 8)
-    for (let i = 0; i < n; i++) {
-      const dir = i % 2 === 0 ? -1 : 1
-      const dx = dir * Phaser.Math.Between(26, 92)
-      const coin = this.scene.add
-        .image(x, y, FX.coin)
-        .setDepth(15)
-        .setScale(0.9)
-        .setAngle(Phaser.Math.Between(-30, 30))
-      this.scene.tweens.chain({
-        targets: coin,
-        tweens: [
-          { y: y - Phaser.Math.Between(26, 54), x: x + dx * 0.55, duration: 200, ease: 'Quad.easeOut' },
-          { y: groundY, x: x + dx, duration: 280, ease: 'Quad.easeIn' },
-        ],
-        onComplete: () => {
-          coin.setAngle(Phaser.Math.Between(-16, 16))
-          this.scene.time.delayedCall(2200, () => {
-            this.scene.tweens.add({
-              targets: coin,
-              alpha: 0,
-              y: coin.y - 6,
-              duration: 500,
-              onComplete: () => coin.destroy(),
-            })
-          })
-        },
-      })
+    for (let i = 0; i < AFTERIMAGES; i++) {
+      this.ghosts.push(scene.add.image(0, 0, FX.glow).setOrigin(0.5, 1).setDepth(24).setVisible(false))
     }
-  }
+    this.slashG = scene.add.graphics().setDepth(36)
+    this.dimRect = scene.add.rectangle(960, 540, 1920, 1080, INK.dim, 1).setDepth(45).setAlpha(0)
 
-  /** Gold "+N EXP" drift on a kill — solid long enough to survive any still. */
-  expPop(x: number, y: number, exp: number): void {
-    const text = this.scene.add
-      .text(x + Phaser.Math.Between(-14, 14), y, `+${exp.toLocaleString('en-US')} EXP`, {
-        fontFamily: this.font,
-        fontSize: '21px',
-        fontStyle: 'bold',
-        color: '#ffe28a',
-        stroke: '#2b1b12',
-        strokeThickness: 5,
+    this.stars = scene.add
+      .particles(0, 0, FX.star, {
+        speed: { min: 180, max: 420 },
+        angle: { min: 200, max: 340 },
+        gravityY: 700,
+        lifespan: { min: 420, max: 640 },
+        scale: { start: 0.9, end: 0 },
+        alpha: { start: 1, end: 0 },
+        rotate: { min: -180, max: 180 },
+        emitting: false,
       })
-      .setResolution(2)
-      .setOrigin(0.5, 1)
-      .setDepth(53)
-    this.scene.tweens.add({ targets: text, y: y - 26, duration: 900, ease: 'Sine.easeOut' })
-    this.scene.tweens.add({
-      targets: text,
-      y: y - 40,
-      alpha: 0,
-      delay: 700,
-      duration: 450,
-      ease: 'Sine.easeIn',
-      onComplete: () => text.destroy(),
-    })
+      .setDepth(41)
+    this.dust = scene.add
+      .particles(0, 0, FX.dust, {
+        speed: { min: 80, max: 220 },
+        angle: { min: 200, max: 340 },
+        gravityY: 260,
+        lifespan: { min: 320, max: 520 },
+        scale: { start: 0.7, end: 1.6 },
+        alpha: { start: 0.75, end: 0 },
+        tint: 0xcaa273,
+        emitting: false,
+      })
+      .setDepth(19)
+    this.coins = scene.add
+      .particles(0, 0, FX.coin, {
+        speed: { min: 260, max: 520 },
+        angle: { min: 225, max: 315 },
+        gravityY: 1200,
+        lifespan: 760,
+        scale: { start: 1, end: 0.5 },
+        alpha: { start: 1, end: 0 },
+        rotate: { min: -90, max: 90 },
+        emitting: false,
+      })
+      .setDepth(31)
+    this.confetti = scene.add
+      .particles(0, 0, FX.confetti, {
+        speed: { min: 300, max: 800 },
+        angle: { min: 200, max: 340 },
+        gravityY: 900,
+        lifespan: { min: 900, max: 1400 },
+        scale: { start: 1.6, end: 0.4 },
+        alpha: { start: 1, end: 0 },
+        rotate: { min: 0, max: 720 },
+        tint: Object.values(RARITY_COLORS),
+        emitting: false,
+      })
+      .setDepth(47)
+    this.fountain = scene.add
+      .particles(0, 0, FX.star, {
+        speed: { min: 420, max: 760 },
+        angle: { min: 250, max: 290 },
+        gravityY: 600,
+        lifespan: { min: 900, max: 1300 },
+        scale: { start: 1.1, end: 0 },
+        alpha: { start: 1, end: 0 },
+        tint: [INK.gold, INK.goldSoft, 0xffffff],
+        emitting: false,
+      })
+      .setDepth(44)
   }
 
-  /** Tiny dirt specks kicked up at a sprite's feet when it takes a hit. */
-  dustKick(x: number, y: number): void {
+  /** Clear timers and restore time — call from the scene's shutdown. */
+  dispose(): void {
+    window.clearTimeout(this.freezeTimer)
+    window.clearTimeout(this.slowTimer)
+    this.freezeEnd = 0
+    this.slowEnd = 0
+    this.applyTimeScale()
+  }
+
+  private count(n: number): number {
+    return this.reduced ? Math.max(1, Math.round(n / 2)) : n
+  }
+
+  // ------------------------------------------------------------ time control
+
+  private applyTimeScale(): void {
+    const now = performance.now()
+    const s = now < this.freezeEnd ? JUICE.FREEZE_SCALE : now < this.slowEnd ? this.slowScale : 1
+    this.scene.tweens.timeScale = s
+    this.scene.time.timeScale = s
+  }
+
+  /** Near-freeze for `ms` (half under reduced motion). Overlapping stops merge. */
+  hitStop(ms: number): void {
+    const dur = this.reduced ? ms / 2 : ms
+    const now = performance.now()
+    if (now + dur <= this.freezeEnd) return
+    this.freezeEnd = now + dur
+    this.applyTimeScale()
+    window.clearTimeout(this.freezeTimer)
+    this.freezeTimer = window.setTimeout(() => this.applyTimeScale(), dur + 1)
+  }
+
+  get frozen(): boolean {
+    return performance.now() < this.freezeEnd
+  }
+
+  /** Slow the world (tweens + clock) for `ms`. Skipped under reduced motion. */
+  slowMo(scale: number, ms: number): void {
     if (this.reduced) return
-    for (let i = 0; i < 2; i++) {
-      const speck = this.scene.add
-        .image(x + Phaser.Math.Between(-14, 14), y, FX.glow)
-        .setTint(0xcaa273)
-        .setAlpha(0.75)
-        .setDepth(15)
-        .setScale(0.22)
-      this.scene.tweens.add({
-        targets: speck,
-        y: y - Phaser.Math.Between(10, 22),
-        x: speck.x + Phaser.Math.Between(-12, 12),
-        alpha: 0,
-        duration: Phaser.Math.Between(260, 380),
-        ease: 'Quad.easeOut',
-        onComplete: () => speck.destroy(),
-      })
-    }
+    const now = performance.now()
+    this.slowScale = scale
+    this.slowEnd = now + ms
+    this.applyTimeScale()
+    window.clearTimeout(this.slowTimer)
+    this.slowTimer = window.setTimeout(() => this.applyTimeScale(), ms + 1)
   }
 
-  // --- small radial sparkle burst ---
+  // ----------------------------------------------------------- text objects
 
-  burst(x: number, y: number, tint: number, count: number, radius: number): void {
-    const n = this.reduced ? Math.max(2, Math.round(count / 2)) : count
-    for (let i = 0; i < n; i++) {
-      const a = (Math.PI * 2 * i) / n + Math.random() * 0.5
-      const star = this.scene.add
-        .image(x, y, FX.star)
-        .setTint(tint)
-        .setDepth(41)
-        .setScale(0.28 + Math.random() * 0.2)
-      this.scene.tweens.add({
-        targets: star,
-        x: x + Math.cos(a) * radius,
-        y: y + Math.sin(a) * radius - 8,
-        alpha: 0,
-        angle: Phaser.Math.Between(-120, 120),
-        duration: Phaser.Math.Between(380, 560),
-        ease: 'Cubic.easeOut',
-        onComplete: () => star.destroy(),
-      })
-    }
+  private acquire(): Phaser.GameObjects.Text {
+    const t = this.pool[this.poolIdx++ % this.pool.length]
+    this.scene.tweens.killTweensOf(t)
+    t.setVisible(true).setAlpha(1).setScale(1).setAngle(0)
+    return t
   }
 
-  // --- trainer slash + impact star ---
-
-  slash(x: number, y: number): void {
-    const g = this.scene.add.graphics().setDepth(35)
-    g.lineStyle(5, 0xffffff, 0.95)
-    g.beginPath()
-    g.arc(x, y, 30, Phaser.Math.DegToRad(-65), Phaser.Math.DegToRad(65))
-    g.strokePath()
-    g.lineStyle(2, 0xfff3d6, 0.9)
-    g.beginPath()
-    g.arc(x, y, 22, Phaser.Math.DegToRad(-55), Phaser.Math.DegToRad(55))
-    g.strokePath()
+  /**
+   * Damage number 20px above the head: drifts 80–120px up with ±40px x jitter and
+   * fades over 700ms. White for the trainer, orange-red for the rooster, gold and
+   * 1.6× for crits (1.8 → 1.0 pop plus a 4px shake).
+   */
+  damage(x: number, topY: number, value: number, kind: DamageKind): void {
+    const crit = kind === 'crit'
+    const size = crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster
+    const color = crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
+    const t = this.acquire()
+    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 8 : 6 })
+    t.setText(fmt(value))
+    const sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
+    const sy = topY - JUICE.DMG_ABOVE_HEAD
+    t.setPosition(sx, sy).setDepth(52)
+    const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
+    if (crit) {
+      t.setScale(1.8)
+      this.scene.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
+      this.shake(JUICE.SHAKE_CRIT)
+      this.stars.setParticleTint(INK.gold)
+      this.stars.explode(this.count(6), x, sy - size * 0.5)
+    } else {
+      t.setScale(1.25)
+      this.scene.tweens.add({ targets: t, scale: 1, duration: 120, ease: 'Back.easeOut' })
+    }
     this.scene.tweens.add({
-      targets: g,
+      targets: t,
+      y: sy - rise,
+      duration: JUICE.DMG_MS,
+      ease: 'Sine.easeOut',
+    })
+    this.scene.tweens.add({
+      targets: t,
       alpha: 0,
-      duration: 130,
-      onComplete: () => g.destroy(),
+      delay: JUICE.DMG_MS * 0.55,
+      duration: JUICE.DMG_MS * 0.45,
+      ease: 'Sine.easeIn',
+      onComplete: () => t.setVisible(false),
+    })
+  }
+
+  /** "+44K EXP" in cyan — the real per-kill amount, compact-formatted. */
+  expPop(x: number, y: number, exp: number): void {
+    const t = this.acquire()
+    t.setStyle({ fontSize: `${TYPE.exp}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 6 })
+    t.setText(`+${fmt(exp)} EXP`)
+    t.setPosition(x, y).setDepth(53).setScale(0.7)
+    this.scene.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
+    this.scene.tweens.add({ targets: t, y: y - 120, duration: 900, ease: 'Sine.easeOut' })
+    this.scene.tweens.add({
+      targets: t,
+      alpha: 0,
+      delay: 650,
+      duration: 350,
+      ease: 'Sine.easeIn',
+      onComplete: () => t.setVisible(false),
+    })
+  }
+
+  /** Small floating label, e.g. "+1 Paddy Rice" next to the Harvest chip. */
+  tick(x: number, y: number, label: string, color: string, size = TYPE.lootTick): void {
+    const t = this.acquire()
+    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: 5 })
+    t.setText(label)
+    t.setPosition(x, y).setDepth(56).setScale(0.8)
+    this.scene.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' })
+    this.scene.tweens.add({ targets: t, y: y - 44, duration: 640, ease: 'Sine.easeOut' })
+    this.scene.tweens.add({
+      targets: t,
+      alpha: 0,
+      delay: 380,
+      duration: 260,
+      onComplete: () => t.setVisible(false),
+    })
+  }
+
+  /** Big centred text slam: scale 2.4 → 1 (Back), hold, then fade while rising. */
+  slam(text: string, sub?: string, y = 320, color: string = INK.cream): void {
+    const t = this.acquire()
+    t.setStyle({ fontSize: `${TYPE.slam}px`, color, stroke: INK.stroke, strokeThickness: 12 })
+    t.setText(text)
+    t.setPosition(960, y).setDepth(70).setScale(this.reduced ? 1 : 2.4)
+    this.scene.tweens.chain({
+      targets: t,
+      tweens: [
+        { scale: 1, duration: 280, ease: 'Back.easeOut' },
+        { y: y - 6, duration: 700 },
+        { alpha: 0, y: y - 30, duration: 320 },
+      ],
+      onComplete: () => t.setVisible(false),
+    })
+    if (sub) {
+      const s = this.acquire()
+      s.setStyle({ fontSize: `${TYPE.slamSub}px`, color: '#fff8ec', stroke: INK.stroke, strokeThickness: 7 })
+      s.setText(sub)
+      s.setPosition(960, y + 58).setDepth(70).setAlpha(0)
+      this.scene.tweens.chain({
+        targets: s,
+        tweens: [
+          { alpha: 1, duration: 200, delay: 180 },
+          { y: y + 52, duration: 620 },
+          { alpha: 0, y: y + 30, duration: 320 },
+        ],
+        onComplete: () => s.setVisible(false),
+      })
+    }
+  }
+
+  // ---------------------------------------------------------------- impacts
+
+  /**
+   * Orange slash arc (~120°, growing to r≈190) with a white core. One reusable
+   * Graphics object; a new swing restarts it. `dir` 1 = swings to the right.
+   */
+  slash(x: number, y: number, dir = 1, scale = 1): void {
+    this.slashTween?.remove()
+    const g = this.slashG
+    const half = Phaser.Math.DegToRad(JUICE.SLASH_ARC_DEG / 2)
+    const a0 = dir > 0 ? -half : Math.PI - half
+    const a1 = dir > 0 ? half : Math.PI + half
+    this.slashTween = this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: JUICE.SLASH_MS,
+      ease: 'Cubic.easeOut',
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 1
+        const r = Phaser.Math.Linear(JUICE.SLASH_R0, JUICE.SLASH_R1, t) * scale
+        const lw = Phaser.Math.Linear(22, 4, t) * scale
+        const alpha = 1 - t * 0.85
+        g.clear()
+        g.lineStyle(lw + 10, 0xff8a2a, alpha * 0.9)
+        g.beginPath()
+        g.arc(x, y, r, a0, a1)
+        g.strokePath()
+        g.lineStyle(lw, 0xffffff, alpha)
+        g.beginPath()
+        g.arc(x, y, r, a0, a1)
+        g.strokePath()
+        g.lineStyle(Math.max(2, lw * 0.4), 0xffd24a, alpha * 0.8)
+        g.beginPath()
+        g.arc(x, y, r * 0.72, a0 * 0.8, a1 * 0.8)
+        g.strokePath()
+      },
+      onComplete: () => g.clear(),
     })
   }
 
   impactStar(x: number, y: number, scale = 1, tint = 0xfff3d6): void {
-    const star = this.scene.add.image(x, y, FX.star).setTint(tint).setDepth(36).setScale(0.3 * scale)
+    const star = this.scene.add.image(x, y, FX.star).setTint(tint).setDepth(37).setScale(0.6 * scale)
     this.scene.tweens.chain({
       targets: star,
       tweens: [
-        { scale: 1.05 * scale, angle: 90, duration: 110, ease: 'Back.easeOut' },
-        { alpha: 0, scale: 0.7 * scale, duration: 130 },
+        { scale: 2.2 * scale, angle: 90, duration: 110, ease: 'Back.easeOut' },
+        { alpha: 0, scale: 1.4 * scale, duration: 130 },
       ],
       onComplete: () => star.destroy(),
     })
   }
 
-  // --- cartoon death poof (no blood, ever) ---
+  /** Dirt specks kicked up at the feet. */
+  dustKick(x: number, y: number, n = 4): void {
+    if (this.reduced && n > 2) n = 2
+    this.dust.explode(n, x, y)
+  }
 
-  poof(x: number, y: number, big = false): void {
-    const cloud = this.scene.add.image(x, y, FX.poof).setDepth(34).setScale(big ? 1 : 0.4).setAlpha(0.95)
+  /** Three fading copies of a sprite along its dash path. */
+  afterimages(key: string, x0: number, y0: number, x1: number, y1: number, displayH: number, flipX = false): void {
+    if (this.reduced) return
+    const alphas = [0.5, 0.35, 0.2]
+    for (let i = 0; i < AFTERIMAGES; i++) {
+      const g = this.ghosts[this.ghostIdx++ % AFTERIMAGES]
+      this.scene.tweens.killTweensOf(g)
+      const t = (i + 1) / (AFTERIMAGES + 1)
+      g.setTexture(key)
+        .setDisplaySize(displayH, displayH)
+        .setPosition(Phaser.Math.Linear(x0, x1, 1 - t), Phaser.Math.Linear(y0, y1, 1 - t))
+        .setTint(0xfff3d6)
+        .setAlpha(alphas[i])
+        .setFlipX(flipX)
+        .setVisible(true)
+      this.scene.tweens.add({ targets: g, alpha: 0, duration: 160, delay: i * 30, onComplete: () => g.setVisible(false) })
+    }
+  }
+
+  // ------------------------------------------------------------------ death
+
+  /** Cartoon poof (no blood, ever) plus a star burst. */
+  poof(x: number, y: number, size = 1): void {
+    const cloud = this.scene.add.image(x, y, FX.poof).setDepth(34).setScale(0.8 * size).setAlpha(0.95)
     this.scene.tweens.add({
       targets: cloud,
-      scale: big ? 2.8 : 1.35,
+      scale: 3.2 * size,
       alpha: 0,
-      duration: big ? 460 : 330,
+      duration: 330,
       ease: 'Cubic.easeOut',
       onComplete: () => cloud.destroy(),
     })
-    this.burst(x, y - 6, 0xffe9a8, big ? (this.reduced ? 3 : 5) : this.reduced ? 2 : 3, big ? 60 : 38)
+    this.stars.setParticleTint(INK.goldSoft)
+    this.stars.explode(this.count(10), x, y)
   }
 
-  // --- level-up: golden ring + radial particles + bounce-in banner ---
-
-  levelUp(x: number, y: number, label: string): void {
-    const ring = this.scene.add.image(x, y, FX.ring).setTint(GOLD).setDepth(42).setScale(0.2).setAlpha(0.95)
+  /** Flattened ground ring expanding from the feet (`size` ≈ final diameter px). */
+  groundRing(x: number, y: number, tint: number = INK.gold, size = 520, ms = 320): void {
+    const ring = this.scene.add.image(x, y, FX.ring).setTint(tint).setDepth(18).setScale(0.3, 0.3 * 0.35).setAlpha(0.95)
+    const s = size / 72
     this.scene.tweens.add({
       targets: ring,
-      scale: 2.6,
+      scaleX: s,
+      scaleY: s * 0.35,
       alpha: 0,
-      duration: 520,
+      duration: ms,
       ease: 'Cubic.easeOut',
       onComplete: () => ring.destroy(),
     })
-    this.burst(x, y, GOLD, this.reduced ? 6 : 12, 78)
-
-    const banner = this.scene.add
-      .text(x, y - 96, label, {
-        fontFamily: this.font,
-        fontSize: '27px',
-        fontStyle: 'bold',
-        color: '#ffd24a',
-        stroke: '#2b1b12',
-        strokeThickness: 6,
-      })
-      .setResolution(2)
-      .setOrigin(0.5, 1)
-      .setDepth(43)
-      .setAlpha(0)
-      .setScale(0.6)
-    this.scene.tweens.chain({
-      targets: banner,
-      tweens: [
-        { alpha: 1, scale: 1, duration: 240, ease: 'Back.easeOut' },
-        { y: banner.y - 6, duration: 1200 },
-        { alpha: 0, y: banner.y - 20, duration: 320 },
-      ],
-      onComplete: () => banner.destroy(),
-    })
-    this.shake(0.0018, 120)
   }
 
-  /** Quiet sparkle drift on the trainer for exp ticks (no banner, no shake). */
-  sparkleTrail(x: number, y: number): void {
-    const n = this.reduced ? 1 : 2
-    for (let i = 0; i < n; i++) {
-      const star = this.scene.add
-        .image(x + Phaser.Math.Between(-22, 22), y + Phaser.Math.Between(-8, 8), FX.star)
-        .setTint(0xffe9a8)
-        .setDepth(33)
-        .setScale(0.16 + Math.random() * 0.14)
-      this.scene.tweens.add({
-        targets: star,
-        y: star.y - Phaser.Math.Between(22, 40),
-        alpha: 0,
-        duration: Phaser.Math.Between(600, 900),
-        ease: 'Sine.easeOut',
-        onComplete: () => star.destroy(),
-      })
-    }
+  /** Decorative coin sparkle on a kill (no currency exists; it is glitter). */
+  coinSparkle(x: number, y: number, n = 3): void {
+    this.coins.explode(this.count(n), x, y)
   }
 
-  // --- rare drop: golden meteor streak from the sky ---
+  // ------------------------------------------------------------------- loot
 
-  meteor(targetX: number, targetY: number, onLand: () => void): void {
-    const startX = targetX + 250
-    const startY = -40
-    const head = this.scene.add.image(startX, startY, FX.glow).setTint(GOLD).setDepth(44).setScale(1.5)
-    const trail = this.scene.add.graphics().setDepth(43)
-    const pts: Array<{ x: number; y: number }> = []
-    const drawTrail = (): void => {
-      trail.clear()
-      for (let i = 0; i < pts.length - 1; i++) {
-        trail.lineStyle(10 * (1 - i / pts.length) + 2, GOLD, 0.55 * (1 - i / pts.length))
-        trail.beginPath()
-        trail.moveTo(pts[i].x, pts[i].y)
-        trail.lineTo(pts[i + 1].x, pts[i + 1].y)
-        trail.strokePath()
-      }
-    }
-    const dur = this.reduced ? 380 : 620
-    this.scene.tweens.add({
-      targets: head,
-      x: targetX,
-      y: targetY,
-      duration: dur,
-      ease: 'Sine.easeIn',
-      onUpdate: () => {
-        pts.push({ x: head.x, y: head.y })
-        if (pts.length > 7) pts.shift()
-        if (!this.reduced) drawTrail()
+  /**
+   * Icon arcs out of the body to a rest point, waits (the "admire" pause), then
+   * curves into the Harvest chip. Caller creates the icon and handles arrival.
+   */
+  lootArc(icon: Phaser.GameObjects.Image, x1: number, y1: number, onRest: () => void): void {
+    const x0 = icon.x
+    const y0 = icon.y
+    const apex = Math.min(y0, y1) - Phaser.Math.Between(JUICE.LOOT_ARC_MIN, JUICE.LOOT_ARC_MAX) * 0.6
+    const curve = new Phaser.Curves.QuadraticBezier(
+      new Phaser.Math.Vector2(x0, y0),
+      new Phaser.Math.Vector2((x0 + x1) / 2, apex),
+      new Phaser.Math.Vector2(x1, y1),
+    )
+    const spin = Phaser.Math.Between(-200, 200)
+    this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: JUICE.LOOT_ARC_MS,
+      ease: 'Sine.easeOut',
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 1
+        const p = curve.getPoint(t)
+        icon.setPosition(p.x, p.y).setAngle(spin * (1 - t))
       },
       onComplete: () => {
-        head.destroy()
-        trail.destroy()
-        this.impactStar(targetX, targetY, 1.5, GOLD)
-        this.burst(targetX, targetY, GOLD, this.reduced ? 3 : 6, 52)
-        onLand()
+        icon.setAngle(0)
+        // a tiny settle bounce so the rest reads as a landing
+        this.scene.tweens.add({ targets: icon, y: y1 - 14, duration: 110, yoyo: true, ease: 'Quad.easeOut' })
+        onRest()
       },
     })
   }
 
-  /** Framed, glow-pulsing loot icon that lands and stays for a while (rare drops). */
-  framedDrop(x: number, y: number, itemKey: string, rarity: Rarity): void {
-    const color = RARITY_COLORS[rarity] ?? GOLD
-    const container = this.scene.add.container(x, y).setDepth(38).setScale(0)
-    const glow = this.scene.add.image(0, 0, FX.glow).setTint(color).setAlpha(0.55).setScale(1.5)
-    const frame = this.scene.add.image(0, 0, FX.card).setScale(0.62)
-    const icon = this.scene.add.image(0, 2, itemKey).setDisplaySize(26, 26)
-    container.add([glow, frame, icon])
-    this.scene.tweens.chain({
-      targets: container,
-      tweens: [
-        { scale: 1.25, angle: 8, duration: 200, ease: 'Back.easeOut' },
-        { scale: 1, angle: 0, duration: 220, ease: 'Sine.easeOut' },
-      ],
+  /** Fly an object along a curve into (tx, ty), shrinking to 0.45, then call back. */
+  vacuum(obj: Phaser.GameObjects.Image, tx: number, ty: number, onArrive: () => void, delay = 0): void {
+    const x0 = obj.x
+    const y0 = obj.y
+    const curve = new Phaser.Curves.QuadraticBezier(
+      new Phaser.Math.Vector2(x0, y0),
+      new Phaser.Math.Vector2((x0 + tx) / 2 + Phaser.Math.Between(-120, 120), Math.min(y0, ty) - 200),
+      new Phaser.Math.Vector2(tx, ty),
+    )
+    const s0 = obj.scaleX
+    this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: JUICE.LOOT_FLY,
+      delay,
+      ease: 'Cubic.easeIn',
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 1
+        const p = curve.getPoint(t)
+        obj.setPosition(p.x, p.y).setScale(Phaser.Math.Linear(s0, s0 * 0.45, t))
+      },
+      onComplete: () => {
+        obj.destroy()
+        onArrive()
+      },
     })
-    if (!this.reduced) {
-      this.scene.tweens.add({
-        targets: glow,
-        alpha: { from: 0.55, to: 0.2 },
-        scale: { from: 1.5, to: 1.9 },
-        duration: 760,
-        yoyo: true,
-        repeat: 11,
-        onComplete: () => container.destroy(),
-      })
-    } else {
-      this.scene.time.delayedCall(9000, () => {
-        this.scene.tweens.add({ targets: container, alpha: 0, duration: 500, onComplete: () => container.destroy() })
-      })
-    }
   }
 
-  shake(intensity: number, duration: number): void {
+  // ------------------------------------------------------------- ceremonies
+
+  /** Vertical light pillar rising from the feet (tinted). Additive on WebGL. */
+  pillar(x: number, feetY: number, tint: number = INK.gold, height = 1080, ms: number = JUICE.PILLAR_MS): void {
+    const p = this.scene.add
+      .image(x, feetY + 10, FX.pillar)
+      .setOrigin(0.5, 1)
+      .setTint(tint)
+      .setDepth(40)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDisplaySize(200, height)
+      .setAlpha(0)
+    const sx = p.scaleX
+    p.setScale(sx * 0.2, p.scaleY)
+    this.scene.tweens.chain({
+      targets: p,
+      tweens: [
+        { scaleX: sx, alpha: 0.85, duration: ms * 0.3, ease: 'Cubic.easeOut' },
+        { scaleX: sx * 1.1, alpha: 0.7, duration: ms * 0.35 },
+        { scaleX: 0, alpha: 0, duration: ms * 0.35, ease: 'Cubic.easeIn' },
+      ],
+      onComplete: () => p.destroy(),
+    })
+  }
+
+  /** Dim overlay (depth 45) to `alpha` over `ms`. */
+  dim(alpha: number, ms: number): void {
+    this.scene.tweens.killTweensOf(this.dimRect)
+    this.scene.tweens.add({ targets: this.dimRect, alpha, duration: ms })
+  }
+
+  flash(ms = 250, r = 255, g = 240, b = 200): void {
+    this.scene.cameras.main.flash(this.reduced ? ms / 2 : ms, r, g, b)
+  }
+
+  shake(spec: readonly [number, number]): void {
     if (this.reduced) return
-    this.scene.cameras.main.shake(duration, intensity)
+    this.scene.cameras.main.shake(spec[0], spec[1])
+  }
+
+  zoomPunch(zoom = 1.06, inMs = 180, outMs = 420): void {
+    if (this.reduced) return
+    const cam = this.scene.cameras.main
+    cam.zoomTo(zoom, inMs, 'Sine.easeOut', true, (_c: Phaser.Cameras.Scene2D.Camera, progress: number) => {
+      if (progress >= 1) cam.zoomTo(1, outMs, 'Sine.easeInOut', true)
+    })
+  }
+
+  confettiBurst(x: number, y: number, n = 40): void {
+    this.confetti.explode(this.count(n), x, y)
+  }
+
+  /**
+   * Level-up ceremony at the actor's feet: slow-mo, a gold light pillar, two
+   * staggered rings, an upward gold fountain and the "LEVEL UP!" slam.
+   */
+  levelUp(x: number, feetY: number, label: string, sub?: string, small = false): void {
+    this.slowMo(JUICE.LEVELUP_SLOWMO, JUICE.LEVELUP_SLOWMO_MS)
+    this.pillar(x, feetY, INK.gold, small ? 760 : 1080)
+    this.groundRing(x, feetY, INK.gold, small ? 420 : 560)
+    this.scene.time.delayedCall(120, () => this.groundRing(x, feetY, INK.goldSoft, small ? 520 : 720, 420))
+    this.fountain.explode(this.count(small ? 16 : 24), x, feetY - 40)
+    this.slam(label, sub, small ? 380 : 320, INK.crit)
+    this.shake(JUICE.SHAKE_KILL)
+    this.zoomPunch(1.06, 300, 420)
+  }
+
+  /**
+   * Mintable-drop jackpot at the kill spot: ~1s slow-mo, dim, a pillar in the
+   * rarity colour, a ground ring and the item rising in a glow. No card flip, no
+   * pack — the React toast carries the words.
+   */
+  jackpot(x: number, feetY: number, itemKey: string, rarity: Rarity): void {
+    const color: number = RARITY_COLORS[rarity] ?? INK.gold
+    this.slowMo(JUICE.JACKPOT_SLOWMO, JUICE.JACKPOT_SLOWMO_MS)
+    this.dim(0.5, 200)
+    this.pillar(x, feetY, color, 1080, 1400)
+    this.groundRing(x, feetY, color, 640, 420)
+    this.flash(200, 255, 245, 220)
+    this.shake(JUICE.SHAKE_KILL)
+
+    const glow = this.scene.add.image(x, feetY - 120, FX.glow).setTint(color).setAlpha(0).setDepth(46).setScale(3)
+    const icon = this.scene.add.image(x, feetY - 120, itemKey).setDepth(47)
+    const s = 140 / icon.width // display the item at 140px
+    icon.setScale(0)
+    this.scene.tweens.add({ targets: glow, alpha: 0.8, scale: 6, duration: 420, ease: 'Cubic.easeOut' })
+    this.scene.tweens.add({ targets: glow, angle: 360, duration: 4000, repeat: -1 })
+    this.scene.tweens.chain({
+      targets: icon,
+      tweens: [
+        { scale: s, y: feetY - 360, duration: 480, ease: 'Back.easeOut' },
+        { y: feetY - 380, duration: 900, ease: 'Sine.easeInOut' },
+        { scale: s * 0.3, y: feetY - 520, alpha: 0, duration: 420, ease: 'Cubic.easeIn' },
+      ],
+      onComplete: () => {
+        icon.destroy()
+        glow.destroy()
+      },
+    })
+    this.scene.tweens.add({ targets: glow, alpha: 0, delay: 1400, duration: 420 })
+    this.stars.setParticleTint(color)
+    this.stars.explode(this.count(14), x, feetY - 200)
+    this.scene.time.delayedCall(1000, () => this.dim(0, 300))
   }
 }
-
-/** Convenience for damage-number colors elsewhere. */
-export const DAMAGE_TINT = { crit: GOLD, normal: 0xffffff, rooster: 0xfff3d6, outline: OUTLINE } as const
