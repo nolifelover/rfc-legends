@@ -15,7 +15,7 @@ import { rareItemsAbi, rareMarketAbi } from "@/lib/contracts/abis";
 import type { Deployment } from "@/lib/worldid/deployment";
 import type { Hex } from "@/lib/worldid/types";
 import { txUrl } from "@/lib/worldid/client";
-import { describeError, itemInfo, runTx } from "./chain";
+import { describeError, itemInfo, runTx, useSingleFlight, useTxBlocked, WRONG_CHAIN_LABEL } from "./chain";
 import { ItemArt, ItemTitle } from "./ItemArt";
 import { RejectionCard } from "./RejectionCard";
 
@@ -117,13 +117,23 @@ function ListForm({
 }) {
   const config = useConfig();
   const queryClient = useQueryClient();
+  const flight = useSingleFlight();
+  const blocked = useTxBlocked();
   const [price, setPrice] = useState("10");
+  const [qty, setQty] = useState("1");
   const [step, setStep] = useState<string | null>(null);
   const [rejection, setRejection] = useState<{ code?: string; reason: string } | null>(null);
   const info = itemInfo(itemId);
 
-  async function list() {
+  const list = () => flight.run(doList);
+
+  async function doList() {
     setRejection(null);
+    const amount = Number(qty);
+    if (!Number.isInteger(amount) || amount < 1 || BigInt(amount) > balance) {
+      setRejection({ reason: `Quantity must be a whole number from 1 to ${balance.toString()}.` });
+      return;
+    }
     let unitPrice: bigint;
     try {
       unitPrice = parseUnits(price, 6);
@@ -139,7 +149,7 @@ function ListForm({
       address: deployment.RareMarket,
       abi: rareMarketAbi,
       functionName: "list",
-      args: [BigInt(itemId), BigInt(1), unitPrice],
+      args: [BigInt(itemId), BigInt(amount), unitPrice],
     } as const;
 
     try {
@@ -171,13 +181,7 @@ function ListForm({
       void queryClient.invalidateQueries({ queryKey: ["market-balances"] });
     } catch (err) {
       const { message, errorName } = describeError(err);
-      setRejection({
-        code: errorName,
-        reason:
-          errorName === "NotVerifiedHuman"
-            ? `${message}: RareMarket only lets World ID verified humans sell. Verify with World ID first.`
-            : message,
-      });
+      setRejection({ code: errorName, reason: message });
     } finally {
       setStep(null);
     }
@@ -215,14 +219,26 @@ function ListForm({
             onChange={(e) => setPrice(e.target.value)}
             className="w-full bg-transparent font-bold text-bark outline-none"
           />
-          <span className="text-xs text-bark-soft">USDC</span>
+          <span className="text-xs text-bark-soft">USDC each</span>
         </label>
+        {balance > BigInt(1) ? (
+          <label className="flex w-24 items-center gap-1 rounded-full border-2 border-clay/20 bg-cream px-3 py-1.5 text-sm">
+            <span className="text-xs text-bark-soft">×</span>
+            <span className="sr-only">Quantity to list</span>
+            <input
+              inputMode="numeric"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              className="w-full bg-transparent font-bold text-bark outline-none"
+            />
+          </label>
+        ) : null}
         <button
           type="submit"
-          disabled={!!step}
-          className="rounded-full bg-clay px-4 py-2 text-sm font-bold text-cream hover:bg-clay-deep disabled:cursor-wait disabled:opacity-60"
+          disabled={!!step || blocked}
+          className="rounded-full bg-clay px-4 py-2 text-sm font-bold text-cream hover:bg-clay-deep disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {step ?? (verified === false ? "Verify with World ID to list" : "List 1")}
+          {step ?? (blocked ? WRONG_CHAIN_LABEL : verified === false ? "Verify with World ID to list" : `List ${qty || "1"}`)}
         </button>
       </form>
     </li>
