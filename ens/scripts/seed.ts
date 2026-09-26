@@ -30,7 +30,7 @@ type Bird = {
 const roosterRwaAbi = parseAbi([
   'function mintRooster(address to, (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName) r, uint64 nonce, bytes farmSig) returns (uint256 tokenId)',
   'function setEnsName(uint256 tokenId, string ensName)',
-  'function roosters(uint256 tokenId) view returns (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName)',
+  'function getRooster(uint256 tokenId) view returns ((string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName))',
   'function farmSigner() view returns (address)',
   'event RoosterMinted(uint256 indexed tokenId, address indexed to, uint8 sireLine, uint256 sireTokenId, uint256 damTokenId, uint64 hatchedAt, string ringId, string ensName)',
   'function ringToken(bytes32 ringHash) view returns (uint256 tokenId)',
