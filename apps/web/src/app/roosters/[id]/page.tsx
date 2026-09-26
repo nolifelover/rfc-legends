@@ -50,9 +50,26 @@ export default async function RoosterDetailPage({ params }: Props) {
   if (!name) notFound();
 
   const client = ensClient();
-  const recs = await getRoosterRecords(client, name);
+  // every onchain read is soft-failed: an RPC outage degrades the page (banner + retry),
+  // it must never blank or 500 — the list page follows the same contract
+  const recs = await getRoosterRecords(client, name).catch(() => null);
+  if (!recs) {
+    return (
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+        <nav className="mb-4 text-sm">
+          <Link href="/roosters" className="text-bark-soft underline">← All roosters</Link>
+        </nav>
+        <h1 className="text-2xl font-bold text-bark">Rooster</h1>
+        <div className="mt-4 rounded-xl border border-amber-400/50 bg-amber-50 p-4 text-sm text-amber-900">
+          Live ENSv2 read failed for <span className="font-mono text-xs">{name}</span> — the public
+          Sepolia RPC may be rate-limiting. This page renders only from live onchain reads.
+        </div>
+        <a href={`/roosters/${encodeURIComponent(name)}`} className="mt-4 inline-block rounded-full border border-clay/30 bg-cream px-4 py-2 text-sm font-medium text-bark hover:border-clay">Retry ↻</a>
+      </main>
+    );
+  }
   const { sire } = pedigreeOf(name);
-  const offspring = await listOffspring(client, name);
+  const offspring = await listOffspring(client, name).catch(() => [] as string[]);
 
   // dam + attestation + tx proof, all read live from the contracts
   let dam: string | null = null;
@@ -218,7 +235,13 @@ export default async function RoosterDetailPage({ params }: Props) {
               </div>
             ) : (
               <div className="space-y-2 text-sm text-bark-soft">
-                <p>ENS-side records (writable only by the farm key):</p>
+                {tokenId !== null ? (
+                  <p className="rounded-lg bg-sky-50 px-3 py-2 text-sky-900">
+                    ⏳ No farm attestation yet — Ninlanee Farm has not signed a health record for
+                    this bird. Records below are its ENS name data (writable only by the farm key).
+                  </p>
+                ) : null}
+                <p>ENS-side records:</p>
                 <div className="flex gap-3 text-center font-mono text-xs">
                   <div className="flex-1 rounded-xl bg-sun-soft p-3"><span className="block text-xl font-bold text-bark">{recs.weight ?? "—"}</span> g weight</div>
                   <div className="flex-1 rounded-xl bg-emerald-100 p-3"><span className="block text-xl font-bold text-emerald-800">{recs.health ?? "—"}</span> health</div>
