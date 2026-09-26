@@ -313,7 +313,7 @@ export function GameClient() {
   // part of the game, not a web page (critic r6 #1)
   return (
     <div
-      className="flex min-h-[100dvh] flex-1 flex-col"
+      className="flex min-h-0 flex-1 flex-col"
       style={{
         background: `
           radial-gradient(120% 90% at 50% 108%, rgba(85,128,60,0.28) 0%, rgba(85,128,60,0) 46%),

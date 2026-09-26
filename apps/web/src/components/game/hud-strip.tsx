@@ -257,7 +257,7 @@ export function HudStrip({
               </p>
             </div>
           </div>
-          <div className="min-w-0" data-mobscape="roosterexp">
+          <div className="min-w-0 lg:min-w-[180px]" data-mobscape="roosterexp">
             <Bar
               label="EXP"
               value={player.rooster.exp}
