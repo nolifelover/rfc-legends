@@ -994,8 +994,8 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private dropBoss(def: MonsterDef, pendingKill: boolean): void {
-    const boss = this.makePest(def, 1, 0, L.ENGAGE_FRONT_X + 60, true)
-    boss.baseX = L.ENGAGE_FRONT_X + 60
+    const boss = this.makePest(def, 1, 0, L.ENGAGE_FRONT_X + 220, true)
+    boss.baseX = L.ENGAGE_FRONT_X + 220
     boss.container.setPosition(boss.baseX, -520)
     this.tweens.add({
       targets: boss.container,
@@ -1236,6 +1236,7 @@ export class IdleScene extends Phaser.Scene {
   // -------------------------------------------------------------------- loop
 
   update(time: number, delta: number): void {
+    this.fx.syncTime()
     if (this.fx.frozen) {
       // hold every timer while the world is stopped; the victim vibrates
       this.nextTrainerAt += delta
@@ -1280,8 +1281,11 @@ export function createIdleGame(
   opts: SceneMountOptions,
   bridge: SceneBridge,
 ): Phaser.Game {
+  // dev-only: `?renderer=canvas` forces the Canvas renderer (headless capture rigs
+  // without a GPU crawl on software WebGL), and the game is exposed for fps probes
+  const forceCanvas = DEV && typeof location !== 'undefined' && new URLSearchParams(location.search).get('renderer') === 'canvas'
   const game = new Phaser.Game({
-    type: Phaser.AUTO,
+    type: forceCanvas ? Phaser.CANVAS : Phaser.AUTO,
     parent: container,
     width: L.W,
     height: L.H,
@@ -1294,5 +1298,6 @@ export function createIdleGame(
     },
   })
   game.scene.add('idle', IdleScene, true, { bridge, opts })
+  if (DEV) (window as unknown as { __rfcGame?: Phaser.Game }).__rfcGame = game
   return game
 }

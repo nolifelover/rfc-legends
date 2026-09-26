@@ -137,7 +137,7 @@ export class BossBar {
   private readonly hpText: Phaser.GameObjects.Text
   private readonly width = 920
   private readonly height = 64
-  private readonly restY = 70
+  private readonly restY = 150
   private pct = 1
   private ghost = 1
   private ghostTween: Phaser.Tweens.Tween | null = null

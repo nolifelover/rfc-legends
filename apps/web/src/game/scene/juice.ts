@@ -158,7 +158,7 @@ export const TYPE = {
   lootTick: 30,
   plateTrainer: 30,
   plateRooster: 26,
-  platePest: 22,
+  platePest: 24,
   chip: 28,
   slam: 88,
   slamSub: 36,
@@ -167,8 +167,8 @@ export const TYPE = {
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
 
-/** 44,000 → "44K", 3,200,000 → "3.2M"; below 100,000 stays exact with separators. */
+/** 44,000 → "44K", 3,200,000 → "3.2M"; below 10,000 stays exact with separators. */
 export function fmt(n: number): string {
   const v = Math.round(n)
-  return v >= 100_000 ? compact.format(v) : v.toLocaleString('en-US')
+  return v >= 10_000 ? compact.format(v) : v.toLocaleString('en-US')
 }

@@ -144,8 +144,15 @@ export class Fx {
   private applyTimeScale(): void {
     const now = performance.now()
     const s = now < this.freezeEnd ? JUICE.FREEZE_SCALE : now < this.slowEnd ? this.slowScale : 1
-    this.scene.tweens.timeScale = s
-    this.scene.time.timeScale = s
+    if (this.scene.tweens.timeScale !== s) {
+      this.scene.tweens.timeScale = s
+      this.scene.time.timeScale = s
+    }
+  }
+
+  /** Called every frame by the scene: a timer that fired a hair early can never leave the world stuck. */
+  syncTime(): void {
+    this.applyTimeScale()
   }
 
   /** Near-freeze for `ms` (half under reduced motion). Overlapping stops merge. */
@@ -156,7 +163,10 @@ export class Fx {
     this.freezeEnd = now + dur
     this.applyTimeScale()
     window.clearTimeout(this.freezeTimer)
-    this.freezeTimer = window.setTimeout(() => this.applyTimeScale(), dur + 1)
+    this.freezeTimer = window.setTimeout(() => {
+      this.freezeEnd = 0
+      this.applyTimeScale()
+    }, dur + 1)
   }
 
   get frozen(): boolean {
@@ -171,7 +181,10 @@ export class Fx {
     this.slowEnd = now + ms
     this.applyTimeScale()
     window.clearTimeout(this.slowTimer)
-    this.slowTimer = window.setTimeout(() => this.applyTimeScale(), ms + 1)
+    this.slowTimer = window.setTimeout(() => {
+      this.slowEnd = 0
+      this.applyTimeScale()
+    }, ms + 1)
   }
 
   // ----------------------------------------------------------- text objects
@@ -230,9 +243,10 @@ export class Fx {
     const t = this.acquire()
     t.setStyle({ fontSize: `${TYPE.exp}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 6 })
     t.setText(`+${fmt(exp)} EXP`)
-    t.setPosition(x, y).setDepth(53).setScale(0.7)
+    // two kills in quick succession must not print on top of each other
+    t.setPosition(x + Phaser.Math.Between(-80, 80), y + Phaser.Math.Between(-30, 30)).setDepth(53).setScale(0.7)
     this.scene.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
-    this.scene.tweens.add({ targets: t, y: y - 120, duration: 900, ease: 'Sine.easeOut' })
+    this.scene.tweens.add({ targets: t, y: t.y - 120, duration: 900, ease: 'Sine.easeOut' })
     this.scene.tweens.add({
       targets: t,
       alpha: 0,
