@@ -4,7 +4,7 @@ import { ownershipMessage } from "../../lib/worldid/ownership";
 import type { Hex } from "../../lib/worldid/types";
 import type { WorldIdConfig } from "./config";
 import { maskAddress, normalizeNullifier } from "./nullifier";
-import { expectedSignalHash } from "./portal";
+import { expectedSignalHash, isRepeatVerification } from "./portal";
 import type { HumanRegistryClient } from "./registry";
 import { issueRpContext } from "./rp-context";
 import { MemoryWorldIdStore } from "./store";
@@ -412,6 +412,76 @@ describe("verifyHuman: rejected paths", () => {
     expect((await verifyHuman(null, deps)).status).toBe(400);
     const req = await body(alice, "n1");
     expect((await verifyHuman({ ...req, address: "0x123" }, deps)).body).toMatchObject({ code: "invalid_request" });
+  });
+});
+
+describe("second-wallet refusal reads the same from every layer (W11)", () => {
+  const HEADLINE = /^This World ID is already bound to another wallet/;
+  const portalRepeat = () =>
+    portalReturns({ success: false, code: "max_verifications_reached", detail: "This person has already verified for this action." }, 400);
+
+  it("our binding: same code and headline, detail names the server", async () => {
+    const { deps } = await setup({ nonces: { n1: A, n2: A2 } });
+    await verifyHuman(await body(alice, "n1"), deps);
+    const out = await verifyHuman(await body(alice2, "n2"), deps);
+    expect(out.status).toBe(409);
+    expect(out.body).toMatchObject({ code: "nullifier_bound_to_other_wallet", boundTo: maskAddress(A) });
+    expect(out.body.verified === false && out.body.reason).toMatch(HEADLINE);
+    expect(out.body.verified === false && out.body.detail).toMatch(/RFC Legends server/);
+  });
+
+  it("HumanRegistry onchain: same code and headline, detail names the contract", async () => {
+    const { deps } = await setup({ nonces: { n2: A2 }, registry: fakeRegistry({ [NULLIFIER]: A }) });
+    const out = await verifyHuman(await body(alice2, "n2"), deps);
+    expect(out.body).toMatchObject({ code: "nullifier_bound_to_other_wallet", boundTo: maskAddress(A) });
+    expect(out.body.verified === false && out.body.reason).toMatch(HEADLINE);
+    expect(out.body.verified === false && out.body.detail).toMatch(/HumanRegistry/);
+  });
+
+  it("World's Portal refusing the repeat: same code and headline, names the bound wallet, detail carries the Portal code", async () => {
+    const { deps, store } = await setup({ nonces: { n1: A, n2: A2 } });
+    await verifyHuman(await body(alice, "n1"), deps);
+    deps.fetchImpl = portalRepeat() as unknown as typeof fetch;
+    const out = await verifyHuman(await body(alice2, "n2"), deps);
+    expect(out.status).toBe(409);
+    expect(out.body).toMatchObject({ verified: false, code: "nullifier_bound_to_other_wallet", boundTo: maskAddress(A) });
+    expect(out.body.verified === false && out.body.reason).toMatch(HEADLINE);
+    expect(out.body.verified === false && out.body.detail).toBe("Refused by World ID's Portal: max_verifications_reached");
+    expect(await store.getVerifiedHuman(A2)).toBeNull();
+  });
+
+  it("Portal repeat with no local binding still shows the same refusal (no wallet named)", async () => {
+    const { deps } = await setup({ nonces: { n2: A2 }, fetchImpl: portalRepeat() });
+    const out = await verifyHuman(await body(alice2, "n2"), deps);
+    expect(out.status).toBe(409);
+    expect(out.body).toMatchObject({ code: "nullifier_bound_to_other_wallet" });
+    expect(out.body.verified === false && out.body.boundTo).toBeUndefined();
+    expect(out.body.verified === false && out.body.reason).toMatch(HEADLINE);
+  });
+
+  it("Portal repeat for the wallet that is already bound is not a refusal", async () => {
+    const { deps } = await setup({ nonces: { n1: A, n2: A } });
+    await verifyHuman(await body(alice, "n1"), deps);
+    deps.fetchImpl = portalRepeat() as unknown as typeof fetch;
+    const out = await verifyHuman(await body(alice, "n2"), deps);
+    expect(out.status).toBe(200);
+    expect(out.body).toMatchObject({ verified: true, onchain: "already_marked" });
+  });
+
+  it("other Portal refusals keep their own code", async () => {
+    const { deps } = await setup({
+      fetchImpl: portalReturns({ success: false, code: "all_verifications_failed", detail: "Invalid proof" }, 400),
+    });
+    expect((await verifyHuman(await body(alice, "n1"), deps)).body).toMatchObject({ code: "proof_rejected" });
+  });
+
+  it("recognises repeat-style Portal codes and details", () => {
+    for (const code of ["max_verifications_reached", "already_verified", "nullifier_replayed", "verification_limit_exceeded"]) {
+      expect(isRepeatVerification(code)).toBe(true);
+    }
+    expect(isRepeatVerification("verification_error", "This person has already verified for this action")).toBe(true);
+    expect(isRepeatVerification("all_verifications_failed", "Invalid proof")).toBe(false);
+    expect(isRepeatVerification(undefined, undefined)).toBe(false);
   });
 });
 

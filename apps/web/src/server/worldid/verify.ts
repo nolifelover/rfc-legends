@@ -16,9 +16,9 @@ import { getAddress, isAddress } from "viem";
 import { z } from "zod";
 import type { Hex, VerifyRejectCode, VerifyResponse } from "../../lib/worldid/types";
 import type { WorldIdConfig } from "./config";
-import { maskAddress } from "./nullifier";
+import { maskAddress, normalizeNullifier } from "./nullifier";
 import { checkOwnership, ownershipSchema } from "./ownership";
-import { idkitResultSchema, precheckResult, verifyWithPortal } from "./portal";
+import { idkitResultSchema, isRepeatVerification, precheckResult, verifyWithPortal } from "./portal";
 import type { HumanRegistryClient } from "./registry";
 import type { NonceCheck, OnchainStatus, WorldIdStore } from "./store";
 
@@ -40,16 +40,21 @@ const bodySchema = z.object({
   ownership: ownershipSchema,
 });
 
-function reject(status: number, code: VerifyRejectCode, reason: string, boundTo?: string): VerifyOutcome {
-  return { status, body: { verified: false, code, reason, ...(boundTo ? { boundTo } : {}) } };
+function reject(status: number, code: VerifyRejectCode, reason: string, boundTo?: string, detail?: string): VerifyOutcome {
+  return { status, body: { verified: false, code, reason, ...(boundTo ? { boundTo } : {}), ...(detail ? { detail } : {}) } };
 }
 
-function secondWallet(boundTo: string): VerifyOutcome {
+/**
+ * The second-wallet refusal. It reads the same whichever layer refused (our
+ * binding, HumanRegistry onchain, or World's Portal); `detail` names the layer.
+ */
+function secondWallet(boundTo: string | undefined, detail: string): VerifyOutcome {
   return reject(
     409,
     "nullifier_bound_to_other_wallet",
-    `This World ID is already linked to wallet ${maskAddress(boundTo)}. One human, one wallet: a second wallet can't verify with the same World ID.`,
-    maskAddress(boundTo),
+    `This World ID is already bound to another wallet${boundTo ? ` (${maskAddress(boundTo)})` : ""}. One human, one wallet: a second wallet can't verify with the same World ID.`,
+    boundTo ? maskAddress(boundTo) : undefined,
+    detail,
   );
 }
 
@@ -83,6 +88,22 @@ export async function verifyHuman(input: unknown, deps: VerifyDeps): Promise<Ver
   if (nonce !== "ok") return nonceReject(nonce);
 
   const portal = await verifyWithPortal(result, address, deps.cfg, deps.fetchImpl);
+  if (!portal.ok && isRepeatVerification(portal.portalCode, portal.portalDetail)) {
+    // World refused a repeat for this human. If this wallet is the one already
+    // bound, nothing changes; otherwise it's the second-wallet case.
+    const mine = await deps.store.getVerifiedHuman(address);
+    if (mine) {
+      return { status: 200, body: { verified: true, address, txHash: mine.txHash, onchain: "already_marked" } };
+    }
+    let boundTo: string | undefined;
+    try {
+      const holder = await deps.store.getBinding(normalizeNullifier(result.responses[0].nullifier));
+      if (holder && holder.address !== address) boundTo = holder.address;
+    } catch {
+      boundTo = undefined;
+    }
+    return secondWallet(boundTo, `Refused by World ID's Portal: ${portal.portalCode}`);
+  }
   if (!portal.ok) return reject(portal.code === "portal_unreachable" ? 502 : 403, portal.code, portal.reason);
   const nullifier = portal.nullifier;
 
@@ -90,7 +111,9 @@ export async function verifyHuman(input: unknown, deps: VerifyDeps): Promise<Ver
   if (consumed !== "ok") return nonceReject(consumed);
 
   const reservation = await deps.store.reserveBinding(nullifier, address, now().toISOString());
-  if (reservation.kind === "nullifier_taken") return secondWallet(reservation.boundTo);
+  if (reservation.kind === "nullifier_taken") {
+    return secondWallet(reservation.boundTo, "Refused by the RFC Legends server: this World ID's nullifier is already bound");
+  }
   if (reservation.kind === "wallet_taken") {
     return reject(
       409,
@@ -110,7 +133,7 @@ export async function verifyHuman(input: unknown, deps: VerifyDeps): Promise<Ver
       const owner = await deps.registry.nullifierOwner(n);
       if (owner && owner !== address) {
         await release();
-        return secondWallet(owner);
+        return secondWallet(owner, "Refused by HumanRegistry onchain: nullifierOwner is another wallet");
       }
       if (owner === address) {
         onchain = "already_marked";

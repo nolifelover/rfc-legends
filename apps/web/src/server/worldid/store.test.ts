@@ -47,6 +47,8 @@ function storeContract(name: string, make: () => WorldIdStore) {
 
       await s.finalizeBinding(n, a, { verifiedAt: "2026-09-26T10:00:05.000Z", txHash: null, onchain: "skipped" });
       expect(await s.getVerifiedHuman(a)).toMatchObject({ nullifier: n, address: a, status: "verified", onchain: "skipped" });
+      expect(await s.getBinding(n)).toMatchObject({ address: a, status: "verified" });
+      expect(await s.getBinding(unique("9"))).toBeNull();
     });
 
     it("refuses a second World ID on an already bound wallet", async () => {

@@ -39,6 +39,8 @@ export type VerifyResponse =
       reason: string;
       /** Masked address the World ID is already bound to (second-wallet case). */
       boundTo?: string;
+      /** Which layer refused and its own code (e.g. "World ID Portal: max_verifications_reached"). */
+      detail?: string;
     };
 
 export type RpContextResponse = {

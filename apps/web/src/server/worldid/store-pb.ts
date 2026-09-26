@@ -140,6 +140,11 @@ export class PocketBaseWorldIdStore implements WorldIdStore {
     return row ? toBinding(row) : null;
   }
 
+  async getBinding(nullifier: string) {
+    const row = await this.first<BindingRow>(BINDINGS, "nullifier = {:n}", { n: nullifier });
+    return row ? toBinding(row) : null;
+  }
+
   async useOnce(key: string, address: Hex, expiresAt: number) {
     try {
       await (await this.pb()).collection(NONCES).create({ kind: "wallet", nonce: key, address, expires_at: expiresAt });

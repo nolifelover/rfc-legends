@@ -45,6 +45,8 @@ export interface WorldIdStore {
   /** Drops a still-pending reservation (e.g. the onchain write failed). */
   releaseBinding(nullifier: string, address: Hex): Promise<void>;
   getVerifiedHuman(address: Hex): Promise<Binding | null>;
+  /** The binding (pending or verified) that holds this nullifier, if any. */
+  getBinding(nullifier: string): Promise<Binding | null>;
 
   /** Replay guard for wallet signatures: true the first time a key is seen. */
   useOnce(key: string, address: Hex, expiresAt: number): Promise<boolean>;
@@ -107,6 +109,10 @@ export class MemoryWorldIdStore implements WorldIdStore {
 
   async getVerifiedHuman(address: Hex) {
     return [...this.bindings.values()].find((b) => b.address === address && b.status === "verified") ?? null;
+  }
+
+  async getBinding(nullifier: string) {
+    return this.bindings.get(nullifier) ?? null;
   }
 
   async useOnce(key: string) {

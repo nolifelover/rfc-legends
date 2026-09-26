@@ -39,7 +39,26 @@ export const idkitResultSchema = z.looseObject({
 
 export type IdkitResult = z.infer<typeof idkitResultSchema>;
 
-export type Reject = { ok: false; code: VerifyRejectCode; reason: string };
+export type Reject = {
+  ok: false;
+  code: VerifyRejectCode;
+  reason: string;
+  /** The Portal's own error code and detail, when the Portal refused. */
+  portalCode?: string;
+  portalDetail?: string;
+};
+
+/**
+ * Does this Portal refusal mean "this human already verified for this action"?
+ * Portal v4 currently accepts reuse, but a per-action verification limit (or a
+ * future change) would refuse the second wallet here, before our own binding
+ * check; the UI must then say the same thing our binding check says.
+ */
+export function isRepeatVerification(code?: string, detail?: string): boolean {
+  const c = (code ?? "").toLowerCase();
+  if (/max_verifications|already_verified|nullifier_(replayed|reused|used)|verification_limit/.test(c)) return true;
+  return /already (been )?verified|max(imum)? (number of )?verifications|nullifier (has )?already been used/i.test(detail ?? "");
+}
 
 /** The signal every proof must commit to: the wallet address. */
 export function expectedSignalHash(address: Hex): string {
@@ -164,7 +183,13 @@ export async function verifyWithPortal(
       code === "environment_not_allowed"
         ? " Staging proofs need an open staging window and WORLD_STAGING_VERIFICATION_TOKEN."
         : "";
-    return { ok: false, code: "proof_rejected", reason: `World ID rejected the proof: ${detail} (${code}).${hint}` };
+    return {
+      ok: false,
+      code: "proof_rejected",
+      reason: `World ID rejected the proof: ${detail} (${code}).${hint}`,
+      portalCode: code,
+      portalDetail: detail,
+    };
   }
 
   // Bind only what the Portal itself says it verified: the result for our
