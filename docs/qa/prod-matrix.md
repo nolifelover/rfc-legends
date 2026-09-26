@@ -46,3 +46,27 @@
 ## Notes for the demo
 - Demo-mode rates verified honest-but-fast end to end on prod: Lv 31 + MVP card + handoff in ~95s with the pity guarantee intact.
 - The market gate copy is exactly the rejected-path story World wants on camera.
+
+## Retest e5334c4 (after P1/P2/P3 fixes)
+
+Fresh throwaway wallets, same guardrails. 10 of 12 checks PASS.
+
+| Check | Result | Evidence |
+|---|---|---|
+| /roosters lists 6/6 | ✅ (was 5) | chick01.theprawang.rfclegends.eth now listed |
+| Pedigree links both ways | ✅ | offspring→sire (ENS name) and theprawang→/roosters/6 both resolve. NOTE: khunphaen legitimately has no offspring — first-ever check used the wrong sire |
+| No first-visit 400 | ✅ (was P3) | zero 4xx across a full fresh visit incl. creation (boot-sync no longer fires for playerless wallets) |
+| Wrong-chain banner (post-creation) | ✅ (was P1) | "Wrong network. Your wallet is on chain 1; the Rare Market runs on Sepolia (11155111)… Switch to Sepolia" |
+| Accept switch clears banner | ✅ | after wallet_switchEthereumChain → banner gone (required a correctly-switching stub; the earlier FAIL was the stub returning a constant chainId) |
+| Reject switch | ✅ | banner persists, page alive, zero errors |
+| Zone-2 ribbon at Lv 30 | ✅ | ribbon + server zoneId บึงบัวหลวง |
+| Zone-2 fight progresses after Lv 30 | ✅ (was known stall) | lv 30→34, exp climbing over 45s — comfortably faster than the ~15s/pest target |
+| Rare-drop toast | ✅ | +86.8s after creation |
+| Welcome-back after 65s | ❌ **N2** | see below — reproduced 2/2 |
+
+**N1 (P2) — wrong-chain banner missing on the creation screen.** `game-client.tsx:283` returns `<CreateCharacter/>` before the banner render at `:307`, so a judge connecting on the wrong chain sees no warning until after they've created a character. One-line fix: render the banner in the creation branch too. Owner: eth-dev1.
+
+**N2 (P2) — welcome-back suppressed by away-settlement drops.** Repro 2/2 on prod: player away 65s → reload → the away-settled sync rolls a mintable drop (common in demo mode) → the drop celebration/toast takes the screen and the "While you were away" card never appears. Passed at 7a902cd when no drop happened to land. Fix shape: welcome-back should queue above/after the drop celebration rather than yield to it (research #10 + the no-stacking rules at 7a902cd need to prefer the summary, or show it after the celebration closes). Owner: eth-dev1.
+
+QA-harness notes: Cloudflare still rejects non-browser UAs; the QA stub now performs real `wallet_switchEthereumChain` (mutable `cur`) — old stubs returning a constant chainId false-FAIL the accept-switch check.
+
