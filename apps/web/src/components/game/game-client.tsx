@@ -74,6 +74,9 @@ export function GameClient() {
   // GET settles the away window server-side before the client ever sees it,
   // and the welcome-back modal can never fire on reload.
   const [booted, setBooted] = useState(false);
+  // celebrations pause at boot until the welcome-back decision lands; if no
+  // card opens, they arm 1.5s later. A card holds them until Collect (N2).
+  const [celebrationsArmed, setCelebrationsArmed] = useState(false);
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
@@ -107,7 +110,10 @@ export function GameClient() {
       } catch {
         /* PLAYER_NOT_FOUND and transient errors: the state query takes over */
       } finally {
-        if (!cancelled) setBooted(true);
+        if (!cancelled) {
+          setBooted(true);
+          window.setTimeout(() => !cancelled && setCelebrationsArmed(true), 1500);
+        }
       }
     })();
     return () => {
@@ -213,6 +219,14 @@ export function GameClient() {
     onError: (err) => setNotice({ kind: "error", text: reasonText(err.message) }),
   });
 
+  // no boot sync (first visit): celebrations can arm right away
+  useEffect(() => {
+    if (booted && !celebrationsArmed) {
+      const t = window.setTimeout(() => setCelebrationsArmed(true), 1500);
+      return () => window.clearTimeout(t);
+    }
+  }, [booted, celebrationsArmed]);
+
   // Any successful state load with a player arms the sync-first boot for
   // this wallet's next visit (P3 companion to the localStorage gate).
   useEffect(() => {
@@ -284,7 +298,12 @@ export function GameClient() {
 
   // 3. Wallet, no player yet → character creation.
   if (!state?.player) {
-    return <CreateCharacter onCreate={handleCreate} />;
+    return (
+      <div className="flex flex-1 flex-col gap-2">
+        {wrongChain ? <WrongChainBanner chainId={chainId ?? 0} /> : null}
+        <CreateCharacter onCreate={handleCreate} />
+      </div>
+    );
   }
 
   // 4. Player exists → the game screen. The canvas claims the viewport;
@@ -308,7 +327,9 @@ export function GameClient() {
         <div className="relative flex min-h-0 flex-1 justify-center">
           {/* height = whatever the nav/banner/HUD leave free; the aspect-video
               box derives width from that height, clamped by the viewport */}
-          <SceneFrame className="h-full w-auto max-w-full">
+          {/* --game-top-inset tells the scene how much chrome sits above it
+              (mobile top bar) so in-canvas chips stay clear; 0 on desktop */}
+          <SceneFrame className="h-full w-auto max-w-full [--game-top-inset:52px] lg:[--game-top-inset:0px]">
             <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
           </SceneFrame>
         </div>
@@ -361,7 +382,7 @@ export function GameClient() {
         />
       ) : null}
 
-      <DropToasts drops={state.drops} hold={welcomeBack != null} />
+      <DropToasts drops={state.drops} hold={welcomeBack != null || !celebrationsArmed} />
 
       {notice ? (
         <div
