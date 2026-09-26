@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "./connect-button";
 import { RoosterMark } from "./rooster-mark";
@@ -45,6 +46,45 @@ function NavLink({
 
 export function NavBar() {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // GAME MODE (/game): the chrome collapses to a floating brand + menu
+  // button so the canvas keeps the viewport.
+  if (pathname?.startsWith("/game")) {
+    return (
+      <header className="pointer-events-none fixed left-3 top-2 z-40 flex items-center gap-2">
+        <Link
+          href="/"
+          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-clay/25 bg-cream/90 px-2.5 py-1 backdrop-blur transition hover:border-clay"
+          aria-label="RFC Legends home"
+        >
+          <RoosterMark size={22} />
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-expanded={menuOpen}
+          aria-label="Site menu"
+          className="pointer-events-auto rounded-full border border-clay/25 bg-cream/90 px-3 py-1 text-sm font-black text-bark backdrop-blur transition hover:border-clay"
+        >
+          ☰
+        </button>
+        {menuOpen ? (
+          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-clay/25 bg-cream/95 px-2 py-1 shadow-lg backdrop-blur">
+            {NAV_LINKS.map((link) => (
+              <NavLink
+                key={link.href}
+                href={link.href}
+                label={link.label}
+                active={pathname === link.href}
+              />
+            ))}
+            <ConnectButton className="!px-2.5 !py-1 !text-xs" />
+          </div>
+        ) : null}
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-clay/20 bg-cream/90 backdrop-blur">

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { DemoBadge } from "@/components/game/demo-badge";
+import { DemoBanner, SiteFooter } from "@/components/game/chrome";
 import { NavBar } from "@/components/game/nav-bar";
 import "./globals.css";
 
@@ -42,17 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
         <Providers>
           <NavBar />
-          {demo ? (
-            <div className="border-b border-sun/40 bg-sun-soft/60 py-1.5 text-center">
-              <DemoBadge demo={demo} />
-            </div>
-          ) : null}
+          <DemoBanner demo={demo} />
           <div className="flex flex-1 flex-col">{children}</div>
-          <footer className="border-t border-clay/15 bg-cream/70">
-            <p className="mx-auto max-w-6xl px-4 py-5 text-center text-sm text-bark-soft">
-              Built at ETHGlobal Tokyo 2026 · Sepolia testnet
-            </p>
-          </footer>
+          <SiteFooter />
         </Providers>
       </body>
     </html>
