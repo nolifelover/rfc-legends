@@ -77,9 +77,9 @@ flowchart LR
 ## Sponsor integrations (exact file:line)
 
 **World — Best Use of IDKit.** Server-side proof verification then an onchain mirror:
-- Proof verify + nullifier binding: [`apps/web/src/server/worldid/verify.ts:62`](apps/web/src/server/worldid/verify.ts#L62) (`verifyHuman`), route [`apps/web/src/app/api/worldid/verify/route.ts:9`](apps/web/src/app/api/worldid/verify/route.ts#L9), status check [`…/status/route.ts:8`](apps/web/src/app/api/worldid/status/route.ts#L8)
-- Mint voucher gate (verified human + Base Lv ≥ 30 + rarity + daily limit): [`apps/web/src/server/worldid/voucher.ts:24-55`](apps/web/src/server/worldid/voucher.ts#L24) (`MIN_BASE_LEVEL`, `issueMintVoucher`), route [`apps/web/src/app/api/voucher/mint/route.ts:7`](apps/web/src/app/api/voucher/mint/route.ts#L7)
-- Widget + rejected-path UI: [`apps/web/src/components/worldid/WorldIdWidget.tsx:18`](apps/web/src/components/worldid/WorldIdWidget.tsx#L18), [`VerifyHuman.tsx:46`](apps/web/src/components/worldid/VerifyHuman.tsx#L46)
+- Proof verify + nullifier binding: [`apps/web/src/server/worldid/verify.ts:67`](apps/web/src/server/worldid/verify.ts#L67) (`verifyHuman`), route [`apps/web/src/app/api/worldid/verify/route.ts:7`](apps/web/src/app/api/worldid/verify/route.ts#L7), status check [`…/status/route.ts:7`](apps/web/src/app/api/worldid/status/route.ts#L8)
+- Mint voucher gate (verified human + Base Lv ≥ 30 + rarity + daily limit): [`apps/web/src/server/worldid/voucher.ts:24-55`](apps/web/src/server/worldid/voucher.ts#L24) (`MIN_BASE_LEVEL`, `issueMintVoucher`), route [`apps/web/src/app/api/voucher/mint/route.ts:5`](apps/web/src/app/api/voucher/mint/route.ts#L5)
+- Widget + rejected-path UI: [`apps/web/src/components/worldid/WorldIdWidget.tsx:9`](apps/web/src/components/worldid/WorldIdWidget.tsx#L9), [`VerifyHuman.tsx:41`](apps/web/src/components/worldid/VerifyHuman.tsx#L46)
 - Onchain enforcement: [`contracts/src/HumanRegistry.sol:47`](contracts/src/HumanRegistry.sol#L47) (one human → one account); the bot-rejection path is asserted on Sepolia by [e2e/demo-beat.ts](e2e/demo-beat.ts) steps 1–2.
 
 **ENS — Best Use of ENSv2.** Hierarchical pedigree as subnames with farm-key-scoped resolver writes; live names today: `rfclegends.eth` → `theprawang.rfclegends.eth` → `chick01.theprawang.rfclegends.eth` (farm signer `0x7E28…Ac39`):
@@ -91,7 +91,7 @@ flowchart LR
 
 **Curvegrid — Best RWA Tokenization (MultiBaas).** Contracts linked with event indexing; the market sale feed is served from MultiBaas queries:
 - Setup (idempotent): [`contracts/scripts/multibaas-setup.mjs`](contracts/scripts/multibaas-setup.mjs) — uploads the five ABIs + bytecode, links each Sepolia address, saves `rfc-sold`, `rfc-rare-minted`, `rfc-attestation-recorded`, `rfc-rooster-minted`
-- REST helper: [`apps/web/src/lib/contracts/multibaas.ts:60`](apps/web/src/lib/contracts/multibaas.ts#L60) (`getSaleHistory` executes the saved query)
+- REST helper: [`apps/web/src/lib/contracts/multibaas.ts:91`](apps/web/src/lib/contracts/multibaas.ts#L91) (`getSaleHistory` executes the saved query)
 - Visible integration: [`apps/web/src/app/api/market/sales/route.ts`](apps/web/src/app/api/market/sales/route.ts) — returns `source: "multibaas"` today; verify with `curl .../api/market/sales` or `?query=rfc-rare-minted`
 - The RWA trust model (farm co-signature, one ring = one token): [`contracts/src/RoosterRWA.sol:127`](contracts/src/RoosterRWA.sol#L127), explained in [`contracts/README.md`](contracts/README.md)
 

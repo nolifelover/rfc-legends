@@ -17,7 +17,7 @@ Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC). Do not claim anything n
 
 **Live on Sepolia:** all 5 contracts (verified on Etherscan+Sourcify), World ID verify → `HumanRegistry.markVerified` (0xa081…58ff), voucher mint → `RareItems`, list/buy → 90/10 `Sold` (0xcd9b…6356, 0xfb5d…60f04, both MultiBaas-indexed), ENSv2 `rfclegends.eth` + permissioned resolver + sire subname, item metadata routes, guild chat + guild boss (PocketBase realtime), idle game with demo mode, market sale feed through MultiBaas.
 
-**Pending (do NOT claim until landed):** RoosterRWA farm co-signed mint + attestation tx hashes (eth-dev3's seed run), ENS register tx hash citation, demo video link.
+**Pending (do NOT claim until landed):** demo video link. Everything else listed as live has been verified on Sepolia.
 
 ---
 
@@ -60,8 +60,8 @@ Solidity, Foundry, OpenZeppelin, Etherscan/Sourcify, TypeScript, Next.js 16, Rea
 
 ## Pre-submit checklist
 
-- [ ] RoosterRWA seed tx hashes (mint + attestation) cited in README + here
-- [ ] ENS register tx hash cited
+- [x] RoosterRWA seed tx hashes cited (six mints + attestation + ENS writes, in README)
+- [x] ENS register + resolver hashes cited
 - [ ] Demo video recorded and linked
 - [ ] Screenshots uploaded
 - [ ] Repo README reviewed against repo reality one last time
