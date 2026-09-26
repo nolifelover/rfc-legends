@@ -47,6 +47,8 @@ import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, fmt, mobileCameraZoom, mobile
 import type { ZoneSpec } from './juice'
 import type { SceneBridge, SceneMountOptions } from './scene-bridge'
 import { UiScene } from './ui-scene'
+import { riversidePortraitBackdrop } from './riverside-backdrop'
+import { RiversideJourney, riversidePlatform } from './riverside-journey'
 import { MAPS, THUNG_NA } from '@/game/data/maps'
 import type { MapDef } from '@/game/types'
 import { getItem } from '@/game/data/items'
@@ -120,7 +122,8 @@ export class IdleScene extends Phaser.Scene {
     walkway: Phaser.GameObjects.Image[]
     shimmers: Phaser.GameObjects.Image[]
   } = { lotus: [], walkway: [], shimmers: [] }
-  private mobileBackdrop: Array<Phaser.GameObjects.Rectangle | Phaser.GameObjects.Graphics> = []
+  private mobileBackdrop: Array<Phaser.GameObjects.Rectangle | Phaser.GameObjects.Graphics | Phaser.GameObjects.Image> = []
+  private riversideJourney: RiversideJourney | null = null
 
   // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
@@ -392,40 +395,92 @@ export class IdleScene extends Phaser.Scene {
 
   private buildRiversideBackground(): void {
     const skyExtension = this.add.rectangle(-5000, -5000, 10000, 7000, 0x102b43).setOrigin(0, 0).setDepth(-1)
-    const waterExtension = this.add.rectangle(-5000, L.H - 46, 10000, 3000, 0x132e3b).setOrigin(0, 0).setDepth(9.8)
-    const waterRipples = this.add.graphics().setDepth(9.9)
-    waterRipples.lineStyle(3, 0x8bb6b2, 0.15)
-    for (let y = L.H + 56; y < L.H + 1800; y += 54) {
-      for (let x = 34 + ((y / 54) % 2) * 78; x < L.W; x += 156) {
-        waterRipples.beginPath()
-        waterRipples.moveTo(x, y)
-        waterRipples.lineTo(x + 48, y - 2)
-        waterRipples.strokePath()
-      }
-    }
-    waterRipples.fillStyle(0x567e75, 0.4)
-    for (const [x, y] of [[88, 1180], [1780, 1320], [210, 1510], [1660, 1600]] as const) {
-      waterRipples.fillEllipse(x, y, 54, 14)
-      waterRipples.fillEllipse(x + 36, y + 8, 42, 11)
-    }
-    this.mobileBackdrop = [skyExtension, waterExtension, waterRipples]
-    this.add.image(0, -720, 'river-sky').setOrigin(0, 0).setDisplaySize(L.W, L.H).setDepth(-0.5)
+    const [portraitSky, portraitWater] = riversidePortraitBackdrop(this)
+    this.mobileBackdrop = [skyExtension, portraitSky]
     this.add.image(0, 0, 'river-sky').setOrigin(0, 0).setDisplaySize(L.W, L.H).setDepth(0)
-    this.add.image(0, 684, 'river-houses-left').setOrigin(0, 1).setDisplaySize(735, 490).setDepth(1)
-    this.add.image(L.W, 684, 'river-houses-right').setOrigin(1, 1).setDisplaySize(735, 490).setDepth(1)
-    this.add.image(0, 410, 'river-corridor').setOrigin(0, 0).setDisplaySize(L.W, 400).setAlpha(0.92).setDepth(2)
-    this.add.image(0, 580, 'river-water-boardwalk').setOrigin(0, 0).setDisplaySize(L.W, 500).setDepth(4)
-    // Keep the legacy farm props out of this scene, but retain their visual
-    // storytelling as small shoreline details at the far edges of the lane.
-    this.add.image(128, 826, 'art-prop-scarecrow').setOrigin(0.5, 1).setDisplaySize(108, 128).setDepth(5)
-    this.add.image(208, 874, 'art-prop-rice-bundle').setOrigin(0.5, 1).setDisplaySize(54, 70).setDepth(5)
-    this.add.image(1792, 870, 'art-prop-hay-bale').setOrigin(0.5, 1).setDisplaySize(88, 62).setDepth(5)
-    this.add.image(1872, 866, 'art-prop-water-jar').setOrigin(0.5, 1).setDisplaySize(64, 74).setDepth(5)
-    this.add.image(1810, 780, 'art-prop-fence').setOrigin(0.5, 1).setDisplaySize(180, 110).setDepth(3)
+    this.riversideJourney = new RiversideJourney(this.reduced)
+    const panelXs = [0, L.W]
+
+    // The far corridor moves only a little, the houses move more, and water plus
+    // shoreline details pass fastest. This preserves the original first frame.
+    const corridors = panelXs.map((x, index) => {
+      const panel = this.add.container(x, 0).setDepth(2)
+      panel.add(this.add.image(0, 410, 'river-corridor').setOrigin(0).setDisplaySize(L.W, 400).setAlpha(0.92).setFlipX(index === 1))
+      return panel
+    })
+    this.riversideJourney.addLayer(corridors, L.W, 8)
+
+    const houses = panelXs.map((x) => {
+      const panel = this.add.container(x, 0).setDepth(1)
+      panel.add([
+        this.add.image(0, 684, 'river-houses-left').setOrigin(0, 1).setDisplaySize(735, 490),
+        this.add.image(L.W, 684, 'river-houses-right').setOrigin(1, 1).setDisplaySize(735, 490),
+      ])
+      return panel
+    })
+    this.riversideJourney.addLayer(houses, L.W, 18)
+
+    const water = panelXs.map((x, index) => {
+      const panel = this.add.container(x, 0).setDepth(4)
+      const lowerWater = index === 0
+        ? portraitWater
+        : this.add.image(0, L.H - 1, 'river-water-extension').setOrigin(0).setDisplaySize(L.W, 960)
+      lowerWater.setFlipX(index === 1)
+      this.mobileBackdrop.push(lowerWater)
+      panel.add([
+        this.add.image(0, 580, 'river-water-boardwalk').setOrigin(0).setDisplaySize(L.W, 500).setFlipX(index === 1),
+        lowerWater,
+      ])
+      return panel
+    })
+    this.riversideJourney.addLayer(water, L.W, 34)
 
     // The two maps keep their identity through a light temperature wash; actors
     // and all combat information stay above it and retain their original colors.
     const lotusMap = this.zone.lotus
+    const shoreline = panelXs.map((x) => {
+      const panel = this.add.container(x, 0).setDepth(7)
+      // Keep the shoreline storytelling at the original coordinates, with an
+      // offscreen repeated panel ready to enter without an abrupt reset.
+      panel.add([
+        this.add.image(128, 826, 'art-prop-scarecrow').setOrigin(0.5, 1).setDisplaySize(108, 128),
+        this.add.image(208, 874, 'art-prop-rice-bundle').setOrigin(0.5, 1).setDisplaySize(54, 70),
+        this.add.image(1792, 870, 'art-prop-hay-bale').setOrigin(0.5, 1).setDisplaySize(88, 62),
+        this.add.image(1872, 866, 'art-prop-water-jar').setOrigin(0.5, 1).setDisplaySize(64, 74),
+      ])
+      if (!lotusMap) {
+        const rice = this.add.graphics()
+        for (const bank of [38, 1720]) {
+          for (let i = 0; i < 14; i++) {
+            const stemX = bank + i * 12
+            const stemY = 816 + Math.sin(i * 1.7) * 13
+            rice.lineStyle(3, 0x527b65, 0.8)
+            rice.beginPath()
+            rice.moveTo(stemX, stemY)
+            rice.lineTo(stemX - 8, stemY - 60)
+            rice.lineTo(stemX - 16, stemY - 76)
+            rice.strokePath()
+            rice.fillStyle(0xd0ae61, 0.72)
+            for (let grain = 0; grain < 4; grain++) rice.fillEllipse(stemX - 13 - grain * 3, stemY - 61 - grain * 4, 8, 4)
+          }
+        }
+        panel.add(rice)
+      }
+      return panel
+    })
+    this.riversideJourney.addLayer(shoreline, L.W, 50)
+    const fences = panelXs.map((x) => {
+      const panel = this.add.container(x, 0).setDepth(3)
+      panel.add(this.add.image(1810, 780, 'art-prop-fence').setOrigin(0.5, 1).setDisplaySize(180, 110))
+      return panel
+    })
+    this.riversideJourney.addLayer(fences, L.W, 42)
+    const platforms = panelXs.map((x) => {
+      const panel = this.add.container(x, 0).setDepth(6)
+      panel.add(riversidePlatform(this, L.W))
+      return panel
+    })
+    this.riversideJourney.addLayer(platforms, L.W, 50)
     this.zoneArt.grade = this.add.rectangle(0, 0, L.W, L.H, lotusMap ? 0x263c58 : 0x173645, lotusMap ? 0.08 : 0.035)
       .setOrigin(0, 0)
       .setDepth(10)
@@ -876,9 +931,10 @@ export class IdleScene extends Phaser.Scene {
         this.trainerBody.sendToBack(cloth)
         this.trainerPower.push(cloth)
         if (!this.reduced) this.tweens.add({ targets: cloth, scaleX: cloth.scaleX * 0.9, angle: tt === 2 ? -6 : -3, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-        // hat band (silver, then gold with a tassel)
-        // the hat brim sits at about -0.68H on the raster
-        const band = this.add.image(0.0 * H, -0.7 * H, tt === 2 ? FX.hatBand2 : FX.hatBand1).setOrigin(0.5, 0.35).setScale(0.95)
+        // The riverside trainer wears a sash, so pin the tier medal to his shirt.
+        const band = this.riversideProfile
+          ? this.add.image(-0.02 * H, -0.61 * H, tt === 2 ? FX.medal : tintedTexture(this, FX.medal, 0xdfe6ee)).setScale(0.45)
+          : this.add.image(0, -0.7 * H, tt === 2 ? FX.hatBand2 : FX.hatBand1).setOrigin(0.5, 0.35).setScale(0.95)
         this.trainerBody.add(band)
         this.trainerPower.push(band)
         // sparkle trail off the tool head (no soft glow over the outline)
@@ -1015,7 +1071,17 @@ export class IdleScene extends Phaser.Scene {
   private buildChips(): void {
     // zone pill: the HUD shows the zone too, so this one fades out after 3s
     const mapChip = new Chip(this.ui, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24, mobile: this.ui.mobileProfile })
-    mapChip.container.setDepth(54).setPosition(this.ui.rect.x0 + L.SAFE + mapChip.boxWidth / 2, this.ui.rect.y0 + L.SAFE + this.ui.topInset)
+    let mapTop = this.ui.rect.y0 + L.SAFE + this.ui.topInset
+    if (!this.ui.mobileProfile) {
+      const nav = document.querySelector('[data-riverside-nav]')?.getBoundingClientRect()
+      const canvas = this.game.canvas.getBoundingClientRect()
+      const scale = this.scale.displaySize.width / L.W
+      const left = canvas.left + (this.ui.rect.x0 + L.SAFE) * scale
+      if (nav && scale > 0 && nav.right > left && nav.left < left + mapChip.boxWidth * scale) {
+        mapTop = Math.max(mapTop, (nav.bottom - canvas.top + 8) / scale + mapChip.boxHeight / 2)
+      }
+    }
+    mapChip.container.setDepth(54).setPosition(this.ui.rect.x0 + L.SAFE + mapChip.boxWidth / 2, mapTop)
     this.tweens.add({ targets: mapChip.container, alpha: 0, delay: 3000, duration: 600, onComplete: () => mapChip.destroy() })
 
     this.killChip = new Chip(this.ui, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e, mobile: this.ui.mobileProfile })
@@ -1100,6 +1166,7 @@ export class IdleScene extends Phaser.Scene {
     for (const layer of this.mobileBackdrop) layer.setVisible(mobile)
     const zoom = mobile ? mobileCameraZoom(r.x1 - r.x0) : L.WORLD_ZOOM
     this.fx.setBaseZoom(zoom)
+    this.fx.setVisibleStage(r)
     cam.setZoom(zoom)
     if (mobile) {
       cam.centerOn((L.TRAINER_X + L.ENGAGE_BACK_X) / 2, L.H / 2)
@@ -2231,6 +2298,7 @@ export class IdleScene extends Phaser.Scene {
       return
     }
     this.victim = null
+    this.riversideJourney?.update(delta, this.bossActive || this.forceBoss)
 
     // keep the pack stocked (never during a boss)
     if (!this.bossActive) {
@@ -2253,7 +2321,11 @@ export class IdleScene extends Phaser.Scene {
 
     const f = this.focus
     if (f && !f.dead) {
-      f.plate.container.x = Math.round(f.container.x)
+      const view = this.fx.visibleWorld()
+      const halfPlate = f.plate.width / 2 + 12
+      f.plate.container.x = Math.round(this.ui.mobileProfile
+        ? Phaser.Math.Clamp(f.container.x, view.left + halfPlate, view.right - halfPlate)
+        : f.container.x)
       f.bar.container.x = Math.round(f.container.x)
     }
     if (time >= this.nextTrainerAt) this.trainerAttack(time)
@@ -2296,16 +2368,43 @@ export function createIdleGame(
   // Phaser polls the parent size every 500ms; the frame also changes size on its
   // own (the HUD mounts below it after the canvas) and a stale canvas is clipped by
   // the frame's overflow-hidden. Re-fit immediately — read the bounds first, or
-  // refresh() computes the FIT from the stale parent size.
-  const refit = (): void => {
-    if (game.scale.getParentBounds()) game.scale.refresh()
+  // refresh() computes the ENVELOP scale from the stale parent size.
+  let frameRequest = 0
+  let lastViewportWidth = window.innerWidth
+  const reconcileScale = (viewportChanged = false): void => {
+    const bounds = container.getBoundingClientRect()
+    if (bounds.width <= 0 || bounds.height <= 0) return
+    const parentChanged = game.scale.getParentBounds()
+    const envelope = Math.max(bounds.width / L.W, bounds.height / L.H)
+    const fitted = Math.abs(game.scale.displaySize.width - L.W * envelope) < 1
+      && Math.abs(game.scale.displaySize.height - L.H * envelope) < 1
+    if (parentChanged || viewportChanged || !fitted) game.scale.refresh()
   }
+  const refit = (): void => {
+    window.cancelAnimationFrame(frameRequest)
+    frameRequest = window.requestAnimationFrame(() => {
+      frameRequest = 0
+      const viewportChanged = window.innerWidth !== lastViewportWidth
+      lastViewportWidth = window.innerWidth
+      reconcileScale(viewportChanged)
+    })
+  }
+  // ScaleManager.refresh() computes displaySize before its final parent-bounds
+  // read. After an orientation change its first RESIZE can therefore expose the
+  // new parentSize with the previous orientation's canvas size. Reconcile that
+  // mismatch synchronously so camera layout cannot wait on (or lose) another RAF.
+  const onScaleResize = (): void => reconcileScale()
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(refit) : null
   ro?.observe(container)
+  window.addEventListener('resize', refit)
+  game.scale.on(Phaser.Scale.Events.RESIZE, onScaleResize)
   // belt and braces for the first seconds, while the HUD below the frame settles
   const timers = [300, 1000, 2500, 5000].map((ms) => window.setTimeout(refit, ms))
   game.events.once(Phaser.Core.Events.DESTROY, () => {
     ro?.disconnect()
+    window.removeEventListener('resize', refit)
+    game.scale.off(Phaser.Scale.Events.RESIZE, onScaleResize)
+    window.cancelAnimationFrame(frameRequest)
     for (const t of timers) window.clearTimeout(t)
   })
   if (DEV) (window as unknown as { __rfcGame?: Phaser.Game }).__rfcGame = game

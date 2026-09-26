@@ -56,8 +56,8 @@ function Bar({
   }
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
-      <span className="w-9 shrink-0 text-lg font-black leading-none tracking-wide text-cream md:w-11 md:text-xl">{label}</span>
+    <div className={`flex min-w-0 flex-1 items-center ${wideValueOnly ? "gap-1.5" : "gap-2"}`}>
+      <span className={`shrink-0 font-black leading-none tracking-wide text-cream ${wideValueOnly ? "w-8 text-sm md:text-base" : "w-9 text-lg md:w-11 md:text-xl"}`}>{label}</span>
       <div
         className="relative h-7 min-w-0 flex-1 overflow-hidden rounded-full border-2 border-bark/30 bg-bark/50"
         role="meter"
@@ -70,7 +70,7 @@ function Bar({
           className={`h-full rounded-full ${gradient} transition-[width] duration-500`}
           style={{ width: `${pct}%` }}
         />
-        <span className={`absolute inset-y-0 left-2.5 hidden items-center font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] ${wideValueOnly ? "text-sm 2xl:flex" : showPercent ? "text-sm md:flex" : "text-xl md:flex"}`}>
+        <span className={`absolute inset-y-0 hidden items-center font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] ${wideValueOnly ? "left-2 text-[11px] md:flex xl:text-xs" : showPercent ? "left-2.5 text-sm md:flex" : "left-2.5 text-xl md:flex"}`}>
           {curMax}
         </span>
         {/* mobile: % only — a raw value beside the % overlapped it in
@@ -106,7 +106,7 @@ function Pill({
   title: string;
   active?: boolean;
 }) {
-  const cls = `inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 py-1.5 text-lg font-black leading-tight transition md:py-0.5 md:text-xl ${
+  const cls = `inline-flex min-h-11 w-fit items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 py-1.5 text-lg font-black leading-tight transition md:text-xl lg:min-h-0 lg:py-0.5 ${
     active
       ? "border-sun bg-sun/25 text-sun-soft hover:bg-sun/35"
       : "border-sun/50 bg-[#1d130c]/70 text-cream/85 hover:border-sun hover:text-cream"
@@ -246,7 +246,7 @@ export function HudStrip({
         {/* Row B — rooster card + counters + pills */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
           <div className="flex min-w-0 items-center gap-3">
-            <SireLineArt line={player.sireLine} size={44} className="shrink-0 rounded-xl ring-2 ring-sun-soft" />
+            <SireLineArt line={player.sireLine} size={44} className="shrink-0 rounded-xl ring-2 ring-sun-soft" theme="riverside" />
             <div className="min-w-0 leading-tight">
               <p className="truncate text-lg font-black text-cream md:text-xl">
                 {player.rooster.name}{" "}
@@ -259,7 +259,7 @@ export function HudStrip({
               </p>
             </div>
           </div>
-          <div className="min-w-0 lg:min-w-[180px]" data-mobscape="roosterexp">
+          <div className="min-w-0 lg:min-w-[196px] xl:min-w-[220px]" data-mobscape="roosterexp">
             <Bar
               label="EXP"
               value={player.rooster.exp}

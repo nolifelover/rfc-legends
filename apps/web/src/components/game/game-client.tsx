@@ -54,12 +54,8 @@ const riversideBackdrop = `
 
 function CenterCard({ children }: { children: React.ReactNode }) {
   return (
-    <div data-riverside-ui className="flex min-h-0 flex-1 flex-col" style={{ background: riversideBackdrop }}>
-      <style>{`
-        [data-riverside-ui] h1 { color: #fffdf6; }
-        [data-riverside-ui] p { color: rgba(255,253,246,.78); }
-      `}</style>
-      <section className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center sm:px-6">
+    <div data-riverside-ui className="flex min-h-0 flex-1 items-center px-4 py-12 sm:px-6" style={{ background: riversideBackdrop }}>
+      <section className="mx-auto flex w-full max-w-lg flex-col items-center justify-center gap-4 rounded-3xl border-2 border-[#c69a5b] bg-[#fffaf0] px-5 py-10 text-center shadow-[0_24px_70px_-24px_rgba(0,0,0,0.8)] sm:px-8 sm:py-12">
         {children}
       </section>
     </div>
@@ -314,10 +310,7 @@ export function GameClient() {
     return (
       <div data-riverside-ui data-riverside-create className="flex flex-1 flex-col gap-2" style={{ background: riversideBackdrop }}>
         <style>{`
-          [data-riverside-ui] h1 { color: #fffdf6; }
-          [data-riverside-ui] p { color: rgba(255,253,246,.78); }
-          [data-riverside-create] > section { background-color: rgba(40,59,99,.96); border-color: #c69a5b; }
-          [data-riverside-create] label, [data-riverside-create] legend { color: #f2d59d; }
+          [data-riverside-create] > section { background-color: #fffaf0; border-color: #c69a5b; box-shadow: 0 24px 70px -28px rgba(0,0,0,.8); }
           [data-riverside-create] input { background-color: #fffdf6; }
           [data-riverside-create] button.group { background-color: #fffdf6; }
         `}</style>
@@ -373,7 +366,7 @@ export function GameClient() {
             disabled={syncMutation.isPending}
             aria-label="Sync now"
             title={syncMutation.isPending ? "Syncing…" : "Sync now"}
-            className="grid h-10 w-10 place-items-center rounded-full border-2 border-clay/40 bg-cream text-xl font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 disabled:cursor-wait disabled:opacity-60"
+            className="grid h-11 w-11 place-items-center rounded-full border-2 border-clay/40 bg-cream text-xl font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sun disabled:cursor-wait disabled:opacity-60 lg:h-10 lg:w-10"
           >
             {syncMutation.isPending ? "…" : <GameChromeIcon name="sync" className="h-5 w-5" />}
           </button>

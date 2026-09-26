@@ -417,6 +417,410 @@ function drawItem(fill: number) {
   }
 }
 
+// --- riverside fallbacks ----------------------------------------------------
+// These deliberately do not call the legacy artists above. If a generated
+// image is unavailable, the game keeps its moonlit indigo / lantern-gold
+// identity and each actor remains recognizable at gameplay size.
+
+const RIVER_INK = 0x17213a
+const RIVER_INDIGO = 0x283b63
+const RIVER_AMBER = 0xf2b45b
+const RIVER_AMBER_LIGHT = 0xffdda0
+const RIVER_PAPER = 0xf4e7c8
+const RIVER_TEAL = 0x3f7880
+
+function riverBlob(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, fill: number): void {
+  g.fillStyle(fill)
+  g.fillEllipse(x, y, w, h)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeEllipse(x, y, w, h)
+}
+
+function riverDot(g: Phaser.GameObjects.Graphics, x: number, y: number, r: number, fill: number): void {
+  g.fillStyle(fill)
+  g.fillCircle(x, y, r)
+  g.lineStyle(2.5, RIVER_INK)
+  g.strokeCircle(x, y, r)
+}
+
+function riverStroke(g: Phaser.GameObjects.Graphics, pts: Array<[number, number]>, color: number, width = 4): void {
+  g.lineStyle(width + 2, RIVER_INK)
+  g.beginPath()
+  g.moveTo(pts[0][0], pts[0][1])
+  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1])
+  g.strokePath()
+  g.lineStyle(width, color)
+  g.beginPath()
+  g.moveTo(pts[0][0], pts[0][1])
+  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1])
+  g.strokePath()
+}
+
+function drawRiverTrainer(g: Phaser.GameObjects.Graphics, walking = false): void {
+  // Thai field trainer: indigo mor-hom shirt, pha khao ma sash, chong
+  // kraben trousers and a broad ngob-style woven hat.
+  const step = walking ? 5 : 0
+  riverStroke(g, [[43, 65], [37 - step, 83]], RIVER_INDIGO, 8)
+  riverStroke(g, [[55, 65], [61 + step, 83]], RIVER_INDIGO, 8)
+  g.fillStyle(0x6f4931)
+  g.fillRoundedRect(27 - step, 82, 19, 7, 3)
+  g.fillRoundedRect(53 + step, 82, 19, 7, 3)
+  g.lineStyle(2.5, RIVER_INK)
+  g.strokeRoundedRect(27 - step, 82, 19, 7, 3)
+  g.strokeRoundedRect(53 + step, 82, 19, 7, 3)
+  g.fillStyle(RIVER_INDIGO)
+  g.fillRoundedRect(30, 39, 38, 31, 11)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeRoundedRect(30, 39, 38, 31, 11)
+  g.fillStyle(0xbd5a43)
+  g.fillRoundedRect(30, 60, 38, 7, 3)
+  g.fillTriangle(57, 64, 68, 67, 61, 82)
+  riverStroke(g, [[33, 47], [22 - step, 64]], 0xc78356, 7)
+  riverStroke(g, [[65, 47], [76 + step, 62]], 0xc78356, 7)
+  riverDot(g, 22 - step, 65, 4, 0xc78356)
+  riverDot(g, 76 + step, 63, 4, 0xc78356)
+  riverDot(g, 49, 28, 13, 0xc78356)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(44, 28, 1.7)
+  g.fillCircle(54, 28, 1.7)
+  g.lineStyle(2, 0x75432f)
+  g.lineBetween(46, 34, 52, 34)
+  g.fillStyle(RIVER_AMBER)
+  g.fillEllipse(49, 19, 50, 12)
+  g.fillTriangle(34, 18, 49, 5, 64, 18)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeEllipse(49, 19, 50, 12)
+  g.strokeTriangle(34, 18, 49, 5, 64, 18)
+  g.lineStyle(2, 0x9e6534)
+  g.lineBetween(38, 18, 60, 18)
+}
+
+function drawRiverRooster(body: number, wing: number, tail: number, accent: number) {
+  return (g: Phaser.GameObjects.Graphics): void => {
+    riverStroke(g, [[29, 48], [8, 18]], tail, 6)
+    riverStroke(g, [[26, 51], [4, 32]], accent, 6)
+    riverStroke(g, [[30, 52], [12, 46]], tail, 5)
+    riverBlob(g, 42, 51, 46, 36, body)
+    riverDot(g, 58, 30, 13, body)
+    g.fillStyle(0xc84e42)
+    for (const [x, y, r] of [[53, 17, 4], [59, 14, 5], [65, 18, 4]] as const) g.fillCircle(x, y, r)
+    g.lineStyle(2.5, RIVER_INK)
+    for (const [x, y, r] of [[53, 17, 4], [59, 14, 5], [65, 18, 4]] as const) g.strokeCircle(x, y, r)
+    g.fillStyle(RIVER_AMBER)
+    g.fillTriangle(69, 29, 79, 34, 68, 37)
+    g.lineStyle(2.5, RIVER_INK)
+    g.strokeTriangle(69, 29, 79, 34, 68, 37)
+    g.fillStyle(wing)
+    g.fillEllipse(41, 52, 24, 16)
+    g.lineStyle(2.5, RIVER_INK)
+    g.strokeEllipse(41, 52, 24, 16)
+    g.lineStyle(2, RIVER_AMBER_LIGHT, 0.8)
+    g.lineBetween(34, 51, 47, 56)
+    g.fillStyle(RIVER_INK)
+    g.fillCircle(61, 28, 2)
+    g.fillStyle(0xffffff)
+    g.fillCircle(61.5, 27.4, 0.7)
+    riverStroke(g, [[40, 68], [38, 78]], RIVER_AMBER, 4)
+    riverStroke(g, [[51, 67], [53, 78]], RIVER_AMBER, 4)
+    g.lineStyle(2, RIVER_INK)
+    g.lineBetween(32, 78, 42, 78)
+    g.lineBetween(48, 78, 58, 78)
+  }
+}
+
+function drawRiverRat(g: Phaser.GameObjects.Graphics): void {
+  riverStroke(g, [[65, 56], [83, 43], [78, 29]], 0xc9879c, 5)
+  riverBlob(g, 43, 51, 52, 38, 0x73819c)
+  riverDot(g, 29, 27, 10, 0x73819c)
+  riverDot(g, 51, 24, 11, 0x73819c)
+  g.fillStyle(0xc9879c)
+  g.fillCircle(29, 27, 3)
+  g.fillCircle(51, 24, 3)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(38, 39, 2)
+  g.fillCircle(51, 38, 2)
+  g.fillStyle(RIVER_AMBER_LIGHT)
+  g.fillCircle(44, 46, 3)
+  riverStroke(g, [[31, 67], [27, 78]], 0x73819c, 5)
+  riverStroke(g, [[55, 67], [60, 78]], 0x73819c, 5)
+}
+
+function drawRiverLocust(g: Phaser.GameObjects.Graphics): void {
+  riverStroke(g, [[38, 21], [31, 7]], RIVER_TEAL, 3)
+  riverStroke(g, [[49, 20], [57, 7]], RIVER_TEAL, 3)
+  riverBlob(g, 44, 48, 49, 43, 0x6f986f)
+  g.fillStyle(0x9cad72)
+  g.fillEllipse(52, 47, 28, 32)
+  g.lineStyle(2.5, RIVER_INK)
+  g.strokeEllipse(52, 47, 28, 32)
+  g.fillStyle(RIVER_AMBER_LIGHT, 0.72)
+  g.fillEllipse(40, 44, 13, 23)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(33, 36, 2.5)
+  riverStroke(g, [[30, 57], [13, 70], [23, 79]], RIVER_TEAL, 4)
+  riverStroke(g, [[58, 57], [75, 70], [65, 79]], RIVER_TEAL, 4)
+  riverStroke(g, [[40, 69], [40, 79]], 0x6f986f, 4)
+  riverStroke(g, [[50, 69], [50, 79]], 0x6f986f, 4)
+}
+
+function drawRiverCrab(g: Phaser.GameObjects.Graphics): void {
+  riverBlob(g, 40, 49, 48, 34, 0xb85f48)
+  riverStroke(g, [[31, 36], [27, 20]], 0xb85f48, 4)
+  riverStroke(g, [[49, 36], [53, 20]], 0xb85f48, 4)
+  riverDot(g, 27, 17, 5, RIVER_PAPER)
+  riverDot(g, 53, 17, 5, RIVER_PAPER)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(27, 17, 2)
+  g.fillCircle(53, 17, 2)
+  g.fillStyle(RIVER_AMBER)
+  g.fillTriangle(14, 43, 2, 31, 7, 48)
+  g.fillTriangle(66, 43, 78, 31, 73, 48)
+  g.lineStyle(2.5, RIVER_INK)
+  g.strokeTriangle(14, 43, 2, 31, 7, 48)
+  g.strokeTriangle(66, 43, 78, 31, 73, 48)
+  for (const [a, b, c, d] of [[22, 59, 12, 69], [34, 63, 30, 74], [48, 63, 52, 74], [59, 59, 69, 69]] as const) riverStroke(g, [[a, b], [c, d]], 0xb85f48, 4)
+}
+
+function drawRiverRatKing(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(RIVER_AMBER, 0.12)
+  g.fillCircle(72, 76, 62)
+  g.fillStyle(0x663c62)
+  g.fillTriangle(36, 57, 17, 126, 61, 113)
+  g.fillTriangle(87, 57, 108, 126, 62, 113)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeTriangle(36, 57, 17, 126, 61, 113)
+  g.strokeTriangle(87, 57, 108, 126, 62, 113)
+  riverBlob(g, 72, 84, 84, 72, 0x69738e)
+  riverDot(g, 43, 40, 15, 0x69738e)
+  riverDot(g, 82, 35, 16, 0x69738e)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(62, 65, 3)
+  g.fillCircle(84, 65, 3)
+  g.fillStyle(RIVER_AMBER_LIGHT)
+  g.fillCircle(73, 76, 4)
+  g.fillStyle(RIVER_AMBER)
+  g.fillTriangle(52, 25, 57, 8, 64, 23)
+  g.fillTriangle(63, 23, 72, 4, 79, 22)
+  g.fillTriangle(78, 22, 86, 8, 90, 26)
+  g.fillRoundedRect(51, 23, 40, 8, 3)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeRoundedRect(51, 23, 40, 8, 3)
+  riverStroke(g, [[108, 92], [130, 70], [123, 53]], 0xc9879c, 8)
+}
+
+function drawRiverSnail(g: Phaser.GameObjects.Graphics): void {
+  riverBlob(g, 47, 58, 52, 25, 0x7d946f)
+  riverBlob(g, 38, 43, 36, 36, 0xb64d6a)
+  g.lineStyle(4, RIVER_AMBER_LIGHT)
+  g.strokeCircle(38, 43, 10)
+  riverStroke(g, [[64, 49], [69, 34]], 0x7d946f, 3)
+  riverStroke(g, [[72, 49], [78, 35]], 0x7d946f, 3)
+  riverDot(g, 69, 32, 3.5, RIVER_PAPER)
+  riverDot(g, 78, 33, 3.5, RIVER_PAPER)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(69, 32, 1.3)
+  g.fillCircle(78, 33, 1.3)
+  g.fillStyle(0xd96d7d)
+  g.fillCircle(29, 28, 5)
+  g.fillCircle(38, 24, 5)
+  g.fillCircle(47, 29, 5)
+}
+
+function drawRiverHyacinth(g: Phaser.GameObjects.Graphics): void {
+  riverBlob(g, 44, 56, 48, 40, 0x557e70)
+  g.fillStyle(0x8aa47a)
+  for (const [x, y, w, h] of [[28, 29, 25, 12], [43, 23, 27, 13], [59, 30, 25, 12]] as const) {
+    g.fillEllipse(x, y, w, h)
+    g.lineStyle(2.5, RIVER_INK)
+    g.strokeEllipse(x, y, w, h)
+  }
+  riverStroke(g, [[28, 68], [15, 79]], RIVER_TEAL, 5)
+  riverStroke(g, [[44, 73], [44, 84]], RIVER_TEAL, 5)
+  riverStroke(g, [[60, 68], [73, 79]], RIVER_TEAL, 5)
+  g.fillStyle(0x9b75ae)
+  for (const [x, y] of [[36, 40], [45, 35], [53, 42]] as const) g.fillCircle(x, y, 5)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(37, 55, 2)
+  g.fillCircle(51, 55, 2)
+}
+
+function drawRiverFish(g: Phaser.GameObjects.Graphics): void {
+  riverBlob(g, 43, 46, 56, 35, 0x426f7d)
+  g.fillStyle(RIVER_TEAL)
+  g.fillTriangle(17, 45, 3, 27, 4, 63)
+  g.fillTriangle(41, 29, 52, 12, 58, 33)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeTriangle(17, 45, 3, 27, 4, 63)
+  g.strokeTriangle(41, 29, 52, 12, 58, 33)
+  g.fillStyle(RIVER_AMBER_LIGHT)
+  g.fillEllipse(48, 49, 22, 14)
+  g.lineStyle(2, RIVER_INK)
+  g.strokeEllipse(48, 49, 22, 14)
+  riverDot(g, 63, 39, 4, RIVER_PAPER)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(64, 39, 1.5)
+  g.lineStyle(3, RIVER_INK)
+  g.lineBetween(68, 50, 77, 48)
+}
+
+function drawRiverCrocodile(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(RIVER_AMBER, 0.1)
+  g.fillCircle(72, 78, 64)
+  riverBlob(g, 73, 82, 104, 54, 0x476f63)
+  g.fillStyle(0x5f8b70)
+  g.fillRoundedRect(82, 48, 58, 31, 14)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeRoundedRect(82, 48, 58, 31, 14)
+  g.fillStyle(0x375d58)
+  g.fillTriangle(25, 75, 3, 52, 12, 91)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeTriangle(25, 75, 3, 52, 12, 91)
+  for (const x of [47, 65, 84]) {
+    g.fillStyle(RIVER_AMBER)
+    g.fillTriangle(x, 57, x + 8, 43, x + 15, 60)
+    g.lineStyle(2.5, RIVER_INK)
+    g.strokeTriangle(x, 57, x + 8, 43, x + 15, 60)
+  }
+  g.fillStyle(RIVER_PAPER)
+  g.fillCircle(117, 59, 5)
+  g.fillStyle(RIVER_INK)
+  g.fillCircle(118, 59, 2)
+  g.lineStyle(3, RIVER_INK)
+  g.lineBetween(104, 72, 139, 72)
+  for (const x of [111, 123, 135]) {
+    g.fillStyle(RIVER_PAPER)
+    g.fillTriangle(x, 72, x + 5, 72, x + 2, 79)
+  }
+  riverStroke(g, [[49, 104], [38, 124]], 0x476f63, 8)
+  riverStroke(g, [[95, 105], [108, 124]], 0x476f63, 8)
+}
+
+function drawRiverHayBale(g: Phaser.GameObjects.Graphics): void {
+  g.fillStyle(0xbc8245)
+  g.fillRoundedRect(7, 20, 50, 36, 12)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeRoundedRect(7, 20, 50, 36, 12)
+  g.lineStyle(3, RIVER_AMBER_LIGHT)
+  g.strokeRoundedRect(14, 26, 36, 23, 7)
+  riverStroke(g, [[21, 21], [21, 55]], 0x72513b, 3)
+  riverStroke(g, [[44, 21], [44, 55]], 0x72513b, 3)
+}
+
+function drawRiverScarecrow(g: Phaser.GameObjects.Graphics): void {
+  riverStroke(g, [[32, 14], [32, 62]], 0x79543a, 5)
+  riverStroke(g, [[9, 29], [55, 29]], 0x79543a, 5)
+  g.fillStyle(RIVER_INDIGO)
+  g.fillTriangle(14, 27, 50, 27, 32, 58)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeTriangle(14, 27, 50, 27, 32, 58)
+  riverDot(g, 32, 17, 9, RIVER_PAPER)
+  g.fillStyle(RIVER_AMBER)
+  g.fillEllipse(32, 10, 31, 8)
+  g.lineStyle(2.5, RIVER_INK)
+  g.strokeEllipse(32, 10, 31, 8)
+  g.fillStyle(RIVER_AMBER)
+  g.fillCircle(28, 17, 1.5)
+  g.fillCircle(36, 17, 1.5)
+}
+
+function drawRiverJar(g: Phaser.GameObjects.Graphics): void {
+  riverBlob(g, 32, 40, 42, 38, 0x6e7194)
+  g.fillStyle(RIVER_INDIGO)
+  g.fillEllipse(32, 22, 23, 8)
+  g.lineStyle(3, RIVER_INK)
+  g.strokeEllipse(32, 22, 23, 8)
+  g.lineStyle(3, RIVER_AMBER)
+  g.strokeEllipse(32, 41, 27, 17)
+  g.fillStyle(RIVER_AMBER_LIGHT)
+  g.fillCircle(32, 41, 4)
+}
+
+function drawRiverFence(g: Phaser.GameObjects.Graphics): void {
+  for (const x of [6, 27, 48]) {
+    g.fillStyle(0x76523a)
+    g.fillRoundedRect(x, 13, 10, 45, 3)
+    g.fillTriangle(x, 13, x + 10, 13, x + 5, 5)
+    g.lineStyle(2.5, RIVER_INK)
+    g.strokeRoundedRect(x, 13, 10, 45, 3)
+    g.strokeTriangle(x, 13, x + 10, 13, x + 5, 5)
+  }
+  riverStroke(g, [[4, 26], [60, 26]], 0x9a704c, 5)
+  riverStroke(g, [[4, 43], [60, 43]], 0x9a704c, 5)
+}
+
+function drawRiverRiceBundle(g: Phaser.GameObjects.Graphics): void {
+  for (const [dx, tip] of [[-20, 16], [-10, 8], [0, 5], [10, 8], [20, 16]] as const) {
+    riverStroke(g, [[32, 55], [32 + dx * 0.55, 30], [32 + dx, tip]], RIVER_AMBER, 3)
+    g.fillStyle(RIVER_AMBER_LIGHT)
+    g.fillEllipse(32 + dx, tip, 5, 9)
+  }
+  riverStroke(g, [[32, 53], [32, 63]], 0x76523a, 5)
+  g.fillStyle(0xbd5a43)
+  g.fillRoundedRect(24, 48, 16, 6, 3)
+}
+
+function drawRiverItem(id: number) {
+  return (g: Phaser.GameObjects.Graphics): void => {
+    const tier = id >= 3000 ? 0xb64d6a : id >= 2000 ? 0x795b9a : id >= 1000 ? RIVER_TEAL : id >= 200 ? 0x566d8f : 0x76523a
+    g.fillStyle(RIVER_INDIGO)
+    g.fillRoundedRect(3, 3, 42, 42, 10)
+    g.lineStyle(2.5, RIVER_AMBER)
+    g.strokeRoundedRect(3, 3, 42, 42, 10)
+    g.fillStyle(tier)
+    g.fillCircle(24, 24, 15)
+    g.lineStyle(2, RIVER_AMBER_LIGHT)
+    g.strokeCircle(24, 24, 15)
+    g.fillStyle(RIVER_PAPER)
+    const variant = id % 10
+    if (id < 200) {
+      g.fillEllipse(24, 29, 18, 15)
+      g.fillRoundedRect(19, 13, 10, 8, 3)
+      g.lineStyle(2, RIVER_INK)
+      g.strokeEllipse(24, 29, 18, 15)
+      g.lineBetween(17, 21, 31, 21)
+    } else if (id < 1000) {
+      g.fillStyle(RIVER_AMBER_LIGHT)
+      g.fillRoundedRect(22, 12, 5, 25, 2)
+      g.fillStyle(RIVER_PAPER)
+      if (variant % 3 === 0) g.fillRect(13, 14, 22, 5)
+      else if (variant % 3 === 1) g.fillTriangle(11, 16, 25, 11, 25, 22)
+      else g.fillEllipse(29, 15, 17, 8)
+    } else if (id < 2000) {
+      g.fillStyle(RIVER_PAPER)
+      g.fillTriangle(24, 10, 36, 21, 31, 37)
+      g.fillTriangle(24, 10, 12, 21, 17, 37)
+      g.fillStyle(RIVER_AMBER)
+      g.fillCircle(24, 25, 6)
+      g.fillStyle(tier)
+      g.fillCircle(24, 25, 2)
+    } else if (id < 3000) {
+      g.fillStyle(RIVER_PAPER)
+      g.fillRoundedRect(14, 9, 20, 30, 4)
+      g.lineStyle(2, RIVER_INK)
+      g.strokeRoundedRect(14, 9, 20, 30, 4)
+      g.fillStyle(tier)
+      g.fillCircle(24, 23, 7)
+      g.fillStyle(RIVER_AMBER)
+      g.fillCircle(24, 23, 2.5)
+    } else {
+      const points: Phaser.Geom.Point[] = []
+      for (let i = 0; i < 10; i++) {
+        const radius = i % 2 === 0 ? 15 : 7
+        const angle = i * Math.PI / 5 - Math.PI / 2
+        points.push(new Phaser.Geom.Point(24 + Math.cos(angle) * radius, 24 + Math.sin(angle) * radius))
+      }
+      g.fillStyle(RIVER_AMBER)
+      g.fillPoints(points, true)
+      g.lineStyle(2, RIVER_INK)
+      g.strokePoints(points, true)
+      g.fillStyle(RIVER_PAPER)
+      g.fillCircle(24, 24, 4)
+    }
+    g.fillStyle(variant % 2 === 0 ? RIVER_AMBER_LIGHT : 0xd67878)
+    g.fillCircle(38, 10, 2.5)
+  }
+}
+
 // --- cloud fallbacks (cream puffs, warm-tinted undersides) ---
 
 function drawCloudPuffy(g: Phaser.GameObjects.Graphics): void {
@@ -477,7 +881,7 @@ function riversideSpec(
   sourceUrl: string,
   w: number,
   h: number,
-  legacyDraw: (g: Phaser.GameObjects.Graphics) => void,
+  _legacyDraw: (g: Phaser.GameObjects.Graphics) => void,
   legacyFb?: [number, number],
 ): ArtSpec['riverside'] {
   const url = riversideUrl(key, sourceUrl)
@@ -491,10 +895,7 @@ function riversideSpec(
         : sourceUrl.includes('/assets/items/')
           ? Number(sourceUrl.split('/').at(-1)!.split('.')[0]) >= 1001 ? [256, 256] : [128, 128]
           : [w, h]
-  // If a replacement image fails, retain the existing category-specific art for
-  // that key. A trainer still reads as a trainer, each rooster keeps its palette,
-  // and pests retain their distinct silhouettes instead of becoming generic blobs.
-  return { url, w: rw, h: rh, draw: legacyDraw, fb: legacyFb ?? [w, h] }
+  return { url, w: rw, h: rh, draw: riversideFallback(key, sourceUrl), fb: legacyFb ?? [w, h] }
 }
 
 export const TRAINER_KEY = 'art-trainer'
@@ -516,6 +917,44 @@ export const MONSTER_KEYS: Record<string, string> = {
   'phak-tob-chawai-yak': 'art-monster-phak-tob-chawai-yak',
   'pla-chon-yak': 'art-monster-pla-chon-yak',
   'jorakhe-thao-bueng': 'art-monster-jorakhe-thao-bueng',
+}
+
+function riversideFallback(key: string, sourceUrl: string): (g: Phaser.GameObjects.Graphics) => void {
+  if (key === TRAINER_KEY) return (g) => drawRiverTrainer(g)
+  if (key === TRAINER_WALK_KEY) return (g) => drawRiverTrainer(g, true)
+
+  const roosterFallbacks: Record<string, (g: Phaser.GameObjects.Graphics) => void> = {
+    [ROOSTER_KEYS.kumarnjeen]: drawRiverRooster(0xb95542, 0xd68055, 0x315b65, RIVER_AMBER),
+    [ROOSTER_KEYS.kingkong]: drawRiverRooster(0x5b463e, 0x7e6858, 0x253550, 0xbd5a43),
+    [ROOSTER_KEYS.chaokhunthong]: drawRiverRooster(0xc99143, 0xe7bd66, 0x75503b, 0xf4d28a),
+    [ROOSTER_KEYS.thepbut]: drawRiverRooster(0xe7dfc9, 0xb9c3d0, 0x67799a, 0xf2b45b),
+    [ROOSTER_KEYS.raptor]: drawRiverRooster(0x334f49, 0x547668, 0x1d3547, 0xb74f32),
+  }
+  if (roosterFallbacks[key]) return roosterFallbacks[key]
+
+  const monsterFallbacks: Record<string, (g: Phaser.GameObjects.Graphics) => void> = {
+    [MONSTER_KEYS['nu-na']]: drawRiverRat,
+    [MONSTER_KEYS['takka-taen-yak']]: drawRiverLocust,
+    [MONSTER_KEYS['pu-na']]: drawRiverCrab,
+    [MONSTER_KEYS['raja-nu-na']]: drawRiverRatKing,
+    [MONSTER_KEYS['hoi-cherry']]: drawRiverSnail,
+    [MONSTER_KEYS['phak-tob-chawai-yak']]: drawRiverHyacinth,
+    [MONSTER_KEYS['pla-chon-yak']]: drawRiverFish,
+    [MONSTER_KEYS['jorakhe-thao-bueng']]: drawRiverCrocodile,
+  }
+  if (monsterFallbacks[key]) return monsterFallbacks[key]
+
+  const propFallbacks: Record<string, (g: Phaser.GameObjects.Graphics) => void> = {
+    'art-prop-hay-bale': drawRiverHayBale,
+    'art-prop-scarecrow': drawRiverScarecrow,
+    'art-prop-water-jar': drawRiverJar,
+    'art-prop-fence': drawRiverFence,
+    'art-prop-rice-bundle': drawRiverRiceBundle,
+  }
+  if (propFallbacks[key]) return propFallbacks[key]
+
+  if (sourceUrl.includes('/assets/items/')) return drawRiverItem(Number(key.replace('art-item-', '')))
+  throw new Error(`Missing riverside fallback artist for ${key}`)
 }
 
 for (const key of [TRAINER_KEY, TRAINER_WALK_KEY, ...Object.values(ROOSTER_KEYS), ...Object.values(MONSTER_KEYS), 'art-prop-hay-bale', 'art-prop-scarecrow', 'art-prop-water-jar', 'art-prop-fence', 'art-prop-rice-bundle']) {

@@ -4,43 +4,62 @@ import { useState } from "react";
 import type { SireLine } from "@/game/types";
 import { sireLineInfo } from "./sire-lines";
 
-/**
- * Sire-line rooster art with a themed badge fallback if a replacement sprite
- * fails — never a broken image.
- */
+/** Sire-line art. Shared routes keep legacy art unless /game opts into riverside. */
 export function SireLineArt({
   line,
   size = 112,
   className = "",
+  theme = "legacy",
 }: {
   line: SireLine;
   size?: number;
   className?: string;
+  theme?: "legacy" | "riverside";
 }) {
   const info = sireLineInfo(line);
-  const [fallbackLevel, setFallbackLevel] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const palette: Record<SireLine, { body: string; wing: string; tail: string; accent: string }> = {
+    kumarnjeen: { body: "#b95542", wing: "#d68055", tail: "#315b65", accent: "#f2b45b" },
+    kingkong: { body: "#5b463e", wing: "#7e6858", tail: "#253550", accent: "#bd5a43" },
+    chaokhunthong: { body: "#c99143", wing: "#e7bd66", tail: "#75503b", accent: "#f4d28a" },
+    thepbut: { body: "#e7dfc9", wing: "#b9c3d0", tail: "#67799a", accent: "#f2b45b" },
+    raptor: { body: "#334f49", wing: "#547668", tail: "#1d3547", accent: "#b74f32" },
+  };
+  const colors = palette[line];
   return (
     <span
       style={{ width: size, height: size }}
       className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 bg-sun-soft/50 ${info.badge} ${info.ring} ${className}`}
       aria-hidden
     >
-      {fallbackLevel < 2 ? (
-        // Plain <img> on purpose: sprites may not be committed yet, and we need
-        // onError to fall back to the existing rooster SVG before the drawn mark.
+      {!failed ? (
+        // Plain <img> keeps error handling deterministic for generated assets.
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={fallbackLevel === 0 ? `/assets/game/riverside/characters/rooster-${line}.webp` : `/assets/sprites/rooster-${line}.svg`}
+          src={theme === "riverside" ? `/assets/game/riverside/characters/rooster-${line}.webp` : `/assets/sprites/rooster-${line}.svg`}
           alt=""
           width={size}
           height={size}
-          onError={() => setFallbackLevel((level) => level + 1)}
+          onError={() => setFailed(true)}
           className="h-full w-full object-contain p-1.5"
         />
-      ) : (
-        <svg viewBox="0 0 64 64" className="h-3/4 w-3/4 text-[#b74f32]" fill="currentColor" aria-hidden="true">
-          <path d="M38 19c1-5 4-7 7-8 0 5-1 8-4 10 3-3 7-3 10-1-2 5-6 7-12 6l-3 4c10 1 17 9 17 18 0 8-7 12-20 12H19c-9 0-14-5-14-12 0-8 5-13 13-16l6-3-6-5c-2-2-2-5 0-7 2-2 5-2 7 0l4 5 4-1 2-2c-2-4-1-8 3-10 4 3 5 6 3 10l-3 2Zm9 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM17 55l-7 7h7l7-7h-7Zm16 0-7 7h7l7-7h-7Z" />
+      ) : theme === "riverside" ? (
+        <svg viewBox="0 0 96 96" className="h-[88%] w-[88%]" aria-hidden="true">
+          <path d="M34 57C23 49 15 37 12 22c12 5 20 14 25 26M34 60C20 59 11 53 6 43c14-1 24 3 31 11" fill="none" stroke="#17213a" strokeWidth="9" strokeLinecap="round" />
+          <path d="M34 57C23 49 15 37 12 22c12 5 20 14 25 26" fill="none" stroke={colors.tail} strokeWidth="5" strokeLinecap="round" />
+          <path d="M34 60C20 59 11 53 6 43c14-1 24 3 31 11" fill="none" stroke={colors.accent} strokeWidth="5" strokeLinecap="round" />
+          <ellipse cx="48" cy="61" rx="27" ry="21" fill={colors.body} stroke="#17213a" strokeWidth="3" />
+          <circle cx="67" cy="38" r="15" fill={colors.body} stroke="#17213a" strokeWidth="3" />
+          <ellipse cx="47" cy="61" rx="14" ry="10" fill={colors.wing} stroke="#17213a" strokeWidth="3" />
+          <circle cx="62" cy="22" r="5" fill="#c84e42" stroke="#17213a" strokeWidth="2" />
+          <circle cx="69" cy="19" r="6" fill="#c84e42" stroke="#17213a" strokeWidth="2" />
+          <circle cx="76" cy="23" r="5" fill="#c84e42" stroke="#17213a" strokeWidth="2" />
+          <path d="M80 37l13 6-13 7Z" fill="#f2b45b" stroke="#17213a" strokeWidth="3" strokeLinejoin="round" />
+          <circle cx="71" cy="35" r="2.5" fill="#17213a" />
+          <path d="M45 79l-2 11m15-12 3 12M36 90h13m6 0h13" fill="none" stroke="#17213a" strokeWidth="4" strokeLinecap="round" />
         </svg>
+      ) : (
+        <span className="text-4xl leading-none">🐓</span>
       )}
     </span>
   );

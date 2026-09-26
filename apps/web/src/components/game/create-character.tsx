@@ -84,7 +84,7 @@ export function CreateCharacter({
                     : "border-clay/25 bg-background hover:border-clay/60 hover:bg-sun-soft/20"
                 }`}
               >
-                <SireLineArt line={info.id} size={96} />
+                <SireLineArt line={info.id} size={96} theme="riverside" />
                 <span className="text-sm font-black text-bark">
                   {info.roman}{" "}
                   <span lang="th" className="font-semibold text-bark-soft">

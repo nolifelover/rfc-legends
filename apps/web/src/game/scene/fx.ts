@@ -9,6 +9,7 @@ import Phaser from 'phaser'
 import { FX, RARITY_COLORS, tintedTexture, isRiversideArtProfile } from './art'
 import { INK, JUICE, LAYOUT as L, TYPE, fmt } from './juice'
 import type { Rarity } from '../types'
+import type { VisibleRect } from './ui-scene'
 
 export type DamageKind = 'trainer' | 'crit' | 'rooster'
 
@@ -56,6 +57,10 @@ export class Fx {
   private noSpawnX: number = L.NO_SPAWN_X
   private noSpawnY: number = L.NO_SPAWN_Y
   private baseZoom = 1
+  private visibleStage: VisibleRect = { x0: 0, y0: 0, x1: L.W, y1: L.H }
+  private readonly visibleBounds = new Phaser.Geom.Rectangle()
+  private readonly viewStart = new Phaser.Math.Vector2()
+  private readonly viewEnd = new Phaser.Math.Vector2()
 
   constructor(scene: Phaser.Scene, font: string, reduced: boolean, mobile = false) {
     this.scene = scene
@@ -167,7 +172,23 @@ export class Fx {
   }
 
   setBaseZoom(z: number): void {
+    // An in-flight punch must not restore the previous orientation's zoom after
+    // the layout camera has already fitted the new viewport.
+    if (Math.abs(z - this.baseZoom) > 0.0001) {
+      this.scene.tweens.killTweensOf(this.scene.cameras.main)
+    }
     this.baseZoom = z
+  }
+
+  setVisibleStage(rect: VisibleRect): void {
+    this.visibleStage = { ...rect }
+  }
+
+  visibleWorld(): Phaser.Geom.Rectangle {
+    const camera = this.scene.cameras.main
+    const a = camera.getWorldPoint(this.visibleStage.x0, this.visibleStage.y0, this.viewStart)
+    const b = camera.getWorldPoint(this.visibleStage.x1, this.visibleStage.y1, this.viewEnd)
+    return this.visibleBounds.setTo(a.x, a.y, b.x - a.x, b.y - a.y)
   }
 
   /** Clear timers and restore time — call from the scene's shutdown. */
@@ -249,7 +270,8 @@ export class Fx {
   damage(x: number, y: number, value: number, kind: DamageKind): void {
     const crit = kind === 'crit'
     const miss = value <= 0
-    const size = this.mobileSize(crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster)
+    const rawSize = this.mobileSize(crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster)
+    const size = Math.round(rawSize * (RIVERSIDE_THEME && !this.mobileProfile ? 0.72 : 1))
     const color = miss ? '#aebec4' : crit ? (RIVERSIDE_THEME ? '#ffd58a' : INK.crit) : RIVERSIDE_THEME ? (kind === 'trainer' ? '#f4e6c7' : '#f2b45b') : kind === 'trainer' ? INK.trainer : INK.rooster
     const now = performance.now()
     this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
@@ -258,19 +280,20 @@ export class Fx {
     t.setStyle({ fontSize: `${size}px`, color, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: crit ? 10 : 8 })
     t.setShadow(3, 4, '#000000', 6, true, true)
     t.setText(miss ? 'MISS' : crit ? `★ ${fmt(value)}` : fmt(value))
-    const view = this.scene.cameras.main.worldView
+    const view = this.visibleWorld()
     const maxTextWidth = Math.max(32, view.width - 64)
     const fit = Math.min(1, maxTextWidth / Math.max(1, t.width))
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
     let sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
     let sy = y - this.dmgStack * Math.round(size * 0.85)
-    const initialScale = Math.min(fit * (crit ? 1.8 : 1), maxTextWidth / Math.max(1, t.width))
+    const initialScale = Math.min(fit * (crit ? 1.8 : 1.25), maxTextWidth / Math.max(1, t.width))
     const halfText = (t.width * initialScale) / 2
     sx = Phaser.Math.Clamp(sx, view.x + 32 + halfText, view.x + view.width - 32 - halfText)
     if (sx > this.noSpawnX - 80 && sy - rise - size < this.noSpawnY) {
       sx = Math.min(sx, this.noSpawnX - 80)
       sy = Math.max(sy, this.noSpawnY + rise + size)
     }
+    sy = Phaser.Math.Clamp(sy, view.top + rise + size * initialScale + 16, view.bottom - 32)
     t.setPosition(sx, sy).setDepth(52).setScale(initialScale)
     if (crit) {
       this.scene.tweens.add({ targets: t, scale: fit, duration: 160, ease: 'Back.easeOut' })
@@ -278,8 +301,7 @@ export class Fx {
       this.stars.setParticleTint(INK.gold)
       this.stars.explode(this.count(6), x, y)
     } else {
-      t.setScale(1.25)
-      this.scene.tweens.add({ targets: t, scale: 1, duration: 120, ease: 'Back.easeOut' })
+      this.scene.tweens.add({ targets: t, scale: fit, duration: 120, ease: 'Back.easeOut' })
     }
     this.scene.tweens.add({ targets: t, y: sy - rise, duration: JUICE.DMG_MS, ease: 'Sine.easeOut' })
     this.scene.tweens.add({
@@ -358,15 +380,20 @@ export class Fx {
 
   private showSlam(text: string, sub: string | undefined, y: number, color: string): void {
     this.slamActive = true
+    const view = this.visibleWorld()
+    // Keep the ceremony in the open sky, above both hero nameplates. Use the
+    // visible crop rather than the canvas edges under portrait ENVELOP scaling.
+    if (RIVERSIDE_THEME) y = Math.min(300, view.top + Math.max(100, view.height * 0.22))
+    const centerX = RIVERSIDE_THEME ? view.centerX : L.W / 2
     const t = this.acquire()
     t.setStyle({ fontSize: `${this.mobileSize(RIVERSIDE_THEME ? 60 : TYPE.slam)}px`, color: RIVERSIDE_THEME && color === INK.crit ? '#ffd58a' : color, stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: RIVERSIDE_THEME ? 8 : 12 })
     t.setText(text)
-    const maxWidth = Math.max(180, this.scene.cameras.main.worldView.width - 96)
+    const maxWidth = Math.max(180, view.width - 96)
     const fit = Math.min(1, maxWidth / Math.max(1, t.width))
     // Keep the overshoot inside the same viewport fit at every animation frame;
     // scaling only the resting state still clips long labels at the first pop.
     const startScale = this.reduced ? fit : Math.min(fit * 2.4, maxWidth / Math.max(1, t.width))
-    t.setPosition(960, y).setDepth(70).setScale(startScale)
+    t.setPosition(centerX, y).setDepth(70).setScale(startScale)
     this.scene.tweens.chain({
       targets: t,
       tweens: [
@@ -383,16 +410,18 @@ export class Fx {
     })
     if (sub) {
       const s = this.acquire()
-      s.setStyle({ fontSize: `${this.mobileSize(RIVERSIDE_THEME ? 28 : TYPE.slamSub)}px`, color: '#fff8ec', stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: RIVERSIDE_THEME ? 5 : 7 })
+      const subSize = RIVERSIDE_THEME ? (this.mobileProfile ? 44 : 28) : TYPE.slamSub
+      const subOffset = RIVERSIDE_THEME && this.mobileProfile ? 84 : 58
+      s.setStyle({ fontSize: `${this.mobileSize(subSize)}px`, color: '#fff8ec', stroke: RIVERSIDE_THEME ? '#102b43' : INK.stroke, strokeThickness: RIVERSIDE_THEME ? 5 : 7 })
       s.setText(sub)
       const subFit = Math.min(1, maxWidth / Math.max(1, s.width))
-      s.setPosition(960, y + 58).setDepth(70).setAlpha(0).setScale(subFit)
+      s.setPosition(centerX, y + subOffset).setDepth(70).setAlpha(0).setScale(subFit)
       this.scene.tweens.chain({
         targets: s,
         tweens: [
           { alpha: 1, duration: 200, delay: 180 },
-          { y: y + 52, duration: 620 },
-          { alpha: 0, y: y + 30, duration: 320 },
+          { y: y + subOffset - 6, duration: 620 },
+          { alpha: 0, y: y + subOffset - 28, duration: 320 },
         ],
         onComplete: () => s.setVisible(false),
       })
