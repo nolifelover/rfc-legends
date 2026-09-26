@@ -534,6 +534,7 @@ export const FX = {
   aura: 'fx-aura',
   feather: 'fx-feather',
   bubble: 'fx-bubble',
+  kite: 'fx-kite',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -651,6 +652,26 @@ export function makeFxTextures(scene: Phaser.Scene): void {
   make(FX.confetti, 16, 16, (g) => {
     g.fillStyle(0xffffff)
     g.fillRect(2, 2, 12, 12)
+  })
+
+  // Thai diamond kite (ว่าว) with a bow tail — sky filler, origin at the centre
+  make(FX.kite, 120, 200, (g) => {
+    g.fillStyle(0xe2574c)
+    g.fillTriangle(60, 4, 116, 70, 60, 136)
+    g.fillStyle(0xffd24a)
+    g.fillTriangle(60, 4, 4, 70, 60, 136)
+    g.lineStyle(4, OUTLINE)
+    g.strokeTriangle(60, 4, 116, 70, 60, 136)
+    g.strokeTriangle(60, 4, 4, 70, 60, 136)
+    g.lineBetween(60, 4, 60, 136)
+    g.lineBetween(4, 70, 116, 70)
+    g.lineStyle(3, OUTLINE)
+    g.lineBetween(60, 136, 52, 196)
+    for (const [y, c] of [[150, 0x3b82c4], [166, 0xffd24a], [182, 0xe2574c]] as const) {
+      g.fillStyle(c)
+      g.fillTriangle(48, y - 6, 66, y, 48, y + 6)
+      g.fillTriangle(66, y - 6, 48, y, 66, y + 6)
+    }
   })
 
   // cream feather (rooster ruffles and crits — never blood)

@@ -146,6 +146,10 @@ export class IdleScene extends Phaser.Scene {
   private lastKillX: number = L.ENGAGE_FRONT_X
   private lastKillY: number = L.FEET_FRONT
 
+  // living scene
+  private dayTint!: Phaser.GameObjects.Rectangle
+  private fireflies: Phaser.GameObjects.Particles.ParticleEmitter | null = null
+
   // boss — driven by the server: kill #8 (demo) / #25 is the MVP, so the server is
   // fighting the boss while killCount % every === every − 1
   private bossActive = false
@@ -233,8 +237,13 @@ export class IdleScene extends Phaser.Scene {
 
     // hills → paddy → ground, back to front. The camera sits low: sky ≤ 20%,
     // horizon at 35%, and the clay lane owns the bottom 40% of the frame.
-    this.add.image(0, L.HORIZON_Y - 330, 'art-hills').setOrigin(0, 0).setDepth(4)
-    this.add.image(0, L.HORIZON_Y, 'art-paddy').setOrigin(0, 0).setDepth(6)
+    const hills = this.add.image(0, L.HORIZON_Y - 330, 'art-hills').setOrigin(0, 0).setDepth(4)
+    const paddy = this.add.image(0, L.HORIZON_Y, 'art-paddy').setOrigin(0, 0).setDepth(6)
+    // breathing parallax: the far layers drift a few px on an 8s sine
+    if (!this.reduced) {
+      this.tweens.add({ targets: hills, x: -6, duration: 8000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tweens.add({ targets: paddy, x: -3, duration: 8000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 2000 })
+    }
 
     const shimmers: Array<[number, number, number, number]> = [
       [260, L.HORIZON_Y + 34, 2.6, 0],
@@ -267,6 +276,8 @@ export class IdleScene extends Phaser.Scene {
 
     // one warm grade over the whole backdrop; actors above it keep full saturation
     this.add.rectangle(0, 0, L.W, L.H, INK.grade, 0.14).setOrigin(0, 0).setDepth(11)
+    // time of day: morning → noon → golden hour → dusk over 6 real minutes (backdrop only)
+    this.dayTint = this.add.rectangle(0, 0, L.W, L.H, 0xfff1d6, 0.1).setOrigin(0, 0).setDepth(11)
     // boss-fight darkening lives just above the grade and below every actor
     this.bossDim = this.add.rectangle(0, 0, L.W, L.H, INK.outline, 1).setOrigin(0, 0).setDepth(12).setAlpha(0)
 
@@ -326,6 +337,87 @@ export class IdleScene extends Phaser.Scene {
       .setDepth(16)
 
     this.scheduleFlock()
+    this.buildKite()
+    this.startDayCycle()
+  }
+
+  /** A kite sways in the upper band, its string running down to the horizon. */
+  private buildKite(): void {
+    // top-left band: clear of the boss bar (centre) and the chips (right)
+    const kx = 250
+    const ky = 150
+    const kite = this.add.image(kx, ky, FX.kite).setDepth(3).setScale(0.9)
+    const string = this.add.graphics().setDepth(3)
+    const drawString = (): void => {
+      string.clear()
+      string.lineStyle(2, 0x5a4636, 0.7)
+      string.beginPath()
+      string.moveTo(kite.x - 8, kite.y + 60)
+      string.lineTo(560, L.HORIZON_Y + 40)
+      string.strokePath()
+    }
+    drawString()
+    if (this.reduced) return
+    this.tweens.add({
+      targets: kite,
+      angle: { from: -8, to: 8 },
+      x: { from: kx - 10, to: kx + 10 },
+      y: { from: ky + 6, to: ky - 6 },
+      duration: 3200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      onUpdate: drawString,
+    })
+  }
+
+  /**
+   * Backdrop light over 6 real minutes: morning cream → clear noon → golden hour →
+   * violet dusk with fireflies, cross-faded through the depth-11 tint rect.
+   */
+  private startDayCycle(): void {
+    const keys: Array<{ at: number; color: number; alpha: number }> = [
+      { at: 0, color: 0xfff1d6, alpha: 0.1 },
+      { at: 0.25, color: 0xfff1d6, alpha: 0 },
+      { at: 0.55, color: 0xffb36b, alpha: 0.18 },
+      { at: 0.8, color: 0x6d5ba8, alpha: 0.22 },
+      { at: 1, color: 0xfff1d6, alpha: 0.1 },
+    ]
+    this.fireflies = this.add
+      .particles(0, 0, FX.glow, {
+        x: { min: 200, max: L.W - 200 },
+        y: { min: L.HORIZON_Y + 60, max: L.GROUND_Y + 120 },
+        lifespan: 3200,
+        speedX: { min: -20, max: 20 },
+        speedY: { min: -24, max: 6 },
+        scale: { start: 0.18, end: 0.3 },
+        alpha: { start: 0, end: 0.9, ease: 'Sine.easeInOut' },
+        tint: 0xd9f27a,
+        frequency: 380,
+        maxAliveParticles: 10,
+        emitting: false,
+      })
+      .setDepth(17)
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 360000,
+      repeat: -1,
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 0
+        let i = 0
+        while (i < keys.length - 2 && t > keys[i + 1].at) i++
+        const a = keys[i]
+        const b = keys[i + 1]
+        const f = Phaser.Math.Clamp((t - a.at) / (b.at - a.at), 0, 1)
+        const ca = Phaser.Display.Color.IntegerToColor(a.color)
+        const cb = Phaser.Display.Color.IntegerToColor(b.color)
+        const c = Phaser.Display.Color.Interpolate.ColorWithColor(ca, cb, 100, f * 100)
+        this.dayTint.setFillStyle(Phaser.Display.Color.GetColor(c.r, c.g, c.b), Phaser.Math.Linear(a.alpha, b.alpha, f))
+        const dusk = t > 0.7 && t < 0.95
+        if (this.fireflies && this.fireflies.emitting !== dusk) this.fireflies.emitting = dusk
+      },
+    })
   }
 
   private scheduleFlock(): void {
