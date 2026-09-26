@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- rails -->
+    <rect x="4" y="22" width="56" height="6" rx="2" fill="#A9774C" stroke="#2B1B12" stroke-width="2.5"/>
+    <rect x="4" y="38" width="56" height="6" rx="2" fill="#A9774C" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- posts in front -->
+    <rect x="6" y="16" width="7" height="46" rx="3" fill="#9A6B43" stroke="#2B1B12" stroke-width="2.5"/>
+    <rect x="28.5" y="14" width="7" height="48" rx="3" fill="#9A6B43" stroke="#2B1B12" stroke-width="2.5"/>
+    <rect x="51" y="16" width="7" height="46" rx="3" fill="#9A6B43" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- wood grain -->
+    <path d="M8.6,22 L8.6,56 M31.1,20 L31.1,58 M53.6,22 L53.6,56" stroke="#7C5334" stroke-width="1.5"/>
+    <!-- nails -->
+    <circle cx="9.5" cy="25" r="1.5" fill="#4A3220"/>
+    <circle cx="9.5" cy="41" r="1.5" fill="#4A3220"/>
+    <circle cx="32" cy="25" r="1.5" fill="#4A3220"/>
+    <circle cx="32" cy="41" r="1.5" fill="#4A3220"/>
+    <circle cx="54.5" cy="25" r="1.5" fill="#4A3220"/>
+    <circle cx="54.5" cy="41" r="1.5" fill="#4A3220"/>
+  </g>
+</svg>

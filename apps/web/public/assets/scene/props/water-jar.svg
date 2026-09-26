@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- jar foot -->
+    <ellipse cx="32" cy="57" rx="13" ry="4.5" fill="#9D4728" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- round terracotta body -->
+    <path d="M14,22 Q10,34 16,46 Q22,57 32,57 Q42,57 48,46 Q54,34 50,22 Z" fill="#B65D33" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- neck ring -->
+    <path d="M13,22 Q32,17.5 51,22 Q32,25 13,22 Z" fill="#9D4728" stroke="#2B1B12" stroke-width="2.2"/>
+    <!-- dark mouth -->
+    <ellipse cx="32" cy="21" rx="15" ry="4.8" fill="#6E3418" stroke="#2B1B12" stroke-width="2.2"/>
+    <ellipse cx="32" cy="21.4" rx="10.5" ry="3" fill="#3E6FA8"/>
+    <!-- woven bands -->
+    <path d="M16,38 Q32,44 48,38" stroke="#9D4728" stroke-width="2.2" fill="none"/>
+    <path d="M18,46 Q32,51 46,46" stroke="#9D4728" stroke-width="2" fill="none"/>
+    <circle cx="24" cy="41.5" r="1.2" fill="#9D4728"/>
+    <circle cx="32" cy="43" r="1.2" fill="#9D4728"/>
+    <circle cx="40" cy="41.5" r="1.2" fill="#9D4728"/>
+    <!-- shine -->
+    <path d="M20,27 Q17,35 19,43" stroke="#D97F58" stroke-width="3" fill="none" opacity="0.8"/>
+  </g>
+</svg>

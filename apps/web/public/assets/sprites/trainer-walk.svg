@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <g stroke-linejoin="round" stroke-linecap="round" transform="rotate(4 48 60)">
+    <!-- arms swung mid-stride -->
+    <path d="M33,66 L43,79" stroke="#2B1B12" stroke-width="11"/>
+    <path d="M33,66 L43,79" stroke="#E5A76B" stroke-width="6.4"/>
+    <circle cx="44" cy="81" r="4.6" fill="#E5A76B" stroke="#2B1B12" stroke-width="3"/>
+    <!-- legs in a wide stride -->
+    <path d="M40,85 L28,91" stroke="#2B1B12" stroke-width="10.5"/>
+    <path d="M40,85 L28,91" stroke="#E5A76B" stroke-width="6"/>
+    <path d="M56,85 L66,91" stroke="#2B1B12" stroke-width="10.5"/>
+    <path d="M56,85 L66,91" stroke="#E5A76B" stroke-width="6"/>
+    <!-- sandals angled with stride -->
+    <rect x="18" y="89" width="15" height="5.5" rx="2.6" fill="#8A6D55" stroke="#2B1B12" stroke-width="2.8" transform="rotate(30 25.5 91.7)"/>
+    <rect x="62" y="89" width="15" height="5.5" rx="2.6" fill="#8A6D55" stroke="#2B1B12" stroke-width="2.8" transform="rotate(-30 69.5 91.7)"/>
+    <!-- walking stick -->
+    <path d="M67,45 L79,92" stroke="#2B1B12" stroke-width="8.5"/>
+    <path d="M67,45 L79,92" stroke="#8A6D55" stroke-width="4.8"/>
+    <circle cx="67" cy="45" r="3.4" fill="#8A6D55" stroke="#2B1B12" stroke-width="2.8"/>
+    <!-- shorts -->
+    <path d="M33,78 L63,78 L61.5,88.5 L52.5,88.5 L49.5,83 L47,88.5 L34.5,88.5 Z" fill="#2C4477" stroke="#2B1B12" stroke-width="3.2"/>
+    <!-- mohorm vest -->
+    <path d="M36,60 Q29,63 29,72 Q29,80 35,83 L61,83 Q67,80 67,72 Q67,63 60,60 Q48,56 36,60 Z" fill="#3F5FA8" stroke="#2B1B12" stroke-width="3.6"/>
+    <path d="M38,62 Q36.5,72 38,82" stroke="#6E8CC9" stroke-width="1.8" fill="none" opacity="0.9"/>
+    <path d="M58,62 Q59.5,72 58,82" stroke="#6E8CC9" stroke-width="1.8" fill="none" opacity="0.9"/>
+    <path d="M48,68 L48,82" stroke="#2C4477" stroke-width="2" fill="none"/>
+    <circle cx="48" cy="71.5" r="1.5" fill="#EDA614"/>
+    <circle cx="48" cy="77.5" r="1.5" fill="#EDA614"/>
+    <path d="M42,59 L54,59 L48,68 Z" fill="#E5A76B" stroke="#2B1B12" stroke-width="2.6"/>
+    <!-- pha khao ma sash -->
+    <path d="M29.5,73 Q48,80 66.5,73 L66.5,79.5 Q48,86.5 29.5,79.5 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M30.8,75.8 Q48,82.4 65.2,75.8" stroke="#FFFDF6" stroke-width="1.2" fill="none" opacity="0.9"/>
+    <circle cx="36" cy="77.6" r="1.4" fill="#FFFDF6"/>
+    <circle cx="44" cy="79.8" r="1.4" fill="#FFFDF6"/>
+    <circle cx="52" cy="79.8" r="1.4" fill="#FFFDF6"/>
+    <circle cx="60" cy="77.6" r="1.4" fill="#FFFDF6"/>
+    <path d="M66,80 Q69.5,86 67.5,92 L63.5,88.5 Q64.8,84 63,81 Z" fill="#A93428" stroke="#2B1B12" stroke-width="2.4"/>
+    <circle cx="66" cy="77" r="3.6" fill="#D14B3D" stroke="#2B1B12" stroke-width="2.8"/>
+    <!-- right arm back, hand on stick -->
+    <path d="M61,65 L67,74" stroke="#2B1B12" stroke-width="11"/>
+    <path d="M61,65 L67,74" stroke="#E5A76B" stroke-width="6.4"/>
+    <circle cx="68" cy="75" r="4.6" fill="#E5A76B" stroke="#2B1B12" stroke-width="3"/>
+    <!-- neck + head -->
+    <path d="M48,54 L48,60" stroke="#2B1B12" stroke-width="11"/>
+    <path d="M48,54 L48,60" stroke="#E5A76B" stroke-width="6.4"/>
+    <circle cx="32" cy="46" r="4" fill="#E5A76B" stroke="#2B1B12" stroke-width="2.8"/>
+    <circle cx="64" cy="46" r="4" fill="#E5A76B" stroke="#2B1B12" stroke-width="2.8"/>
+    <circle cx="48" cy="44" r="15" fill="#E5A76B" stroke="#2B1B12" stroke-width="3.8"/>
+    <path d="M33,46 Q33,33 48,33 Q63,33 63,46 Q56,41 51,43.5 Q48,41 45,43.5 Q40,41 33,46 Z" fill="#26170E"/>
+    <path d="M33,35 Q33,42 37,47" stroke="#A93428" stroke-width="2" fill="none" opacity="0.9"/>
+    <path d="M63,35 Q63,42 59,47" stroke="#A93428" stroke-width="2" fill="none" opacity="0.9"/>
+    <path d="M39,44.5 Q41,43 43,44.5" stroke="#2B1B12" stroke-width="2.2" fill="none"/>
+    <path d="M53,44.5 Q55,43 57,44.5" stroke="#2B1B12" stroke-width="2.2" fill="none"/>
+    <circle cx="41" cy="49" r="2.7" fill="#2B1B12"/>
+    <circle cx="55" cy="49" r="2.7" fill="#2B1B12"/>
+    <circle cx="40" cy="48" r="0.9" fill="#FFFDF6"/>
+    <circle cx="54" cy="48" r="0.9" fill="#FFFDF6"/>
+    <circle cx="34" cy="54" r="3" fill="#E58A63" opacity="0.5"/>
+    <circle cx="62" cy="54" r="3" fill="#E58A63" opacity="0.5"/>
+    <path d="M44,56.5 Q48,60 52,56.5" stroke="#2B1B12" stroke-width="2.4" fill="none"/>
+    <!-- ngob hat, tilted with the stride -->
+    <g transform="rotate(-5 48 32)">
+      <path d="M48,6 Q56,15 63,24 Q69,28.5 76,33.5 Q48,41 20,33.5 Q27,28.5 33,24 Q40,15 48,6 Z" fill="#E7C36A" stroke="#2B1B12" stroke-width="3.8"/>
+      <path d="M38,17 Q48,12 58,17" stroke="#C9A24B" stroke-width="1.7" fill="none"/>
+      <path d="M31,25 Q48,19 65,25" stroke="#C9A24B" stroke-width="1.7" fill="none"/>
+      <path d="M35,26.5 Q48,21.5 61,26.5 L60.5,29.5 Q48,24.5 35.5,29.5 Z" fill="#D14B3D"/>
+      <path d="M22,34.5 Q48,41.5 74,34.5 Q48,38 22,34.5 Z" fill="#C9A24B" opacity="0.9"/>
+    </g>
+  </g>
+</svg>

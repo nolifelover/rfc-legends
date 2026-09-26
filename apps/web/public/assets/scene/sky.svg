@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A6D3E4"/>
+      <stop offset="0.4" stop-color="#C7E5DA"/>
+      <stop offset="0.7" stop-color="#FBE6B3"/>
+      <stop offset="1" stop-color="#F7CE79"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#sky)"/>
+  <!-- soft morning sun over the horizon -->
+  <circle cx="700" cy="330" r="66" fill="#FBE6B3" opacity="0.5"/>
+  <circle cx="700" cy="330" r="45" fill="#FFE9AE" opacity="0.7"/>
+  <circle cx="700" cy="330" r="30" fill="#FFF6D8" opacity="0.9"/>
+  <!-- cream clouds -->
+  <g fill="#FFFDF6" opacity="0.92">
+    <ellipse cx="170" cy="120" rx="52" ry="20"/>
+    <ellipse cx="140" cy="128" rx="30" ry="14"/>
+    <ellipse cx="205" cy="128" rx="32" ry="13"/>
+    <ellipse cx="170" cy="106" rx="30" ry="15"/>
+    <ellipse cx="540" cy="72" rx="60" ry="21"/>
+    <ellipse cx="505" cy="80" rx="32" ry="13"/>
+    <ellipse cx="580" cy="80" rx="34" ry="13"/>
+    <ellipse cx="540" cy="58" rx="32" ry="14"/>
+    <ellipse cx="830" cy="205" rx="42" ry="16"/>
+    <ellipse cx="805" cy="211" rx="24" ry="11"/>
+    <ellipse cx="858" cy="211" rx="25" ry="10"/>
+    <ellipse cx="830" cy="194" rx="24" ry="11"/>
+  </g>
+  <g fill="#F7E8C8" opacity="0.85">
+    <ellipse cx="170" cy="132" rx="40" ry="7"/>
+    <ellipse cx="540" cy="85" rx="46" ry="7"/>
+    <ellipse cx="830" cy="215" rx="32" ry="6"/>
+  </g>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- bamboo ngob hat, front view -->
+    <path d="M4,34 Q24,26 44,34 L24,8 Z" fill="#E7C36A" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- highlight half -->
+    <path d="M4,34 L24,8 Q16,20 10,33 Z" fill="#F2D489" opacity="0.7"/>
+    <!-- weave bands -->
+    <path d="M11,29 Q24,23 37,29" stroke="#C9A24B" stroke-width="1.8" fill="none"/>
+    <path d="M16,22 Q24,17 32,22" stroke="#C9A24B" stroke-width="1.8" fill="none"/>
+    <!-- red rim band -->
+    <path d="M5,35 Q24,28 43,35 Q24,42 5,35 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="2.2"/>
+    <!-- chin straps -->
+    <path d="M16,37.5 Q17,43 15,46" stroke="#9D4728" stroke-width="2" fill="none"/>
+    <path d="M32,37.5 Q31,43 33,46" stroke="#9D4728" stroke-width="2" fill="none"/>
+  </g>
+</svg>

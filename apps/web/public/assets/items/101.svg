@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- steam swirls -->
+    <path d="M17,21 Q13.5,16 17,10.5" stroke="#BFE3C0" stroke-width="3" fill="none" opacity="0.85"/>
+    <path d="M29,21 Q25.5,16 29,10.5" stroke="#BFE3C0" stroke-width="3" fill="none" opacity="0.85"/>
+    <!-- clay bowl -->
+    <path d="M8,27 Q8,41 24,41 Q40,41 40,27 Z" fill="#B65D33" stroke="#2B1B12" stroke-width="2.5"/>
+    <rect x="18" y="41" width="12" height="4" rx="2" fill="#9D4728" stroke="#2B1B12" stroke-width="2.2"/>
+    <path d="M12,34 Q24,38 36,34" stroke="#9D4728" stroke-width="1.8" fill="none" opacity="0.7"/>
+    <!-- herbal green liquid -->
+    <ellipse cx="24" cy="27" rx="16" ry="5" fill="#6FA84E" stroke="#2B1B12" stroke-width="2.3"/>
+    <path d="M13,26.5 Q18,24.5 24,26.5 T35,26.5" stroke="#4C7A35" stroke-width="1.6" fill="none"/>
+    <ellipse cx="19" cy="27" rx="2" ry="1" fill="#9CCC65"/>
+    <ellipse cx="29" cy="26" rx="1.6" ry="0.9" fill="#9CCC65"/>
+    <!-- shine on the bowl -->
+    <path d="M13,33 Q15,37 20,39" stroke="#D97F58" stroke-width="2" fill="none" opacity="0.8"/>
+  </g>
+</svg>

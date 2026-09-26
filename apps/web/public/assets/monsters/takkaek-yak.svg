@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- antennae -->
+    <path d="M40,13 Q34,4 27,5" fill="none" stroke="#2B1B12" stroke-width="3"/>
+    <circle cx="26" cy="5" r="2.6" fill="#558B2F" stroke="#2B1B12" stroke-width="2"/>
+    <path d="M50,13 Q56,4 63,5" fill="none" stroke="#2B1B12" stroke-width="3"/>
+    <circle cx="64" cy="5" r="2.6" fill="#558B2F" stroke="#2B1B12" stroke-width="2"/>
+    <!-- big hind legs -->
+    <path d="M22,50 Q8,42 7,52 Q6,62 15,66 Q21,67.5 24,61 Q26,56 22,50 Z" fill="#558B2F" stroke="#2B1B12" stroke-width="3.5"/>
+    <path d="M14,64 Q12,74 18,78" fill="none" stroke="#2B1B12" stroke-width="8"/>
+    <path d="M14,64 Q12,74 18,78" fill="none" stroke="#7CB342" stroke-width="4.4"/>
+    <path d="M66,50 Q80,42 81,52 Q82,62 73,66 Q67,67.5 64,61 Q62,56 66,50 Z" fill="#558B2F" stroke="#2B1B12" stroke-width="3.5"/>
+    <path d="M74,64 Q76,74 70,78" fill="none" stroke="#2B1B12" stroke-width="8"/>
+    <path d="M74,64 Q76,74 70,78" fill="none" stroke="#7CB342" stroke-width="4.4"/>
+    <!-- segmented body -->
+    <ellipse cx="44" cy="54" rx="17" ry="22" fill="#7CB342" stroke="#2B1B12" stroke-width="4"/>
+    <path d="M30,50 Q44,54 58,50" stroke="#558B2F" stroke-width="2" fill="none"/>
+    <path d="M31,58 Q44,62 57,58" stroke="#558B2F" stroke-width="2" fill="none"/>
+    <path d="M34,64 Q44,68 54,64" stroke="#558B2F" stroke-width="2" fill="none"/>
+    <!-- wing cover -->
+    <path d="M30,40 Q22,52 28,64 Q34,70 40,62 Q40,48 30,40 Z" fill="#9CCC65" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M31,42 Q27,54 29,63" stroke="#558B2F" stroke-width="1.6" fill="none"/>
+    <!-- little front legs -->
+    <path d="M32,46 Q26,50 24,53" fill="none" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M32,46 Q26,50 24,53" fill="none" stroke="#7CB342" stroke-width="2.8"/>
+    <path d="M56,46 Q62,50 64,53" fill="none" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M56,46 Q62,50 64,53" fill="none" stroke="#7CB342" stroke-width="2.8"/>
+    <!-- goofy head -->
+    <circle cx="44" cy="26" r="13.5" fill="#86BE49" stroke="#2B1B12" stroke-width="4"/>
+    <circle cx="38.5" cy="23" r="5.4" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="50.5" cy="22" r="6.6" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="37.2" cy="21.6" r="2.7" fill="#2B1B12"/>
+    <circle cx="48.8" cy="20.4" r="3.3" fill="#2B1B12"/>
+    <circle cx="36.2" cy="20.6" r="0.9" fill="#FFFDF6"/>
+    <circle cx="47.6" cy="19.2" r="1" fill="#FFFDF6"/>
+    <!-- big grin with buck teeth -->
+    <path d="M35,31 Q44,39 53,30 Q44,35 35,31 Z" fill="#5C2E22" stroke="#2B1B12" stroke-width="2.4"/>
+    <path d="M40.5,32.5 L44,32.5 L44,37 L40.5,37 Z" fill="#FFFDF6" stroke="#2B1B12" stroke-width="1.6"/>
+    <path d="M44,32.5 L47.5,32.5 L47.5,37 L44,37 Z" fill="#FFFDF6" stroke="#2B1B12" stroke-width="1.6"/>
+    <circle cx="31.5" cy="29" r="2.6" fill="#E58A63" opacity="0.55"/>
+    <circle cx="57" cy="28" r="2.6" fill="#E58A63" opacity="0.55"/>
+  </g>
+</svg>

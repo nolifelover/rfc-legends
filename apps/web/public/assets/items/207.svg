@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- crafted billhook (mi pha), drawn as a resting farm tool -->
+    <path d="M8,38 L24,22" stroke="#2B1B12" stroke-width="8"/>
+    <path d="M8,38 L24,22" stroke="#6E4A2E" stroke-width="4.6"/>
+    <path d="M6.5,39.5 Q5,43 8.5,44 Q12,44.5 11.5,41" fill="none" stroke="#2B1B12" stroke-width="6"/>
+    <path d="M6.5,39.5 Q5,43 8.5,44 Q12,44.5 11.5,41" fill="none" stroke="#8A6D55" stroke-width="3"/>
+    <!-- ferrule ring -->
+    <path d="M22,20 L26,24" stroke="#C99143" stroke-width="2.6"/>
+    <!-- curved billhook blade with clipped tip -->
+    <path d="M25,21 Q34,10 43,9 Q43.5,14 40,19 Q35,26 27,26.5 Q24.5,24.5 25,21 Z" fill="#B8C4CC" stroke="#2B1B12" stroke-width="2.5"/>
+    <path d="M28,21.5 Q35,14 41.5,12" stroke="#E8EFF2" stroke-width="1.8" fill="none"/>
+    <path d="M27,26.5 Q25.5,25.5 25.2,23.5" stroke="#7E8E98" stroke-width="1.6" fill="none"/>
+    <!-- maker's mark -->
+    <circle cx="35" cy="20" r="1.4" fill="#7E8E98"/>
+  </g>
+</svg>

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 120">
+  <defs>
+    <g id="gtuft" stroke-width="2.6" stroke-linecap="round" fill="none">
+      <path d="M0,0 Q-4,-7 -7,-11" stroke="#7CB342"/>
+      <path d="M0,0 Q-0.5,-8 -1,-13" stroke="#55803C"/>
+      <path d="M0,0 Q3.5,-7 7,-10" stroke="#7CB342"/>
+    </g>
+  </defs>
+  <!-- warm clay soil lane -->
+  <rect width="960" height="120" fill="#B96F44"/>
+  <!-- worn dirt path along the top edge -->
+  <path d="M0,18 Q120,12 240,18 T480,18 T720,18 T960,18 L960,42 Q720,48 480,44 Q240,48 0,42 Z" fill="#CD9263"/>
+  <!-- grass fringe -->
+  <path d="M0,14 Q40,2 80,13 Q120,3 160,12 Q200,2 240,13 Q280,4 320,12 Q360,2 400,13 Q440,3 480,12 Q520,2 560,13 Q600,4 640,12 Q680,2 720,13 Q760,3 800,12 Q840,2 880,13 Q920,4 960,12 L960,0 L0,0 Z" fill="#55803C"/>
+  <rect y="11" width="960" height="4" fill="#3E6130" opacity="0.85"/>
+  <!-- grass tufts breaking through the path edge -->
+  <use href="#gtuft" transform="translate(52,21)"/>
+  <use href="#gtuft" transform="translate(180,19)"/>
+  <use href="#gtuft" transform="translate(340,21)"/>
+  <use href="#gtuft" transform="translate(470,19)"/>
+  <use href="#gtuft" transform="translate(610,21)"/>
+  <use href="#gtuft" transform="translate(760,19)"/>
+  <use href="#gtuft" transform="translate(900,21)"/>
+  <!-- small stones -->
+  <g>
+    <ellipse cx="140" cy="70" rx="10" ry="7" fill="#9C8E80"/>
+    <ellipse cx="137" cy="68" rx="7" ry="4.5" fill="#B0A395"/>
+    <ellipse cx="400" cy="88" rx="14" ry="9" fill="#9C8E80"/>
+    <ellipse cx="396" cy="85" rx="10" ry="6" fill="#B0A395"/>
+    <ellipse cx="620" cy="62" rx="8" ry="6" fill="#9C8E80"/>
+    <ellipse cx="618" cy="60" rx="5.5" ry="4" fill="#B0A395"/>
+    <ellipse cx="856" cy="82" rx="12" ry="8" fill="#9C8E80"/>
+    <ellipse cx="852" cy="79" rx="8.5" ry="5.5" fill="#B0A395"/>
+  </g>
+  <!-- soil speckles -->
+  <g fill="#9D4728" opacity="0.35">
+    <circle cx="80" cy="60" r="2.2"/>
+    <circle cx="230" cy="75" r="2.6"/>
+    <circle cx="320" cy="55" r="2"/>
+    <circle cx="480" cy="65" r="2.4"/>
+    <circle cx="540" cy="95" r="2.2"/>
+    <circle cx="690" cy="70" r="2.6"/>
+    <circle cx="780" cy="98" r="2"/>
+    <circle cx="920" cy="58" r="2.4"/>
+    <circle cx="170" cy="100" r="2.2"/>
+    <circle cx="600" cy="108" r="2.4"/>
+  </g>
+  <g fill="#E0A876" opacity="0.4">
+    <circle cx="120" cy="82" r="2"/>
+    <circle cx="280" cy="95" r="2.4"/>
+    <circle cx="440" cy="52" r="2"/>
+    <circle cx="700" cy="90" r="2.2"/>
+    <circle cx="890" cy="105" r="2.2"/>
+    <circle cx="40" cy="100" r="2"/>
+  </g>
+</svg>

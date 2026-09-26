@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- little side legs -->
+    <path d="M16,58 L10,64" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M16,58 L10,64" stroke="#E85D2F" stroke-width="2.8"/>
+    <path d="M18,62 L13,68" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M18,62 L13,68" stroke="#E85D2F" stroke-width="2.8"/>
+    <path d="M20,64 L16,70" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M20,64 L16,70" stroke="#E85D2F" stroke-width="2.8"/>
+    <path d="M64,58 L70,64" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M64,58 L70,64" stroke="#E85D2F" stroke-width="2.8"/>
+    <path d="M62,62 L67,68" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M62,62 L67,68" stroke="#E85D2F" stroke-width="2.8"/>
+    <path d="M60,64 L64,70" stroke="#2B1B12" stroke-width="5.5"/>
+    <path d="M60,64 L64,70" stroke="#E85D2F" stroke-width="2.8"/>
+    <!-- raised claw arms -->
+    <path d="M18,44 Q10,36 12,26" fill="none" stroke="#2B1B12" stroke-width="8"/>
+    <path d="M18,44 Q10,36 12,26" fill="none" stroke="#E85D2F" stroke-width="4.4"/>
+    <path d="M6,20 Q3,10 12,9.5 Q19,10 18,17 Q13.5,14 12,16.5 Q11,20 6,20 Z" fill="#E85D2F" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M62,44 Q70,36 68,26" fill="none" stroke="#2B1B12" stroke-width="8"/>
+    <path d="M62,44 Q70,36 68,26" fill="none" stroke="#E85D2F" stroke-width="4.4"/>
+    <path d="M76,20 Q79,9 69,8 Q59,8 60.5,18 Q67,13.5 69,16.5 Q70,20.5 76,20 Z" fill="#E85D2F" stroke="#2B1B12" stroke-width="3"/>
+    <!-- round body -->
+    <circle cx="40" cy="48" r="21" fill="#E85D2F" stroke="#2B1B12" stroke-width="4"/>
+    <path d="M23,54 Q40,66 57,54 Q52,62 40,62.5 Q28,62 23,54 Z" fill="#C2441B"/>
+    <path d="M25,40 Q40,27 55,40" stroke="#C2441B" stroke-width="2.2" fill="none"/>
+    <path d="M27,47 Q40,37 53,47" stroke="#C2441B" stroke-width="1.8" fill="none"/>
+    <path d="M30,54 Q40,46 50,54" stroke="#C2441B" stroke-width="1.8" fill="none"/>
+    <circle cx="33" cy="44" r="1.1" fill="#C2441B"/>
+    <circle cx="47" cy="44" r="1.1" fill="#C2441B"/>
+    <!-- eyes on stalks -->
+    <path d="M33,29 L29,17" stroke="#2B1B12" stroke-width="3.5"/>
+    <path d="M33,29 L29,17" stroke="#E85D2F" stroke-width="1.8"/>
+    <path d="M47,29 L51,17" stroke="#2B1B12" stroke-width="3.5"/>
+    <path d="M47,29 L51,17" stroke="#E85D2F" stroke-width="1.8"/>
+    <circle cx="28.5" cy="14" r="5" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="51.5" cy="14" r="5" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="28.5" cy="15.3" r="2.2" fill="#2B1B12"/>
+    <circle cx="51.5" cy="15.3" r="2.2" fill="#2B1B12"/>
+    <circle cx="27.6" cy="13.6" r="0.7" fill="#FFFDF6"/>
+    <circle cx="50.6" cy="13.6" r="0.7" fill="#FFFDF6"/>
+    <!-- friendly face on the shell -->
+    <path d="M34,52 Q40,57 46,52" stroke="#2B1B12" stroke-width="2.4" fill="none"/>
+    <circle cx="29" cy="51" r="2.8" fill="#F5906B" opacity="0.6"/>
+    <circle cx="51" cy="51" r="2.8" fill="#F5906B" opacity="0.6"/>
+  </g>
+</svg>

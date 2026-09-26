@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- rolled khao-ma headband, coiled view -->
+    <ellipse cx="24" cy="26" rx="16" ry="11" fill="#D14B3D" stroke="#2B1B12" stroke-width="2.5"/>
+    <ellipse cx="24" cy="26" rx="10.5" ry="7" fill="none" stroke="#A93428" stroke-width="2"/>
+    <ellipse cx="24" cy="26" rx="5" ry="3.4" fill="#A93428" stroke="#2B1B12" stroke-width="1.6"/>
+    <!-- woven check pattern -->
+    <path d="M11.5,24.5 Q24,19.5 36.5,24.5 M12,30 Q24,25.5 36,30" stroke="#FFFDF6" stroke-width="1.7" fill="none" opacity="0.9"/>
+    <path d="M18,17.8 L17,34.3 M30,17.8 L31,34.3" stroke="#FFFDF6" stroke-width="1.7" opacity="0.75"/>
+    <!-- trailing end -->
+    <path d="M38,29 Q45,34 44,41 L38.5,38 Q40,33 36,33.5 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="2.2"/>
+    <path d="M39.5,32 L43.5,37" stroke="#FFFDF6" stroke-width="1.2" opacity="0.9"/>
+    <path d="M41,31.5 L44.5,36" stroke="#FFFDF6" stroke-width="1.2" opacity="0.9"/>
+  </g>
+</svg>

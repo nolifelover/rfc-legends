@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- bamboo takrut ring -->
+    <path d="M24,13 A13,13 0 1,0 24,39 A13,13 0 1,0 24,13 Z M24,20.5 A5.5,5.5 0 1,1 24,31.5 A5.5,5.5 0 1,1 24,20.5 Z" fill="#D9A94F" fill-rule="evenodd" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- bamboo node lines -->
+    <path d="M11.2,22.5 Q9.4,26 11.2,29.5" stroke="#A87A2E" stroke-width="2" fill="none"/>
+    <path d="M36.8,22.5 Q38.6,26 36.8,29.5" stroke="#A87A2E" stroke-width="2" fill="none"/>
+    <!-- yantra diamond on the band -->
+    <path d="M24,9.5 L27,13.5 L24,17.5 L21,13.5 Z" fill="#FFFDF6" stroke="#2B1B12" stroke-width="1.6"/>
+    <!-- hanging red cord -->
+    <path d="M20,35 Q16,40 12,41" stroke="#D14B3D" stroke-width="2.4" fill="none"/>
+    <circle cx="11.5" cy="42" r="2" fill="#EDA614" stroke="#2B1B12" stroke-width="1.5"/>
+    <path d="M11.5,44 L9,47 M11.5,44 L14,47" stroke="#D14B3D" stroke-width="1.8"/>
+    <!-- sheen -->
+    <path d="M14,18 Q12,22 12.5,26" stroke="#F2CE85" stroke-width="1.8" fill="none" opacity="0.9"/>
+  </g>
+</svg>

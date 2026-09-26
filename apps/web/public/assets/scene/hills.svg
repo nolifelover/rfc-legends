@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 200">
+  <!-- distant hill layer -->
+  <path d="M0,120 Q80,84 170,104 Q260,124 340,96 Q430,70 520,98 Q600,120 690,92 Q780,68 870,96 Q920,110 960,100 L960,200 L0,200 Z" fill="#A9C4A0"/>
+  <!-- nearer hill layer -->
+  <path d="M0,150 Q90,120 190,140 Q300,158 400,132 Q500,110 600,138 Q700,160 800,130 Q880,112 960,136 L960,200 L0,200 Z" fill="#8FB388"/>
+  <!-- tiny Thai stilt farmhouse -->
+  <g>
+    <rect x="695" y="128" width="32" height="17" fill="#C9A97E"/>
+    <path d="M687,129 Q711,110 735,129 L730,133 L692,133 Z" fill="#9D4728"/>
+    <rect x="705" y="133" width="9" height="7" fill="#6E4A2E"/>
+    <path d="M698,145 L698,153 M712,145 L712,153 M726,145 L726,153" stroke="#6E4A2E" stroke-width="3" stroke-linecap="round"/>
+    <rect x="707" y="135" width="5" height="4" fill="#4A3220"/>
+  </g>
+  <!-- palm trees -->
+  <g stroke-linecap="round" fill="none">
+    <path d="M118,152 Q116,132 121,118" stroke="#8A6B4A" stroke-width="5"/>
+    <g stroke="#6E9A62" stroke-width="4.5">
+      <path d="M121,118 Q104,112 96,116"/>
+      <path d="M121,118 Q110,104 102,104"/>
+      <path d="M121,118 Q121,102 116,98"/>
+      <path d="M121,118 Q133,106 141,107"/>
+      <path d="M121,118 Q139,113 146,118"/>
+    </g>
+    <path d="M862,146 Q860,130 864,118" stroke="#8A6B4A" stroke-width="4"/>
+    <g stroke="#6E9A62" stroke-width="3.6">
+      <path d="M864,118 Q850,113 843,117"/>
+      <path d="M864,118 Q854,106 847,106"/>
+      <path d="M864,118 Q865,104 860,100"/>
+      <path d="M864,118 Q875,107 882,108"/>
+      <path d="M864,118 Q880,114 886,119"/>
+    </g>
+    <path d="M490,120 Q489,109 492,101" stroke="#8A6B4A" stroke-width="3.2"/>
+    <g stroke="#6E9A62" stroke-width="2.8">
+      <path d="M492,101 Q481,97 476,100"/>
+      <path d="M492,101 Q484,92 479,92"/>
+      <path d="M492,101 Q493,90 489,87"/>
+      <path d="M492,101 Q501,92 507,93"/>
+      <path d="M492,101 Q504,98 509,102"/>
+    </g>
+  </g>
+</svg>

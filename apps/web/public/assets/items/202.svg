@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- buffalo leather vest -->
+    <path d="M24,8 L14,11 Q8,14 8,22 Q8,28 12,30 L12,42 Q24,46 36,42 L36,30 Q40,28 40,22 Q40,14 34,11 L24,8 Z" fill="#7A4A2B" stroke="#2B1B12" stroke-width="2.5"/>
+    <!-- V collar -->
+    <path d="M19,10.5 L24,21 L29,10.5 Q24,7.5 19,10.5 Z" fill="#4A2E1A" stroke="#2B1B12" stroke-width="2"/>
+    <!-- leather lacing across the chest -->
+    <path d="M19,25 L29,23.5 M29,25 L19,23.5" stroke="#E3B45C" stroke-width="1.9"/>
+    <path d="M19,31 L29,29.5 M29,31 L19,29.5" stroke="#E3B45C" stroke-width="1.9"/>
+    <path d="M19,37 L29,35.5 M29,37 L19,35.5" stroke="#E3B45C" stroke-width="1.9"/>
+    <!-- stitching -->
+    <path d="M14,40.5 Q24,43.5 34,40.5" stroke="#A97B54" stroke-width="1.5" stroke-dasharray="3 2.5" fill="none"/>
+    <!-- highlight -->
+    <path d="M11,15 Q12,21 13,27" stroke="#96603B" stroke-width="2" fill="none" opacity="0.9"/>
+  </g>
+</svg>

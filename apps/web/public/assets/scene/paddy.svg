@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 140">
+  <defs>
+    <g id="tuft" stroke-width="3" stroke-linecap="round" fill="none">
+      <path d="M0,0 Q-4,-7 -7,-12" stroke="#55803C"/>
+      <path d="M0,0 Q-1,-8 -1.5,-14" stroke="#7CB342"/>
+      <path d="M0,0 Q3,-7 7,-11" stroke="#55803C"/>
+      <path d="M0,0 Q5,-5 9,-7" stroke="#9CCC65"/>
+    </g>
+  </defs>
+  <!-- shallow water band reflecting the sky -->
+  <rect width="960" height="44" fill="#9FD4C4"/>
+  <rect width="960" height="3" fill="#86A87E" opacity="0.6"/>
+  <g stroke="#C9EDE2" stroke-width="5" stroke-linecap="round" opacity="0.7" fill="none">
+    <path d="M60,10 H210"/>
+    <path d="M420,16 H540"/>
+    <path d="M700,8 H830"/>
+    <path d="M250,30 H330"/>
+    <path d="M600,32 H720"/>
+    <path d="M880,24 H950"/>
+  </g>
+  <!-- field strips with an earth bund between -->
+  <rect y="44" width="960" height="42" fill="#7FA65B"/>
+  <rect y="86" width="960" height="6" fill="#5B7A44"/>
+  <rect y="92" width="960" height="48" fill="#6E9450"/>
+  <!-- water glints in the near strip -->
+  <g fill="#9FD4C4" opacity="0.75">
+    <ellipse cx="200" cy="102" rx="55" ry="4"/>
+    <ellipse cx="560" cy="100" rx="40" ry="3.5"/>
+    <ellipse cx="820" cy="104" rx="60" ry="4"/>
+    <ellipse cx="90" cy="132" rx="45" ry="4"/>
+    <ellipse cx="640" cy="134" rx="55" ry="4"/>
+  </g>
+  <!-- rows of young rice, receding into the distance -->
+  <use href="#tuft" transform="translate(28,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(74,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(120,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(166,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(212,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(258,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(304,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(350,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(396,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(442,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(488,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(534,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(580,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(626,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(672,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(718,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(764,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(810,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(856,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(902,41) scale(0.5)"/>
+  <use href="#tuft" transform="translate(944,42) scale(0.5)"/>
+  <use href="#tuft" transform="translate(30,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(94,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(158,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(222,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(286,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(350,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(414,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(478,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(542,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(606,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(670,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(734,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(798,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(862,80) scale(0.72)"/>
+  <use href="#tuft" transform="translate(926,82) scale(0.72)"/>
+  <use href="#tuft" transform="translate(40,126) scale(1)"/>
+  <use href="#tuft" transform="translate(124,122) scale(1)"/>
+  <use href="#tuft" transform="translate(208,126) scale(1)"/>
+  <use href="#tuft" transform="translate(292,122) scale(1)"/>
+  <use href="#tuft" transform="translate(376,126) scale(1)"/>
+  <use href="#tuft" transform="translate(460,122) scale(1)"/>
+  <use href="#tuft" transform="translate(544,126) scale(1)"/>
+  <use href="#tuft" transform="translate(628,122) scale(1)"/>
+  <use href="#tuft" transform="translate(712,126) scale(1)"/>
+  <use href="#tuft" transform="translate(796,122) scale(1)"/>
+  <use href="#tuft" transform="translate(880,126) scale(1)"/>
+  <use href="#tuft" transform="translate(950,122) scale(1)"/>
+</svg>

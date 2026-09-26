@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- left sandal -->
+    <g transform="rotate(-10 15 30)">
+      <ellipse cx="15" cy="30" rx="8.5" ry="12.5" fill="#2E5E8C" stroke="#2B1B12" stroke-width="2.4"/>
+      <ellipse cx="15" cy="30" rx="5.5" ry="9.5" fill="none" stroke="#244B70" stroke-width="1.4"/>
+      <path d="M15,18.5 L10.5,27 M15,18.5 L19.5,27" stroke="#D14B3D" stroke-width="2.4"/>
+      <circle cx="15" cy="18.5" r="1.6" fill="#D14B3D" stroke="#2B1B12" stroke-width="1.2"/>
+    </g>
+    <!-- right sandal -->
+    <g transform="rotate(12 33 19)">
+      <ellipse cx="33" cy="19" rx="8.5" ry="12.5" fill="#2E5E8C" stroke="#2B1B12" stroke-width="2.4"/>
+      <ellipse cx="33" cy="19" rx="5.5" ry="9.5" fill="none" stroke="#244B70" stroke-width="1.4"/>
+      <path d="M33,7.5 L28.5,16 M33,7.5 L37.5,16" stroke="#D14B3D" stroke-width="2.4"/>
+      <circle cx="33" cy="7.5" r="1.6" fill="#D14B3D" stroke="#2B1B12" stroke-width="1.2"/>
+    </g>
+    <!-- rubber shine -->
+    <path d="M9,24 Q7,28 8,32" stroke="#6FA0C9" stroke-width="1.8" fill="none" opacity="0.8"/>
+  </g>
+</svg>

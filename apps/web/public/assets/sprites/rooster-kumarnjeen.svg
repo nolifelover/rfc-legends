@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- comb -->
+    <path d="M45,18 Q41,5 49,10 Q48,2 55,7 Q56,1 61,7 Q67,5 63,15 Q59,20 45,18 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="3"/>
+    <!-- sleek tail feathers -->
+    <path d="M26,42 Q10,26 6,12 Q14,20 22,32 Q26,38 26,42 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M24,46 Q6,36 2,24 Q12,30 20,38 Q24,42 24,46 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M23,50 Q4,46 2,36 Q10,42 19,46 Q23,48 23,50 Z" fill="#46586A" stroke="#2B1B12" stroke-width="3.2"/>
+    <path d="M7,13 Q12,19 17,25" stroke="#9DB3C2" stroke-width="1.8" fill="none"/>
+    <path d="M3,25 Q9,31 15,37" stroke="#9DB3C2" stroke-width="1.8" fill="none"/>
+    <!-- legs -->
+    <path d="M38,64 L38,75" stroke="#2B1B12" stroke-width="7"/>
+    <path d="M38,64 L38,75" stroke="#E8933F" stroke-width="3.6"/>
+    <path d="M33.5,77.5 Q38,74.8 42.5,77.5" stroke="#2B1B12" stroke-width="6"/>
+    <path d="M33.5,77.5 Q38,74.8 42.5,77.5" stroke="#E8933F" stroke-width="3"/>
+    <path d="M48,64 L48,75" stroke="#2B1B12" stroke-width="7"/>
+    <path d="M48,64 L48,75" stroke="#E8933F" stroke-width="3.6"/>
+    <path d="M43.5,77.5 Q48,74.8 52.5,77.5" stroke="#2B1B12" stroke-width="6"/>
+    <path d="M43.5,77.5 Q48,74.8 52.5,77.5" stroke="#E8933F" stroke-width="3"/>
+    <!-- body + head silhouette, slate blue -->
+    <path d="M20,50 C20,38 28,30 38,29 C40,20 46,13 55,13 C64,13 68,19 68,25 C68,32 63,37 57,38 C55,40 53,42 54,46 C58,52 61,58 57,63 C51,69 31,69 25,63 C19,57 20,50 20,50 Z" fill="#64798A" stroke="#2B1B12" stroke-width="3.6"/>
+    <path d="M24,58 Q32,67.5 50,66.5 Q36,69 27,63 Q25,61 24,58 Z" fill="#4A5D6C"/>
+    <path d="M55,40 Q60.5,47 58,57 Q61.5,47.5 56,38 Z" fill="#9DB3C2" opacity="0.9"/>
+    <!-- wing -->
+    <path d="M31,44 Q25,52 30,61 Q33,66 37,62 Q40,67 44,62 Q47,66 50,60 Q49,52 42,46 Q36,42 31,44 Z" fill="#4C5F6E" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M31,45 Q27,52 31,59" stroke="#9DB3C2" stroke-width="1.6" fill="none" opacity="0.8"/>
+    <!-- head sheen -->
+    <path d="M48,17.5 Q54,14.5 60,16.5" stroke="#9DB3C2" stroke-width="2.2" fill="none" opacity="0.9"/>
+    <!-- beak + wattle -->
+    <path d="M66,21 L76,26 L66,30.5 Q68.5,26 66,21 Z" fill="#EDA614" stroke="#2B1B12" stroke-width="2.8"/>
+    <path d="M67,26 L73,26" stroke="#2B1B12" stroke-width="1.4"/>
+    <path d="M62,31.5 Q59,39 63.5,40 Q68,39 64.5,31.5 Z" fill="#D14B3D" stroke="#2B1B12" stroke-width="2.6"/>
+    <!-- sharp eye -->
+    <ellipse cx="57.5" cy="23" rx="4.6" ry="5.1" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.4"/>
+    <circle cx="58.8" cy="23.5" r="2.1" fill="#2B1B12"/>
+    <circle cx="57.4" cy="21.8" r="0.8" fill="#FFFDF6"/>
+    <path d="M52,18 L63.5,20.5" stroke="#2B1B12" stroke-width="2.2"/>
+    <!-- signature gold ear-ring -->
+    <circle cx="64.5" cy="29.5" r="2.3" fill="none" stroke="#EDA614" stroke-width="2"/>
+  </g>
+</svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- card body, monster-card violet trim -->
+    <rect x="6" y="3" width="36" height="42" rx="4" fill="#F7ECD2" stroke="#2B1B12" stroke-width="2.5"/>
+    <rect x="9" y="6" width="30" height="36" rx="2.5" fill="none" stroke="#7C4DBE" stroke-width="2"/>
+    <path d="M9,4.5 L10.5,6 L9,7.5 L7.5,6 Z M39,4.5 L40.5,6 L39,7.5 L37.5,6 Z M9,40.5 L10.5,42 L9,43.5 L7.5,42 Z M39,40.5 L40.5,42 L39,43.5 L37.5,42 Z" fill="#7C4DBE"/>
+    <rect x="15" y="4" width="18" height="6.5" rx="3" fill="#7C4DBE" stroke="#2B1B12" stroke-width="1.8"/>
+    <circle cx="20" cy="7.2" r="1.1" fill="#FFFDF6"/>
+    <circle cx="28" cy="7.2" r="1.1" fill="#FFFDF6"/>
+    <!-- face window -->
+    <circle cx="24" cy="26" r="10.5" fill="#FFFDF6" stroke="#7C4DBE" stroke-width="2"/>
+    <!-- pu-na face -->
+    <path d="M19.5,21 L17.5,16 M28.5,21 L30.5,16" stroke="#2B1B12" stroke-width="1.6"/>
+    <circle cx="17.2" cy="15" r="2.4" fill="#FFFDF6" stroke="#2B1B12" stroke-width="1.4"/>
+    <circle cx="30.8" cy="15" r="2.4" fill="#FFFDF6" stroke="#2B1B12" stroke-width="1.4"/>
+    <circle cx="17.2" cy="15.6" r="1.1" fill="#2B1B12"/>
+    <circle cx="30.8" cy="15.6" r="1.1" fill="#2B1B12"/>
+    <circle cx="24" cy="29" r="7.6" fill="#E85D2F" stroke="#2B1B12" stroke-width="2"/>
+    <path d="M18.5,32 Q24,35.5 29.5,32" stroke="#C2441B" stroke-width="1.4" fill="none"/>
+    <circle cx="14.8" cy="29" r="2.6" fill="#E85D2F" stroke="#2B1B12" stroke-width="1.6"/>
+    <path d="M14.8,26.4 L14.8,29" stroke="#2B1B12" stroke-width="1.2"/>
+    <circle cx="33.2" cy="29" r="2.6" fill="#E85D2F" stroke="#2B1B12" stroke-width="1.6"/>
+    <path d="M33.2,26.4 L33.2,29" stroke="#2B1B12" stroke-width="1.2"/>
+    <path d="M21.5,31.5 Q24,33.5 26.5,31.5" stroke="#2B1B12" stroke-width="1.3" fill="none"/>
+    <!-- name bar -->
+    <rect x="12" y="38.5" width="24" height="4.5" rx="2.2" fill="#A27BD6" stroke="#7C4DBE" stroke-width="1.4"/>
+    <path d="M16,40.7 L32,40.7" stroke="#FFFDF6" stroke-width="1.4"/>
+  </g>
+</svg>
