@@ -344,7 +344,7 @@ export class Chip {
   }
 }
 
-/** Countdown pips toward the next boss (8 in demo mode); the last one pulses red. */
+/** Countdown pips toward the next boss (8 in demo mode) with "BOSS IN N" beside them; the last one pulses red. */
 export class BossPips {
   readonly container: Phaser.GameObjects.Container
 
@@ -415,7 +415,9 @@ export class BossPips {
       g.lineStyle(2, INK.outline, 0.9)
       g.strokeRoundedRect(x, -7, pipW, 14, 5)
     }
-    this.label.setText(this.total > 12 ? `BOSS ${this.filled}/${this.total}` : 'BOSS')
+    const left = this.total - this.filled
+    this.label.setText(left <= 1 ? 'BOSS NEXT' : `BOSS IN ${left}`)
+    this.label.setColor(left <= 1 ? '#ff8a7a' : '#ffe9a8')
     this.label.setPosition(-totalW - 12, 0)
   }
 
