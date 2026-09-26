@@ -14,6 +14,8 @@ Already seeded on the recording host (2026-09-26 10:43 UTC, through its real UI)
 
 ## Presenter checklist (5 min before recording)
 
+**Record with the browser window at 1920×1080.**
+
 - [ ] **Open https://rfclegends.rfcclub.app** in both browser profiles.
 - [ ] **MetaMask is on Sepolia**, in both browser profiles.
 - [ ] **Accounts imported and renamed.** Keys are in `apps/web/.data/demo-wallets.json`; import each with Import account → private key.
@@ -79,7 +81,7 @@ Expected on-screen text is quoted exactly as rehearsed.
 2. Type a trainer name (for example "Khun Gai"), pick a sire line (for example **Thep**), and click **Begin the journey**.
    Expected: the live scene starts. The HUD shows the trainer's title and "Lv 1", HP/SP/EXP bars, the rooster, and the goal line "Next: Base Lv 30 → unlock minting rare drops (N to go)". Its buttons are **✦ 48 points to spend ▸**, 🎒, **🛡 Guild** and ⟳. In-canvas chips count kills and harvest/coins and show "BOSS IN n".
 3. Click **✦ 48 points to spend ▸**. In the dialog, press **+** on **STR** ×8, **AGI** ×6 and **DEX** ×6, then close it with **×**.
-4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. On the recording host, **Lv 1 to Lv 30 took 1.1–1.7 minutes** (13:58, 15:24 and 15:49 UTC rehearsals). Budget 2 minutes.
+4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. On the recording host, **Lv 1 to Lv 30 took 1.1–1.7 minutes** (13:58, 15:24, 15:49 and 17:00 UTC rehearsals). Budget 2 minutes.
 5. *(Optional, shows rejection c)* before Lv 30, open **☰ → Market** in a separate window and press **Mint as NFT** on any drop. Expected: "⛔ Rejected `base_level_too_low` Base Lv N: reach Base Lv 30 to mint rare drops." Toasts before Lv 30 are real drops too, but they hit this same level rejection.
 
 > **Don't navigate the /game tab away while leveling.** To show /roosters (or anything else) during this segment, open it in a **separate window**, and never open /game there. When the /game tab comes back, the toast component treats drops that arrived meanwhile as already seen, so the Lv-30 toast never shows.
@@ -157,6 +159,8 @@ Rehearsed through the real UI with an injected wallet in headless Chromium, on s
 | (a) C mints MVP Card #3001 | 403 `not_verified_human` | 09:05:26Z |
 | (a) B (unverified) tries to resell | contract `NotVerifiedHuman`, no wallet prompt | 09:05:46Z |
 | (b) A2-staging verifies | 409 `nullifier_bound_to_other_wallet` | 08:40:27Z |
+
+**W17 final smoke (recording host, e21d322 = freeze build, 17:00 UTC, desktop 1920×1080).** Fresh throwaway `0xcbb7…f815`, no World ID verify. Lv 30 came **1.7 min** after create. The MVP Card การ์ดราชาหนูนา toast appeared 4 s after Lv 30 (zone label บึงบัวหลวง). **Mint & sell →** opened `/market?dropId=0x916b…b489` with MVP Card #3001 highlighted, and an unverified mint gave 403. Bot C is still 403. The market UI at 1920×1080 matches W16 (Recent sales "source: MultiBaas ✓"), so no funded buy was needed.
 
 **W16 smoke (recording host, e5334c4, 15:49 UTC).** Fresh throwaway `0xb393…fced`, no World ID verify. Lv 30 came **1.7 min** after create. At the Lv-30 kill it got a Monster Card #1001 (pity, shown as a full-screen "MONSTER CARD DROP!" reveal) plus Legendary Gear #2001 as a toast, 2 s after Lv 30. **Mint & sell →** on the Legendary toast opened `/market?dropId=0x1eda…2931` with it highlighted, and an unverified mint gave 403. Zone 2 (บึงบัวหลวง) progresses: Lv 32 → 33 in 60 s. Bot C is still 403 `not_verified_human`.
 
