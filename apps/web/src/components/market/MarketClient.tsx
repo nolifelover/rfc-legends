@@ -24,14 +24,14 @@ export function MarketClient({ focusDropId }: { focusDropId?: Hex }) {
   const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
 
   const mintedIds = drops.data?.drops.filter((d) => d.status === "minted").map((d) => d.itemId) ?? [];
-  const listedIds = listings.data?.map((l) => Number(l.itemId)) ?? [];
+  const listedIds = listings.data?.everListedItemIds ?? [];
   const steps = [
     { label: "Verify human", sub: "World ID", done: Boolean(status.data?.verified) },
     { label: "Mint drop", sub: "ERC-1155", done: mintedIds.length > 0 },
     {
       label: "List",
       sub: "escrow",
-      done: Boolean(wallet && listings.data?.some((l) => l.seller.toLowerCase() === wallet)),
+      done: Boolean(wallet && listings.data?.active.some((l) => l.seller.toLowerCase() === wallet)),
     },
     { label: "Sold", sub: "90 / 10 split", done: Boolean(receipt) },
   ];

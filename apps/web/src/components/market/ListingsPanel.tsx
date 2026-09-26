@@ -25,24 +25,31 @@ export function useListings(deployment: Deployment | null | undefined) {
     queryKey: ["market-listings", deployment?.RareMarket],
     enabled: Boolean(deployment && client),
     refetchInterval: 15_000,
-    queryFn: async (): Promise<ActiveListing[]> => {
+    queryFn: async (): Promise<{ active: ActiveListing[]; everListedItemIds: number[] }> => {
       const market = deployment!.RareMarket;
+      // Public Sepolia RPCs refuse getLogs from block 0; fall back to a recent window.
+      const fromBlock = deployment!.startBlock
+        ? BigInt(deployment!.startBlock)
+        : (await client!.getBlockNumber()) - BigInt(50_000);
       const logs = await client!.getContractEvents({
         address: market,
         abi: rareMarketAbi,
         eventName: "Listed",
-        fromBlock: BigInt(deployment!.startBlock ?? 0),
+        fromBlock,
         toBlock: "latest",
       });
       const ids = [...new Set(logs.map((l) => l.args.listingId!))];
       const rows = await Promise.all(
         ids.map((id) => client!.readContract({ address: market, abi: rareMarketAbi, functionName: "getListing", args: [id] })),
       );
-      return ids
+      const active = ids
         .map((id, i) => ({ id, ...rows[i] }))
         .filter((l) => l.active && l.amount > BigInt(0))
         .map(({ id, seller, itemId, amount, unitPrice }) => ({ id, seller: seller as Hex, itemId, amount, unitPrice }))
         .reverse();
+      // Sold-out listings still tell a buyer which item ids to check balances for.
+      const everListedItemIds = [...new Set(logs.map((l) => Number(l.args.itemId!)))];
+      return { active, everListedItemIds };
     },
   });
 }
@@ -82,13 +89,13 @@ export function ListingsPanel({
         <p className="text-sm text-bark-soft">Reading listings from RareMarket…</p>
       ) : listings.error ? (
         <p className="text-sm text-clay-deep">Couldn&apos;t read listings: {describeError(listings.error).message}</p>
-      ) : !listings.data?.length ? (
+      ) : !listings.data?.active.length ? (
         <p className="rounded-2xl bg-sun-soft/40 px-4 py-6 text-center text-sm text-bark-soft">
           Nothing listed right now. Verified players list minted drops here.
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
-          {listings.data.map((l) => (
+          {listings.data.active.map((l) => (
             <ListingCard
               key={l.id.toString()}
               listing={l}

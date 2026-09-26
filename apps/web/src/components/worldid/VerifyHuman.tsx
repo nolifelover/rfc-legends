@@ -85,11 +85,13 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
           ? body
           : { verified: false, code: "invalid_request", reason: `Verification failed (HTTP ${res.status}).` };
       setPhase({ kind: "rejected", code: rejection.current.code, reason: rejection.current.reason });
+      setOpen(false);
       // Throwing fails the IDKit flow; handleError then closes it so our reason is what's on screen.
       throw new Error(rejection.current.reason);
     }
     accepted.current = body;
     setPhase({ kind: "verified", res: body });
+    setOpen(false);
     void queryClient.invalidateQueries({ queryKey: humanStatusKey(address) });
     onVerified?.();
   }
