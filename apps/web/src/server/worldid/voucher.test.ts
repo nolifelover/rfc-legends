@@ -5,7 +5,7 @@ import { MINT_VOUCHER_TYPE, rareItemsDomain } from "../../lib/contracts/eip712";
 import { rareItemsAbi } from "../../lib/contracts/abis";
 import { ownershipMessage } from "../../lib/worldid/ownership";
 import type { Hex } from "../../lib/worldid/types";
-import type { Drop, GameApi, Player } from "./deps";
+import type { Drop, GameApi, PlayerView } from "./game";
 import { MemoryWorldIdStore } from "./store";
 import { confirmMint, issueMintVoucher, utcDay, type ReceiptLike, type VoucherDeps } from "./voucher";
 
@@ -19,15 +19,20 @@ const NOW = new Date("2026-09-26T10:00:00Z");
 const DAY = utcDay(NOW);
 const dropId = (n: number) => `0x${n.toString(16).padStart(64, "0")}` as Hex;
 
-function fakeGame(opts: { player?: Player | null; drops?: Drop[] } = {}) {
+function fakeGame(opts: { player?: PlayerView | null; drops?: Drop[] } = {}) {
   const drops = new Map((opts.drops ?? []).map((d) => [d.dropId, { ...d }]));
   const game: GameApi & { setDropStatus: ReturnType<typeof vi.fn> } = {
     getPlayer: vi.fn(async () => (opts.player === undefined ? { address: HUMAN, baseLevel: 35 } : opts.player)),
     getDrop: vi.fn(async (_a: string, id: Hex) => drops.get(id) ?? null),
     listDrops: vi.fn(async () => [...drops.values()]),
+    // Same forward-only status machine as the real engine.
     setDropStatus: vi.fn(async (_a: string, id: Hex, status: Drop["status"]) => {
       const d = drops.get(id);
-      if (d) d.status = status;
+      if (!d) throw new Error("DROP_NOT_FOUND");
+      const machine: Record<Drop["status"], Drop["status"][]> = { unminted: ["minting"], minting: ["minted", "unminted"], minted: [] };
+      const allowed = machine[d.status];
+      if (!allowed.includes(status)) throw new Error(`INVALID_STATUS ${d.status} -> ${status}`);
+      d.status = status;
     }),
   };
   return game;
@@ -116,6 +121,14 @@ describe("issueMintVoucher: accepted", () => {
     expect(out.body.mintsToday).toBe(1);
     expect(await store.vouchersOn(HUMAN, DAY)).toEqual([dropId(1)]);
     expect(game.setDropStatus).toHaveBeenCalledWith(HUMAN, dropId(1), "minting");
+  });
+
+  it("re-issues a voucher for a drop already in 'minting' without an illegal status jump", async () => {
+    const game = fakeGame({ drops: [drop(1, "monster_card", 1001, "minting")] });
+    const { deps } = await setup({ game });
+    const out = await issueMintVoucher(await req(human, dropId(1)), deps);
+    expect(out.status).toBe(200);
+    expect(game.setDropStatus).not.toHaveBeenCalled();
   });
 
   it("re-issues a voucher for the same drop without using another daily slot", async () => {
@@ -273,6 +286,15 @@ describe("confirmMint", () => {
     const out = await confirmMint({ address: HUMAN, dropId: dropId(1), txHash: tx }, deps);
     expect(out).toEqual({ status: 200, body: { ok: true } });
     expect(game.setDropStatus).toHaveBeenCalledWith(HUMAN, dropId(1), "minted", tx);
+  });
+
+  it("walks an unminted drop through minting to minted (no illegal jump)", async () => {
+    const game = fakeGame({ drops: [drop(1)] });
+    const deps = { game, rareItems: { address: RARE_ITEMS }, getReceipt: async () => ({ status: "success" as const, logs: [rareMintedLog(HUMAN, dropId(1))] }) };
+    const out = await confirmMint({ address: HUMAN, dropId: dropId(1), txHash: tx }, deps);
+    expect(out.status).toBe(200);
+    expect(game.setDropStatus).toHaveBeenNthCalledWith(1, HUMAN, dropId(1), "minting");
+    expect(game.setDropStatus).toHaveBeenNthCalledWith(2, HUMAN, dropId(1), "minted", tx);
   });
 
   it("refuses events from another contract or for another drop", async () => {

@@ -16,7 +16,7 @@ import { z } from "zod";
 import { MINT_VOUCHER_TYPE, rareItemsDomain } from "../../lib/contracts/eip712";
 import { rareItemsAbi } from "../../lib/contracts/abis";
 import type { Hex, VoucherRejectCode, VoucherResponse } from "../../lib/worldid/types";
-import type { Drop, GameApi } from "./deps";
+import type { Drop, GameApi } from "./game";
 import { maskAddress } from "./nullifier";
 import { checkOwnership, ownershipSchema } from "./ownership";
 import type { WorldIdStore } from "./store";
@@ -98,7 +98,7 @@ export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promi
   if (!drop) return reject(403, "drop_not_found", "This drop isn't in your inventory.");
   if (drop.status === "minted") return reject(403, "drop_already_minted", "This drop has already been minted.");
   if (deps.isDropMintedOnchain && (await deps.isDropMintedOnchain(dropId))) {
-    await deps.game.setDropStatus(address, dropId, "minted");
+    await advanceDrop(deps.game, address, drop, "minted");
     return reject(403, "drop_already_minted", "This drop has already been minted onchain.");
   }
   if (!MINTABLE_RARITIES.has(drop.rarity) || drop.itemId < 1000) {
@@ -144,7 +144,7 @@ export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promi
     primaryType: "MintVoucher",
     message: voucher,
   });
-  await deps.game.setDropStatus(address, dropId, "minting");
+  await advanceDrop(deps.game, address, drop, "minting");
 
   return {
     status: 200,
@@ -164,6 +164,14 @@ export async function issueMintVoucher(input: unknown, deps: VoucherDeps): Promi
       dailyLimit: deps.dailyLimit,
     },
   };
+}
+
+/** Moves a drop forward through the engine's status machine without illegal jumps (e.g. unminted -> minted). */
+async function advanceDrop(game: GameApi, address: Hex, drop: Drop, target: "minting" | "minted", txHash?: string) {
+  if (drop.status === target || drop.status === "minted") return;
+  if (target === "minted" && drop.status === "unminted") await game.setDropStatus(address, drop.dropId, "minting");
+  if (txHash) await game.setDropStatus(address, drop.dropId, target, txHash);
+  else await game.setDropStatus(address, drop.dropId, target);
 }
 
 function labelRarity(r: Drop["rarity"]): string {
@@ -222,6 +230,8 @@ export async function confirmMint(
   });
   if (!minted) return { status: 409, body: { ok: false, reason: "No RareMinted event for this drop in that transaction." } };
 
-  await deps.game.setDropStatus(address, dropId as Hex, "minted", parsed.data.txHash);
+  const drop = await deps.game.getDrop(address, dropId as Hex);
+  if (!drop) return { status: 404, body: { ok: false, reason: "Minted onchain, but this wallet has no such drop in the game." } };
+  await advanceDrop(deps.game, address as Hex, drop, "minted", parsed.data.txHash);
   return { status: 200, body: { ok: true } };
 }

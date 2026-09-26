@@ -5,7 +5,7 @@ import { sepolia } from "viem/chains";
 import { rareItemsAbi } from "../../lib/contracts/abis";
 import { getDeployment } from "../../lib/worldid/deployment";
 import type { Hex } from "../../lib/worldid/types";
-import { getGameApi } from "./deps";
+import { gameApi } from "./game";
 import { getWorldIdStore } from "./runtime";
 import type { ConfirmDeps, VoucherDeps } from "./voucher";
 
@@ -24,7 +24,7 @@ export async function resolveVoucherDeps(): Promise<VoucherDeps> {
   const client = deployment ? publicClient() : null;
   return {
     store: getWorldIdStore(),
-    game: await getGameApi(),
+    game: gameApi,
     rareItems: deployment ? { chainId: deployment.chainId, address: deployment.RareItems } : null,
     signerKey: process.env.GAME_SIGNER_PRIVATE_KEY?.trim(),
     isDropMintedOnchain:
@@ -45,7 +45,7 @@ export async function resolveConfirmDeps(): Promise<ConfirmDeps> {
   const deployment = getDeployment();
   const client = publicClient();
   return {
-    game: await getGameApi(),
+    game: gameApi,
     rareItems: deployment ? { address: deployment.RareItems } : null,
     getReceipt: async (hash) => {
       try {

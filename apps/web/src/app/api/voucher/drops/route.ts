@@ -1,6 +1,6 @@
 import { getAddress, isAddress } from "viem";
 import { dailyMintLimit } from "@/server/worldid/chain";
-import { devFixturesEnabled, getGameApi } from "@/server/worldid/deps";
+import { gameApi as game } from "@/server/worldid/game";
 import { getWorldIdStore } from "@/server/worldid/runtime";
 import type { Hex } from "@/lib/worldid/types";
 import { MIN_BASE_LEVEL, MINTABLE_RARITIES, utcDay } from "@/server/worldid/voucher";
@@ -11,7 +11,6 @@ export async function GET(request: Request) {
   if (!isAddress(raw, { strict: false })) return Response.json({ error: "address is required" }, { status: 400 });
   const address = getAddress(raw).toLowerCase();
 
-  const game = await getGameApi();
   const [player, drops, vouchersToday] = await Promise.all([
     game.getPlayer(address),
     game.listDrops(address),
@@ -23,7 +22,5 @@ export async function GET(request: Request) {
     drops: drops.filter((d) => MINTABLE_RARITIES.has(d.rarity) && d.itemId >= 1000),
     mintsToday: vouchersToday.length,
     dailyLimit: dailyMintLimit(),
-    /** True when the game data is fake (local dev only); the UI labels it. */
-    devFixtures: devFixturesEnabled(),
   });
 }

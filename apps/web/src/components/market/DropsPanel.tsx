@@ -22,7 +22,6 @@ type DropsResponse = {
   drops: Drop[];
   mintsToday: number;
   dailyLimit: number;
-  devFixtures?: boolean;
 };
 
 export const dropsKey = (address?: string) => ["market-drops", address?.toLowerCase()] as const;
@@ -70,11 +69,6 @@ export function DropsPanel({ address, focusDropId }: { address?: Hex; focusDropI
         ) : null}
       </header>
 
-      {data?.devFixtures ? (
-        <p className="mb-3 rounded-xl border border-dashed border-bark-soft/50 px-3 py-1.5 text-xs text-bark-soft">
-          Dev fixtures: these drops are fake local test data, not from the game.
-        </p>
-      ) : null}
       {!address ? (
         <p className="text-sm text-bark-soft">Connect a wallet to see your drops.</p>
       ) : drops.isLoading ? (
