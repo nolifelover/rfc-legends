@@ -132,6 +132,10 @@ export class IdleScene extends Phaser.Scene {
   private roosterChain: Phaser.Tweens.TweenChain | null = null
   private roosterPulse: Phaser.Tweens.Tween | null = null
   private roosterHot = false
+  private roosterIdle: Phaser.Tweens.Tween | Phaser.Tweens.TweenChain | null = null
+  /** "Cheer" tap: the next 3 rooster swings come 1.5× faster (cosmetic), 20s cooldown. */
+  private cheerBoostLeft = 0
+  private cheerReadyAt = 0
 
   // pack
   private pests: Pest[] = []
@@ -393,6 +397,99 @@ export class IdleScene extends Phaser.Scene {
     this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H - 58)
     this.startRoosterBob()
     this.updateRoosterPulse()
+    this.scheduleRoosterIdle()
+    this.roosterSprite.setInteractive({ useHandCursor: true })
+    this.roosterSprite.on('pointerdown', () => this.cheerTap())
+  }
+
+  // ------------------------------------------------------ rooster personality
+
+  /** Bird idles every 3–6s when no swing is imminent: peck, head tilt, ruffle, look at the trainer. */
+  private scheduleRoosterIdle(): void {
+    this.time.addEvent({
+      delay: Phaser.Math.Between(3000, 6000),
+      callback: () => {
+        const busy = this.roosterChain?.isPlaying() || this.nextRoosterAt - this.time.now < 700
+        if (!busy) this.roosterIdleOnce()
+        this.scheduleRoosterIdle()
+      },
+    })
+  }
+
+  private resetRoosterPose(): void {
+    this.killTween(this.roosterIdle)
+    this.roosterIdle = null
+    this.roosterSprite.setAngle(0).setFlipX(false).setScale(this.roosterS0)
+  }
+
+  private roosterIdleOnce(): void {
+    this.resetRoosterPose()
+    const sp = this.roosterSprite
+    const s0 = this.roosterS0
+    switch (Phaser.Math.Between(0, 3)) {
+      case 0: // peck: rotate about the feet, twice
+        this.roosterIdle = this.tweens.add({ targets: sp, angle: 18, duration: 120, yoyo: true, repeat: 1, ease: 'Quad.easeOut' })
+        break
+      case 1: // head tilt, hold, back
+        this.roosterIdle = this.tweens.chain({
+          targets: sp,
+          tweens: [
+            { angle: -8, duration: 160, ease: 'Sine.easeOut' },
+            { angle: -8, duration: 400 },
+            { angle: 0, duration: 200, ease: 'Sine.easeInOut' },
+          ],
+        })
+        break
+      case 2: // feather ruffle
+        this.roosterIdle = this.tweens.add({ targets: sp, scaleX: s0 * 0.92, duration: 90, yoyo: true, repeat: 2 })
+        this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 3)
+        break
+      default: // look back at the trainer
+        sp.setFlipX(true)
+        this.time.delayedCall(700, () => {
+          if (!this.roosterChain?.isPlaying()) sp.setFlipX(false)
+        })
+    }
+  }
+
+  /** A kill makes the rooster hop and chirp (about one kill in four). */
+  private roosterReactKill(): void {
+    if (Math.random() > 0.25 || this.roosterChain?.isPlaying()) return
+    this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - L.ROOSTER_H - 20, Phaser.Utils.Array.GetRandom(['♪', '!', '♥', '✦']))
+    this.fx.featherPuff(L.ROOSTER_X + 40, L.ROOSTER_FEET - L.ROOSTER_H * 0.5, 2)
+    this.roosterBob?.remove()
+    this.roosterBob = null
+    this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
+    this.tweens.add({
+      targets: this.rooster,
+      y: L.ROOSTER_FEET - 34,
+      duration: 160,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+      onComplete: () => this.startRoosterBob(),
+    })
+  }
+
+  /** Wings flap wide and the rooster crows — trainer level-ups and the cheer tap. */
+  private roosterCrow(): void {
+    this.resetRoosterPose()
+    const s0 = this.roosterS0
+    this.roosterIdle = this.tweens.add({ targets: this.roosterSprite, scaleX: s0 * 1.14, scaleY: s0 * 0.94, duration: 90, yoyo: true, repeat: 3 })
+    this.fx.speech(L.ROOSTER_X + 120, L.ROOSTER_FEET - L.ROOSTER_H - 10, 'Cock-a-doodle-doo!')
+    this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.55, 6)
+    this.roosterCheer()
+  }
+
+  /** Tapping the rooster: a crow, and the next 3 swings come 1.5× faster (20s cooldown). */
+  private cheerTap(): void {
+    const now = this.time.now
+    if (now < this.cheerReadyAt) {
+      this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - L.ROOSTER_H - 20, '♥')
+      return
+    }
+    this.cheerReadyAt = now + 20000
+    this.cheerBoostLeft = 3
+    this.roosterCrow()
   }
 
   private startTrainerBob(): void {
@@ -485,7 +582,7 @@ export class IdleScene extends Phaser.Scene {
     })
     kb.on('keydown-J', () => {
       this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(1001), 'monster_card')
-      this.roosterCheer()
+      this.roosterWide()
     })
     kb.on('keydown-K', () => {
       const t = this.leader(1) ?? this.leader(0)
@@ -747,11 +844,17 @@ export class IdleScene extends Phaser.Scene {
       this.nextRoosterAt = time + 120
       return
     }
-    this.nextRoosterAt = time + this.roosterCd
+    let cd = this.roosterCd
+    if (this.cheerBoostLeft > 0) {
+      this.cheerBoostLeft -= 1
+      cd = Math.round(cd / 1.5)
+    }
+    this.nextRoosterAt = time + cd
     const { value, crit } = this.roosterHit()
     const s0 = this.roosterS0
     const sp = this.roosterSprite
     const rs = ROW_SCALE[target.row]
+    this.resetRoosterPose()
     const dashX = target.container.x - (target.boss ? 300 : 120 + target.h * rs * 0.45)
     const dashY = target.feetY + (target.row === 0 ? 10 : 6)
     this.killTween(this.roosterChain)
@@ -779,6 +882,7 @@ export class IdleScene extends Phaser.Scene {
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * rs * 0.45
             this.fx.impactStar(tx - 30, ty, 1.1, INK.roosterTint)
+            if (crit) this.fx.featherPuff(dashX, dashY - L.ROOSTER_H * 0.5, 5)
             this.hitPest(target, value, crit ? 'crit' : 'rooster', time)
           },
         },
@@ -863,6 +967,7 @@ export class IdleScene extends Phaser.Scene {
     this.fx.poof(x, midY, boss ? 2.2 : 1)
     this.fx.groundRing(x, p.feetY, INK.goldSoft, boss ? 900 : 380)
     this.fx.shake(boss ? JUICE.SHAKE_BOSS_KILL : JUICE.SHAKE_KILL)
+    this.roosterReactKill()
 
     // rewards only with a server credit: the KILL tick, the credit's real EXP and
     // one loot icon. A kill without credit is presentation and stays silent.
@@ -1106,6 +1211,7 @@ export class IdleScene extends Phaser.Scene {
 
   private playLevelUp(from: number, to: number, n: number): void {
     this.fx.levelUp(L.TRAINER_X, L.TRAINER_FEET, n > 1 ? `LEVEL UP ×${n}!` : 'LEVEL UP!', `Lv ${from} → ${to}`)
+    this.time.delayedCall(1300, () => this.roosterCrow()) // after the slam sub-line fades
     this.trainerBob?.remove()
     this.trainerBob = null
     this.tweens.chain({
@@ -1261,8 +1367,16 @@ export class IdleScene extends Phaser.Scene {
       if (this.time.now - this.lastJackpotAt < JUICE.JACKPOT_THROTTLE) continue
       this.lastJackpotAt = this.time.now
       this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(drop.itemId), drop.rarity)
-      this.roosterCheer()
+      this.roosterWide()
     }
+  }
+
+  /** Eyes wide (1.1× for a beat) plus the cheer hops — a rare drop just landed. */
+  private roosterWide(): void {
+    this.resetRoosterPose()
+    const s0 = this.roosterS0
+    this.roosterIdle = this.tweens.add({ targets: this.roosterSprite, scale: s0 * 1.1, duration: 140, yoyo: true, hold: 600, ease: 'Back.easeOut' })
+    this.roosterCheer()
   }
 
   // -------------------------------------------------------------------- loop

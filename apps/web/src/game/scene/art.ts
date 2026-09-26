@@ -532,6 +532,8 @@ export const FX = {
   tuft: 'fx-tuft',
   confetti: 'fx-confetti',
   aura: 'fx-aura',
+  feather: 'fx-feather',
+  bubble: 'fx-bubble',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -649,6 +651,27 @@ export function makeFxTextures(scene: Phaser.Scene): void {
   make(FX.confetti, 16, 16, (g) => {
     g.fillStyle(0xffffff)
     g.fillRect(2, 2, 12, 12)
+  })
+
+  // cream feather (rooster ruffles and crits — never blood)
+  make(FX.feather, 36, 48, (g) => {
+    g.fillStyle(0xfff3d6)
+    g.fillEllipse(18, 24, 22, 44)
+    g.lineStyle(3, OUTLINE)
+    g.strokeEllipse(18, 24, 22, 44)
+    g.lineStyle(2, 0xd9c7a0)
+    g.lineBetween(18, 4, 18, 44)
+  })
+
+  // speech bubble with a tail at the bottom-left (emotes and the crow)
+  make(FX.bubble, 240, 120, (g) => {
+    g.fillStyle(0xfffdf6)
+    g.fillRoundedRect(6, 6, 228, 84, 26)
+    g.fillTriangle(40, 86, 74, 86, 34, 114)
+    g.lineStyle(4, OUTLINE)
+    g.strokeRoundedRect(6, 6, 228, 84, 26)
+    g.lineBetween(40, 88, 34, 114)
+    g.lineBetween(34, 114, 74, 88)
   })
 
   // flat aura ellipse under the rooster's feet

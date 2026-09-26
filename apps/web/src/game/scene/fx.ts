@@ -35,6 +35,7 @@ export class Fx {
   private readonly coins: Emitter
   private readonly confetti: Emitter
   private readonly fountain: Emitter
+  private readonly feathers: Emitter
 
   // time control (hit-stop + slow-mo). Restored by window timers, never by
   // delayedCall — those would be frozen too.
@@ -124,6 +125,19 @@ export class Fx {
         emitting: false,
       })
       .setDepth(44)
+    this.feathers = scene.add
+      .particles(0, 0, FX.feather, {
+        speed: { min: 120, max: 320 },
+        angle: { min: 200, max: 340 },
+        gravityY: 220,
+        lifespan: { min: 700, max: 1100 },
+        scale: { start: 1, end: 0.6 },
+        alpha: { start: 1, end: 0 },
+        rotate: { min: -60, max: 60 },
+        accelerationX: { min: -40, max: 40 },
+        emitting: false,
+      })
+      .setDepth(26)
   }
 
   /** Clear timers and restore time — call from the scene's shutdown. */
@@ -480,6 +494,77 @@ export class Fx {
         obj.destroy()
         onArrive()
       },
+    })
+  }
+
+  // ----------------------------------------------------------- personality
+
+  /** Cream feathers puff off the rooster (ruffle, crit, cheer). Never blood. */
+  featherPuff(x: number, y: number, n = 6): void {
+    this.feathers.explode(this.count(n), x, y)
+  }
+
+  /** Emote glyph (♪ ! ♥ ✦) that pops above a head, holds, then fades. */
+  emote(x: number, y: number, glyph: string, color: string = INK.cream): void {
+    const t = this.acquire()
+    t.setStyle({ fontSize: '64px', color, stroke: INK.stroke, strokeThickness: 8 })
+    t.setText(glyph)
+    t.setPosition(x, y).setDepth(53).setScale(0)
+    this.scene.tweens.chain({
+      targets: t,
+      tweens: [
+        { scale: 1, duration: 160, ease: 'Back.easeOut' },
+        { y: y - 16, duration: 700 },
+        { alpha: 0, y: y - 40, duration: 240 },
+      ],
+      onComplete: () => t.setVisible(false),
+    })
+  }
+
+  /** Speech bubble ("Cock-a-doodle-doo!") with three sound-wave arcs from the beak. */
+  speech(x: number, y: number, text: string, ms = 1400): void {
+    const bubble = this.scene.add.container(x, y).setDepth(53).setScale(0)
+    const back = this.scene.add.image(0, 0, FX.bubble).setOrigin(0.15, 1)
+    const label = this.scene.add
+      .text(back.x + 240 * 0.35, -66, text, {
+        fontFamily: this.font,
+        fontSize: '30px',
+        fontStyle: 'bold',
+        color: INK.stroke,
+      })
+      .setOrigin(0.5, 0.5)
+    const w = Math.max(240, label.width + 48)
+    back.setDisplaySize(w, 120)
+    label.setX(w * 0.35)
+    bubble.add([back, label])
+    this.scene.tweens.chain({
+      targets: bubble,
+      tweens: [
+        { scale: 1, duration: 200, ease: 'Back.easeOut' },
+        { y: y - 8, duration: ms },
+        { alpha: 0, scale: 0.8, duration: 200, ease: 'Cubic.easeIn' },
+      ],
+      onComplete: () => bubble.destroy(),
+    })
+    if (this.reduced) return
+    const g = this.scene.add.graphics().setDepth(52)
+    this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 900,
+      repeat: 1,
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 0
+        g.clear()
+        for (let i = 0; i < 3; i++) {
+          const r = 30 + i * 26 + t * 40
+          g.lineStyle(6 - i, 0xffffff, (1 - t) * (0.9 - i * 0.2))
+          g.beginPath()
+          g.arc(x + 40, y + 30, r, Phaser.Math.DegToRad(-40), Phaser.Math.DegToRad(40))
+          g.strokePath()
+        }
+      },
+      onComplete: () => g.destroy(),
     })
   }
 
