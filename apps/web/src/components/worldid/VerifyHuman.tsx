@@ -132,7 +132,13 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
         reason: "World says this World ID has already been used for this action. One human, one wallet.",
       });
     } else {
-      setPhase({ kind: "error", message: `World ID error: ${code}` });
+      const known: Record<string, string> = {
+        credential_unavailable: "This World ID doesn't hold the proof-of-human (Orb) credential this game asks for.",
+        world_id_4_not_available: "Update World App: this verification needs World ID 4.0.",
+        connection_failed: "Couldn't reach World App. Check the phone's connection and try again.",
+        timeout: "World App didn't answer in time. Try again.",
+      };
+      setPhase({ kind: "error", message: `${known[code] ?? "World ID couldn't finish the verification."} (${code})` });
     }
   }
 
