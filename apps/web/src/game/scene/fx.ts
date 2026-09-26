@@ -26,6 +26,7 @@ export class Fx {
   private poolIdx = 0
   private dmgStack = 0
   private lastDmgAt = -99999
+  private lastExp: { text: Phaser.GameObjects.Text; value: number; at: number; y: number } | null = null
   private readonly ghosts: Phaser.GameObjects.Image[] = []
   private ghostIdx = 0
   private readonly slashG: Phaser.GameObjects.Graphics
@@ -258,15 +259,33 @@ export class Fx {
     })
   }
 
-  /** "+44K EXP" in cyan — the real per-kill amount, compact-formatted. */
+  /**
+   * "+44K EXP" in gold with a heavy outline over the killed enemy — the server's
+   * credited amount. A second credit inside 600ms merges into the rising label
+   * (the sum stays exact), so two kills never print a ghosted duplicate.
+   */
   expPop(x: number, y: number, exp: number): void {
+    const now = performance.now()
+    const last = this.lastExp
+    if (last && now - last.at < 600 && last.text.visible) {
+      last.value += exp
+      last.at = now
+      const t = last.text
+      this.scene.tweens.killTweensOf(t)
+      t.setText(`+${fmt(last.value)} EXP`).setAlpha(1).setScale(1.3)
+      this.scene.tweens.add({ targets: t, scale: 1, duration: 200, ease: 'Back.easeOut' })
+      this.scene.tweens.add({ targets: t, y: last.y - 120, duration: 900, ease: 'Sine.easeOut' })
+      this.scene.tweens.add({ targets: t, alpha: 0, delay: 650, duration: 350, ease: 'Sine.easeIn', onComplete: () => t.setVisible(false) })
+      return
+    }
     const t = this.acquire()
-    t.setStyle({ fontSize: `${TYPE.exp}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 6 })
+    t.setStyle({ fontSize: `${TYPE.exp}px`, color: INK.exp, stroke: INK.stroke, strokeThickness: 10 })
     t.setText(`+${fmt(exp)} EXP`)
-    // two kills in quick succession must not print on top of each other
-    t.setPosition(x + Phaser.Math.Between(-80, 80), y + Phaser.Math.Between(-30, 30)).setDepth(53).setScale(0.7)
+    const sy = y + Phaser.Math.Between(-20, 20)
+    t.setPosition(x + Phaser.Math.Between(-30, 30), sy).setDepth(53).setScale(0.7)
+    this.lastExp = { text: t, value: exp, at: now, y: sy }
     this.scene.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
-    this.scene.tweens.add({ targets: t, y: t.y - 120, duration: 900, ease: 'Sine.easeOut' })
+    this.scene.tweens.add({ targets: t, y: sy - 120, duration: 900, ease: 'Sine.easeOut' })
     this.scene.tweens.add({
       targets: t,
       alpha: 0,

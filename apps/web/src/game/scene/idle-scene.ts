@@ -1131,7 +1131,7 @@ export class IdleScene extends Phaser.Scene {
       this.pinChips()
       this.killChip.pop()
       this.fx.coinSparkle(x, midY, boss ? 8 : 3)
-      if (credit.exp > 0) this.fx.expPop(x + 120, this.topYOf(p) - 150, credit.exp)
+      if (credit.exp > 0) this.fx.expPop(x + 120, this.topYOf(p) - 250, credit.exp)
       this.drainLoot(x, midY, p.feetY)
     }
     this.removePest(p)
