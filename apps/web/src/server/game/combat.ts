@@ -87,6 +87,9 @@ export interface EngineOpts {
   dropOpts: DropOpts
   mvpEveryKills: number
   pityMonsterCardLevel?: number
+  /** per-map monster HP multiplier (normal play: none). Demo softens the pond so its
+   *  visible-loot pace matches the field — levels, exp and drop bands are untouched. */
+  mapHpMult?: Record<string, number>
 }
 
 export const NORMAL_OPTS: EngineOpts = {
@@ -97,6 +100,9 @@ export const NORMAL_OPTS: EngineOpts = {
 
 export const DEMO_OPTS: EngineOpts = {
   expMult: DEMO_EXP_MULT,
+  // pond pests have ~2x the field's effective HP; halve-ish it in demo so the pond runs
+  // at ~10-12 kills/min (field pace) instead of ~6 — coins/commons flow on kills
+  mapHpMult: { 'bueng-bua': 0.45 },
   dropOpts: {
     common: DEMO_DROP_COMMON_MULT,
     rare: DEMO_DROP_RARE_MULT,
@@ -296,7 +302,7 @@ export function simulateLive(
 
     if (!monster && t >= spawnAt) {
       monster = pickMonster()
-      monsterHp = monster.stats.hp
+      monsterHp = monster.stats.hp * (opts.mapHpMult?.[p.mapId] ?? 1)
     }
 
     if (monster) {

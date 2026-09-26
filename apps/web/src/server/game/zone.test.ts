@@ -35,6 +35,23 @@ describe('zone 2 — บึงบัวหลวง', () => {
     expect(advanced).toBe(true)
   })
 
+  it('demo pond pace lands in the 10–12 kills/min band (visible-loot tune)', () => {
+    let p = buildPlayer(ADDR, 'นายไก่บึงบัว3', 'kingkong', 0)
+    let t = 0
+    let zone2Start = -1
+    let zone2Kills = 0
+    for (let w = 0; w < 60; w++) {
+      const { player, aggregates } = simulateLive(p, 15, mulberry32(3 + w), DEMO_OPTS)
+      p = player
+      if (p.mapId === BUENG_BUA.id && zone2Start < 0) zone2Start = t + 15
+      if (zone2Start >= 0) zone2Kills += aggregates.kills
+      t += 15
+    }
+    const perMin = zone2Kills / ((t - zone2Start) / 60)
+    expect(perMin).toBeGreaterThanOrEqual(9.5)
+    expect(perMin).toBeLessThanOrEqual(13)
+  })
+
   it('zone 1 is untouched: same id, monsters, MVP, and the pity crossing still fires there', () => {
     expect(THUNG_NA.id).toBe('thung-na')
     expect(THUNG_NA.monsters.map((s) => s.monster.id)).toEqual(['nu-na', 'takka-taen-yak', 'pu-na'])

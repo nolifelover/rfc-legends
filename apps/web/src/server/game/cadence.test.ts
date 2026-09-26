@@ -27,7 +27,11 @@ function runWindowed(windowSecs: number, totalSecs: number, tag: string): { play
   let kills = 0
   let sync = 0
   for (let t = 0; t < totalSecs; t += windowSecs) {
-    const { player, aggregates } = simulateLive(p, windowSecs, mulberry32(hashSeed(ADDR, tag, sync)), DEMO_OPTS)
+    // seed by ABSOLUTE window position, not window index: comparing cadences must measure
+    // the ENGINE's windowing behavior, not which stream each cadence happened to draw.
+    // (Balance changes otherwise move the drift — a 0.45 pond-HP tune pushed the old
+    // per-index seeds to a 16% gap with zero engine asymmetry behind it.)
+    const { player, aggregates } = simulateLive(p, windowSecs, mulberry32(hashSeed(ADDR, tag, t)), DEMO_OPTS)
     p = player
     kills += aggregates.kills
     sync += 1
@@ -44,7 +48,7 @@ function runInterleaved(totalSecs: number): { player: Player; kills: number } {
   let t = 0
   while (t < totalSecs) {
     const windowSecs = sync % 2 === 0 ? 1 : 3 // poller A then poller B, interleaved
-    const { player, aggregates } = simulateLive(p, windowSecs, mulberry32(hashSeed(ADDR, 'interleaved', sync)), DEMO_OPTS)
+    const { player, aggregates } = simulateLive(p, windowSecs, mulberry32(hashSeed(ADDR, 'interleaved', t)), DEMO_OPTS)
     p = player
     kills += aggregates.kills
     t += windowSecs
