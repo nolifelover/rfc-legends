@@ -1178,14 +1178,21 @@ export class IdleScene extends Phaser.Scene {
           onStart: () => sp.setTexture(TRAINER_KEY),
           onComplete: () => {
             if (target.dead) return
-            const tx = target.container.x
-            const ty = this.topYOf(target) + target.h * ROW_SCALE[target.row] * 0.5
-            const rsz = target.h * ROW_SCALE[target.row]
-            this.fx.slash(tx - 90, ty, 1, target.boss ? 1.6 : 1)
-            // burst on the hit side of the body, low, never on the face
-            this.fx.impactStar(tx - rsz * 0.42, ty + rsz * 0.18, target.boss ? 1.1 : 0.7)
+            // the trainer's own attack: a teal hoe sweep at the hand, then a seed bag
+            // that arcs to the target and lands the hit
+            const hx = L.TRAINER_X + JUICE.STRIKE_DX + 60
+            const hy = L.TRAINER_FEET - L.TRAINER_H * 0.55
+            this.fx.slash(hx, hy, 1, 0.8, 0x3fb8c9)
             this.fx.dustKick(L.TRAINER_X + JUICE.STRIKE_DX, L.TRAINER_FEET, 3)
-            this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
+            const tx = target.container.x
+            const rsz = target.h * ROW_SCALE[target.row]
+            const ty = this.topYOf(target) + rsz * 0.55
+            this.fx.throwBag(hx, hy - 40, tx - rsz * 0.3, ty, () => {
+              if (target.dead) return
+              // burst on the hit side of the body, low, never on the face
+              this.fx.impactStar(tx - rsz * 0.42, ty + rsz * 0.12, target.boss ? 1.1 : 0.7, 0xbff2ff)
+              this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
+            })
           },
         },
         { x: JUICE.STRIKE_DX + 6, angle: 26, scaleX: 0.94, scaleY: 1.06, duration: JUICE.HOLD },

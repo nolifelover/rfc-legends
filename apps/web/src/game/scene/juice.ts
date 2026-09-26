@@ -37,9 +37,9 @@ export const LAYOUT = {
   FEET_FRONT: 880,
   BACK_SCALE: 0.8,
   MID_SCALE: 0.9,
-  ENGAGE_FRONT_X: 1080,
-  ENGAGE_MID_X: 1190,
-  ENGAGE_BACK_X: 1300,
+  ENGAGE_FRONT_X: 1150,
+  ENGAGE_MID_X: 1260,
+  ENGAGE_BACK_X: 1370,
   /** Spacing between queued pests behind the leader. */
   PACK_GAP: 175,
   SPAWN_X: 2020,
@@ -47,10 +47,10 @@ export const LAYOUT = {
   PACK_MAX: 12,
   WALK_SPEED: 420, // px/s while advancing
   /** Heroes. */
-  TRAINER_X: 370,
+  TRAINER_X: 290,
   TRAINER_FEET: 862,
   TRAINER_H: 400,
-  ROOSTER_X: 800,
+  ROOSTER_X: 840,
   ROOSTER_FEET: 886,
   ROOSTER_H: 480,
   /** Where loot icons come to rest before flying to the Harvest chip. */
@@ -83,7 +83,8 @@ export const JUICE = {
   RECOVER: 220,
   IMPACT_MS: 220, // white starburst on the target
   FLINCH_MS: 110, // white tint on the victim
-  STRIKE_DX: 200, // trainer lunge
+  STRIKE_DX: 160, // trainer lunge
+  THROW_MS: 190, // seed bag flight to the target
   DASH: 110, // rooster dash to the target
   DASH_BACK: 300,
   CROUCH: 70,

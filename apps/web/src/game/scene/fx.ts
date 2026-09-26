@@ -353,7 +353,7 @@ export class Fx {
    * Orange slash arc (~120°, growing to r≈190) with a white core. One reusable
    * Graphics object; a new swing restarts it. `dir` 1 = swings to the right.
    */
-  slash(x: number, y: number, dir = 1, scale = 1): void {
+  slash(x: number, y: number, dir = 1, scale = 1, edge = 0xff8a2a): void {
     this.slashTween?.remove()
     const g = this.slashG
     const half = Phaser.Math.DegToRad(JUICE.SLASH_ARC_DEG / 2)
@@ -370,7 +370,7 @@ export class Fx {
         const lw = Phaser.Math.Linear(22, 4, t) * scale
         const alpha = 1 - t * 0.85
         g.clear()
-        g.lineStyle(lw + 10, 0xff8a2a, alpha * 0.9)
+        g.lineStyle(lw + 10, edge, alpha * 0.9)
         g.beginPath()
         g.arc(x, y, r, a0, a1)
         g.strokePath()
@@ -426,6 +426,32 @@ export class Fx {
         .setVisible(true)
       this.scene.tweens.add({ targets: g, alpha: 0, duration: 160, delay: i * 30, onComplete: () => g.setVisible(false) })
     }
+  }
+
+  /** The trainer's ranged attack: a spinning seed bag arcs to the target, then `onHit`. */
+  throwBag(x0: number, y0: number, x1: number, y1: number, onHit: () => void): void {
+    const bag = this.scene.add.image(x0, y0, FX.bag).setDepth(35).setScale(1.2)
+    const curve = new Phaser.Curves.QuadraticBezier(
+      new Phaser.Math.Vector2(x0, y0),
+      new Phaser.Math.Vector2((x0 + x1) / 2, Math.min(y0, y1) - 160),
+      new Phaser.Math.Vector2(x1, y1),
+    )
+    this.scene.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: JUICE.THROW_MS,
+      ease: 'Sine.easeIn',
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 1
+        const p = curve.getPoint(t)
+        bag.setPosition(p.x, p.y).setAngle(t * 540)
+      },
+      onComplete: () => {
+        bag.destroy()
+        this.dust.explode(this.count(4), x1, y1)
+        onHit()
+      },
+    })
   }
 
   // ------------------------------------------------------------------ death
