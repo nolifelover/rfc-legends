@@ -60,16 +60,17 @@ export const THUNG_NA: MapDef = {
 }
 
 // บึงบัวหลวง (GDD §5.2, น้ำ) — unlocks at Base Lv 30, the same beat as rare drops.
-// Pest LEVELS drive HP/DEF/FLEE/EXP (so the screen shows Lv 24–32 enemies and exp keeps
-// flowing), but their ATK follows a gentler curve (~the zone-1 MVP's punch): a Lv-30 hero
-// must farm the pond at a healthy pace, not death-loop against lv-scaled damage.
-const pondPest = (id: string, name: string, emoji: string, level: number, cardId: number, materialItemId: number): MonsterDef => {
+// Pest LEVELS drive DEF/EXP (screen shows Lv 24–32 enemies, exp keeps flowing), but HP,
+// FLEE and ATK are tuned for the runbook Lv-30 player (STR 8/AGI 6/DEX 6): hit ≈ 78–85%,
+// a pest dies in ~15–30 s — visibly progressing right after the Lv-30 beat. Drop rates
+// and the MVP crocodile are untouched.
+const pondPest = (id: string, name: string, emoji: string, level: number, cardId: number, materialItemId: number, hp: number, flee: number): MonsterDef => {
   const m = monster(id, name, emoji, level, cardId, materialItemId)
-  return { ...m, stats: { ...m.stats, atk: MONSTER_ATK(Math.round(level / 2)) } }
+  return { ...m, stats: { ...m.stats, hp, flee, atk: MONSTER_ATK(Math.round(level / 2)) } }
 }
-const hoiCherry = pondPest('hoi-cherry', 'หอยเชอรี่', '🐌', 24, 1004, 104)
-const phakTobChawai = pondPest('phak-tob-chawai-yak', 'ผักตบชวายักษ์', '🌿', 28, 1005, 102)
-const plaChonYak = pondPest('pla-chon-yak', 'ปลาช่อนยักษ์', '🐟', 32, 1006, 103)
+const hoiCherry = pondPest('hoi-cherry', 'หอยเชอรี่', '🐌', 24, 1004, 104, 260, 36)
+const phakTobChawai = pondPest('phak-tob-chawai-yak', 'ผักตบชวายักษ์', '🌿', 28, 1005, 102, 320, 38)
+const plaChonYak = pondPest('pla-chon-yak', 'ปลาช่อนยักษ์', '🐟', 32, 1006, 103, 380, 40)
 
 export const BUENG_BUA: MapDef = {
   id: 'bueng-bua',

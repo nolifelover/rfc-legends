@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { BUENG_BUA, THUNG_NA, ZONE_ADVANCE_LEVEL } from '../../game/data/maps'
 import { DEMO_OPTS, simulateLive } from './combat'
 import { mulberry32 } from './rng'
+import { hitChance, hitOf } from './stats'
 import { buildPlayer } from './index'
 
 const ADDR = '0x1818181818181818181818181818181818181818'.toLowerCase()
@@ -50,6 +51,36 @@ describe('zone 2 — บึงบัวหลวง', () => {
     const perMin = zone2Kills / ((t - zone2Start) / 60)
     expect(perMin).toBeGreaterThanOrEqual(9.5)
     expect(perMin).toBeLessThanOrEqual(13)
+  })
+
+  it('runbook-stat Lv-30 player hits 75-85% and clears a pond pest in ~15-30s (functional balance)', () => {
+    // docs/demo-runbook.md: 20 points spent — STR 8 / AGI 6 / DEX 6 — the exact build a
+    // judge following the video has right after the Lv-30 beat that auto-advances here.
+    const p = buildPlayer(ADDR, 'นายไก่รันบุ๊ค', 'kingkong', 0)
+    p.baseLevel = 30
+    p.stats = { str: 8, agi: 6, vit: 1, int: 1, dex: 6, luk: 1 }
+    p.mapId = BUENG_BUA.id
+
+    // analytic hit chance against every pest's tuned FLEE
+    const hit = hitOf(p)
+    for (const spawn of BUENG_BUA.monsters) {
+      const chance = hitChance(hit, spawn.monster.stats.flee)
+      expect(chance).toBeGreaterThanOrEqual(0.75)
+      expect(chance).toBeLessThanOrEqual(0.85)
+    }
+
+    // simulated: a kill every 15-30s of live combat (encounter includes the 3s respawn)
+    let kills = 0
+    let q = p
+    for (let w = 0; w < 8; w++) {
+      const { player, aggregates } = simulateLive(q, 15, mulberry32(50 + w), DEMO_OPTS)
+      q = player
+      kills += aggregates.kills
+    }
+    const encounterSec = 120 / kills
+    expect(kills).toBeGreaterThanOrEqual(4) // ≤ 30s per kill
+    expect(kills).toBeLessThanOrEqual(8) // ≥ 15s per kill
+    void encounterSec
   })
 
   it('zone 1 is untouched: same id, monsters, MVP, and the pity crossing still fires there', () => {
