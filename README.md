@@ -31,7 +31,7 @@ Key transactions:
   - token 4 `theprawang.rfclegends.eth` (NL-S-0004) — [`0x9627…88c`](https://sepolia.etherscan.io/tx/0x9627e4bdeb0104dc2fc5af92f5f73e1b5eaf9c5101940d4e018c280aae9ce88c)
   - token 5 `falconthong.rfclegends.eth` (NL-S-0005) — [`0xe9df…388`](https://sepolia.etherscan.io/tx/0xe9dfa4b6d0b7c12666abb028fb015ee55a7826cafc87cc54154e5950e3454388)
   - token 6 `chick01.theprawang.rfclegends.eth` (NL-C-0101, **sire = token 4** — the onchain pedigree link) — [`0x1957…aeea`](https://sepolia.etherscan.io/tx/0x1957cd91e64adc39cc245a1d46424ca61fb403767986e19915d3742601f9aeea)
-- **First farm attestation relay:** _hash incoming from the ENS lane's seed run._
+- **Farm attestation relay (E3):** `submitAttestation` on theprawang with the farm's EIP-712 signature (nonce 2) — [`0xd4c7…1ac4`](https://sepolia.etherscan.io/tx/0xd4c79038486075afa7d04176945303e75432733a274d26bd70d61dc600a61ac4) — mirrored to ENS text records by the farm key on the hardened resolver: `rfc.weight` [`0xdcd0…3f87`](https://sepolia.etherscan.io/tx/0xdcd08538e7b02d26e383859a95c2ca0c471a3ab80650c0be18f61941c9bc3f87), `rfc.health` [`0x732e…c357`](https://sepolia.etherscan.io/tx/0x732e9cfa3501e22f3a976eab4bda3b33a62096f91e94606f4909b7ba5de3c357), `rfc.attestedAt` [`0x8172…acd4`](https://sepolia.etherscan.io/tx/0x817204cde17e2cefb6696f4f1958518dab9edd3553b9ea69a1f11eb819c1acd4). Contract and ENS agree: 4350 g, health 98 — live readback: [`/api/ens/records?name=theprawang.rfclegends.eth`](https://rfc-legends.earn.dev.rawinlab.com/api/ens/records?name=theprawang.rfclegends.eth).
 
 ## Architecture
 
