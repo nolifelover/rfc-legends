@@ -1,69 +1,68 @@
 # ETHGlobal submission — RFC Legends
 
-## Status (2026-09-26 ~07:15 UTC)
+## Status (2026-09-26, updated by eth-dev1 to match reality)
 
 Project page: https://ethglobal.com/events/tokyo2026/project
 
 - [x] Project created: name "RFC Legends", category Gaming, emoji 🐓
-- [x] Typed into the "Project details" step (NOT saved yet): short description, description, how it's made
-- [x] Public repo created: https://github.com/nolifelover/rfc-legends (owned by `nolifelover`, the GitHub account linked to ETHGlobal). Next: use "Review GitHub Permissions" on the form and select it.
-- [ ] Demo link (required field): empty, no live demo yet
-- [ ] Remaining steps: Images, Tech stack, Select prizes, Video, Future, Final
-- [ ] Final submit: do it only after the text is trimmed to what the repo and demo actually show
+- [x] Public repo: https://github.com/nolifelover/rfc-legends (linked via GitHub Permissions)
+- [x] Live demo: https://rfc-legends.earn.dev.rawinlab.com (production build, `next start`, demo mode badge visible)
+- [ ] Demo video: record 2–4 min, ≥720p, clear voice — script follows the e2e demo beat
+- [ ] Images / screenshots
+- [ ] Final submit — only after the video and the two pending tx hashes below are in
 
-Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC)
+Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC). Do not claim anything not in the repo.
 
----
+### Live vs pending (keep the form aligned with this)
 
-## Draft copy (verbatim from the cowork session)
+**Live on Sepolia:** all 5 contracts (verified on Etherscan+Sourcify), World ID verify → `HumanRegistry.markVerified` (0xa081…58ff), voucher mint → `RareItems`, list/buy → 90/10 `Sold` (0xcd9b…6356, 0xfb5d…60f04, both MultiBaas-indexed), ENSv2 `rfclegends.eth` + permissioned resolver + sire subname, item metadata routes, guild chat + guild boss (PocketBase realtime), idle game with demo mode, market sale feed through MultiBaas.
 
-ผมกรอกฟอร์มแทนไม่ได้ครับ session นี้ไม่ได้เชื่อมกับ Chrome และหน้า submit ต้อง login ETHGlobal ด้วยบัญชีของคุณ ผมเลยเตรียมข้อความไว้ให้ copy ไปวางได้ทันที
-
-**ก่อนวาง:** ข้อความด้านล่างเขียนตามแผน vertical slice ส่วนไหนที่ทีมยังทำไม่เสร็จให้ลบออกก่อน กรรมการจะเปิดดู repo และ demo จริง ถ้าอ้างฟีเจอร์ที่ไม่มีอยู่จะเสียคะแนนหรือถูกตัดสิทธิ์ได้
+**Pending (do NOT claim until landed):** RoosterRWA farm co-signed mint + attestation tx hashes (eth-dev3's seed run), ENS register tx hash citation, demo video link.
 
 ---
+
+## Form copy
 
 **Project name**
 RFC Legends
 
-**Short description** (97 ตัวอักษร)
+**Short description** (97 chars)
 Idle MMORPG: level up with your rooster companion. Real roosters live onchain as verifiable RWAs.
 
-**Description**
-RFC Legends is an idle MMORPG inspired by classic Ragnarok-style progression, themed around Thai native gamecock breeds. You play as a trainer who adventures with a rooster companion. Both level up together automatically, even while you are offline, so you spend your time making decisions and talking with your guild instead of clicking.
+**Description** (trim to what's live — paste-ready)
 
-The game is backed by real animals. RFC Club sells RWA cards of real roosters cared for by Ninlanee Farm in Thailand. Each real rooster gets an ENSv2 name, and its offspring become subnames of their sire, so anyone can verify a bloodline onchain. Every week the farm signs updates on weight and health, and those updates feed the in-game card.
+RFC Legends is an idle MMORPG with classic Ragnarok-style progression, themed around Thai native gamecock breeds. You play as a trainer adventuring with a rooster companion; both level up automatically, even offline (demo mode boosts rates for the video — always badged).
 
-Rare drops, like in Ragnarok, are the heart of the economy. Legendary items and monster cards can be minted and sold in an onchain Rare Market. The seller receives 90% and the platform receives 10%, enforced by the contract. To stop bots from farming drops for real money, minting and selling require a World ID verification: one human, one account.
+The game is backed by real animals. Each real rooster at Ninlanee Farm is an onchain RWA: the farm co-signs every mint (ring id, bloodline, hatch date), one ring id can only ever be one token, and the farm signs weekly health attestations anyone can relay onchain. Each bird gets an ENSv2 name; offspring are subnames of their sire, so a bloodline is verifiable by anyone.
 
-There is no gambling. The game focuses on breeding, collecting and community.
+Rare drops are the heart of the economy. Legendary items and monster cards mint from gameplay only — with a server-signed EIP-712 voucher and only to a World ID-verified wallet — and trade in an onchain Rare Market that splits every sale 90% seller / 10% platform inside the contract. One human, one account: a second wallet replaying the same World ID nullifier is rejected onchain.
 
-**How it's made**
-- Frontend: Next.js (PWA) with Phaser for the isometric idle scene.
-- Idle engine: a Node.js/TypeScript server-authoritative engine. Live combat is simulated tick by tick. Offline rewards use rate-based settlement.
-- Data and realtime: PocketBase stores player state, drops and World ID nullifier bindings, and powers guild chat and the guild boss over realtime subscriptions.
-- Smart contracts: Solidity on Ethereum Sepolia.
-  - an ERC-721 for real-rooster RWAs, carrying signed farm attestations
-  - an ERC-1155 for mintable rare drops
-  - a marketplace that splits every sale 90/10 automatically
-- ENSv2: hierarchical subnames act as the pedigree registry (sire → offspring). A permissioned resolver lets only the farm's key write health records.
-- World ID: IDKit with backend verification, required before minting or selling rare items. Unverified accounts are rejected.
-- Curvegrid MultiBaas: used for contract deployment, interaction and event indexing.
-- AI tools: we used Claude for the game design document and code scaffolding. Our GDD is in the repo.
+No gambling, no betting, no real-world fight results. Everything is cartoon-art breeding, collecting and community.
 
-**Partner prizes** (เลือก 3)
-1. World: Best Use of IDKit
-2. ENS: Best Use of ENSv2
-3. Curvegrid: Best RWA Tokenization
+**Tech stack** (for the form's list)
+
+Solidity, Foundry, OpenZeppelin, Etherscan/Sourcify, TypeScript, Next.js 16, React 19, wagmi, viem, Phaser 3, PocketBase, PM2, ENSv2, World ID (IDKit), Curvegrid MultiBaas, Node.js.
+
+**Partner prizes** (3 picks, one line each)
+
+1. **World — Best Use of IDKit:** IDKit widget → server-side Portal verify (signal pinned to the wallet, one-time RP nonces, nullifier bound to one wallet) → onchain `HumanRegistry.markVerified`; unverified bots are rejected at mint and at listing, shown live in the demo.
+2. **ENS — Best Use of ENSv2:** hierarchical pedigree — sire subnames under `rfclegends.eth` with a permissioned resolver where only the farm key can write health text records, resolved live on the rooster pages.
+3. **Curvegrid — Best RWA Tokenization:** all five contracts linked in MultiBaas with event indexing; the market sale history page is served from MultiBaas event queries, and the RoosterRWA trust model (farm co-signature, one ring = one token) is documented for judges.
+
+**World integration feedback** (mandatory — answers taken from docs/feedback/world.md)
+
+- Minutes to first successful verify: **62** wall-clock (07:37Z → 08:39Z; ~20 min after Portal credentials + staging window existed).
+- Blockers: staging verification now needs a 24h window + `x-staging-verification-token` header (developer-portal #2307, not in docs); the simulator ignored `connect_url`; the simulator has a single global identity.
+- What was missing: docs don't cover the staging window/token; no testing page (404); docs never say `signal_hash` is caller-controlled and the examples forward the widget payload verbatim.
+- Top improvement request: Portal-side rejection of nullifier reuse per action, plus a Portal-checked `expected_signal_hash` parameter (and server-pinned examples).
 
 ---
 
-## ส่วนที่ทีมต้องใส่เอง
+## Pre-submit checklist
 
-- **GitHub repo:** ต้องเป็น public และเห็น commit history ต่อเนื่อง
-- **README ใน repo:** ต้องชี้ไปยังไฟล์และบรรทัดที่ใช้ World ID, ENSv2 และ MultiBaas ส่วน Curvegrid บังคับให้มีสรุป 1 ประโยค, แนะนำทีมพร้อม social handle, วิธี setup และ feedback เรื่อง MultiBaas
-- **Integration feedback สำหรับ World (บังคับ):** ใช้เวลากี่นาทีกว่าจะ verify สำเร็จครั้งแรก, ติดขัดตรงไหน, อะไรที่ขาด, อยากให้ปรับอะไรมากที่สุด
-- **Live demo link และ demo video** (2–4 นาที)
-- **Logo และ screenshot**
-
-ต้องส่งก่อน **อาทิตย์ 27 ก.ย. 09:00 JST** ครับ ถ้าส่ง repo URL และรายการฟีเจอร์ที่ทำเสร็จจริงมา ผมปรับข้อความให้ตรงกับของจริง และเขียน README ให้ครบตามเงื่อนไขของทั้ง 3 Sponsor ให้ได้
+- [ ] RoosterRWA seed tx hashes (mint + attestation) cited in README + here
+- [ ] ENS register tx hash cited
+- [ ] Demo video recorded and linked
+- [ ] Screenshots uploaded
+- [ ] Repo README reviewed against repo reality one last time
+- [ ] Final submit before 09:00 JST
