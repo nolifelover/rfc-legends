@@ -155,18 +155,18 @@ export function HudStrip({
         {/* Row A — trainer card + the HP/SP/EXP trio */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
-            <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-sun-soft bg-cream">
+            <span className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-sun-soft bg-cream">
               <RoosterMark size={30} />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border-2 border-bark/40 bg-sun px-1.5 text-sm font-black leading-tight text-bark">
+                {player.baseLevel}
+              </span>
             </span>
             <div className="min-w-0 leading-tight">
               <p className="truncate text-xl font-black text-bark">{player.name}</p>
               <p className="flex items-center gap-1.5 truncate text-xl font-semibold text-bark-soft">
                 <span className="rounded-full bg-sun-soft px-2 font-bold text-bark">{jobTag(player.baseLevel)}</span>
-                <span>
-                  Lv <span className="font-black text-clay">{player.baseLevel}</span>
-                </span>
                 <span className="truncate" lang="th">
-                  · {map.name}
+                  {map.name}
                 </span>
               </p>
             </div>
@@ -196,8 +196,8 @@ export function HudStrip({
                   · {info.thai}
                 </span>
               </p>
-              <p className="truncate text-xl font-semibold text-bark-soft">
-                Rooster Lv <span className="font-black text-clay">{player.rooster.level}</span>
+              <p className="truncate text-xl text-bark/70">
+                Rooster Lv <span className="font-black text-bark-soft">{player.rooster.level}</span>
               </p>
             </div>
           </div>
