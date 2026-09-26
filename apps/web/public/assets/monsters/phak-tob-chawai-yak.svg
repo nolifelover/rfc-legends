@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- root feet -->
+    <path d="M30,66 L26,78 M42,68 L41,80 M54,66 L58,78" stroke="#2B1B12" stroke-width="5"/>
+    <path d="M30,66 L26,78 M42,68 L41,80 M54,66 L58,78" stroke="#8D6E4F" stroke-width="2.6"/>
+    <!-- leafy clump body -->
+    <path d="M20,56 Q12,38 28,30 Q24,16 42,16 Q60,14 58,30 Q74,36 68,54 Q60,68 44,68 Q26,68 20,56 Z" fill="#5FA463" stroke="#2B1B12" stroke-width="4"/>
+    <path d="M28,52 Q22,40 34,34 Q30,24 43,24 Q55,23 53,33 Q63,38 58,50 Q52,60 42,60 Q31,60 28,52 Z" fill="#7FBF7A" stroke="#2B1B12" stroke-width="2.6"/>
+    <!-- leaf sprouts on top -->
+    <path d="M36,18 Q34,8 28,6 M46,16 Q48,6 55,5 M41,15 Q41,6 38,2" fill="none" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M36,18 Q34,8 28,6 M46,16 Q48,6 55,5 M41,15 Q41,6 38,2" fill="none" stroke="#7FBF7A" stroke-width="1.6"/>
+    <!-- hyacinth bloom -->
+    <circle cx="63" cy="30" r="5" fill="#C77DBE" stroke="#2B1B12" stroke-width="2.4"/>
+    <circle cx="70" cy="34" r="4.4" fill="#B76AB0" stroke="#2B1B12" stroke-width="2.4"/>
+    <circle cx="66" cy="38" r="4" fill="#D89BD3" stroke="#2B1B12" stroke-width="2.2"/>
+    <circle cx="66.5" cy="34" r="1.4" fill="#FFD166"/>
+    <!-- face on the clump -->
+    <circle cx="36" cy="46" r="6" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="52" cy="44" r="6.4" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="37.4" cy="47" r="2.6" fill="#2B1B12"/>
+    <circle cx="53.4" cy="45" r="2.8" fill="#2B1B12"/>
+    <circle cx="36.4" cy="45.6" r="0.9" fill="#FFFDF6"/>
+    <circle cx="52.4" cy="43.6" r="0.9" fill="#FFFDF6"/>
+    <path d="M41,54 Q45,57 49,54" stroke="#2B1B12" stroke-width="2.4" fill="none"/>
+    <circle cx="31" cy="52" r="2.6" fill="#E58A63" opacity="0.5"/>
+    <circle cx="57" cy="50" r="2.6" fill="#E58A63" opacity="0.5"/>
+  </g>
+</svg>

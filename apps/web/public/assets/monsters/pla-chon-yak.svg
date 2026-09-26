@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- tail fin -->
+    <path d="M68,44 Q80,32 78,20 Q70,28 64,30 Z" fill="#4E7A4A" stroke="#2B1B12" stroke-width="4"/>
+    <path d="M70,50 Q82,58 80,72 Q71,64 64,60 Z" fill="#4E7A4A" stroke="#2B1B12" stroke-width="4"/>
+    <!-- long snakehead body -->
+    <path d="M18,46 Q16,30 36,26 Q60,22 68,40 Q74,52 62,58 Q40,66 24,60 Q14,56 18,46 Z" fill="#6B8E5A" stroke="#2B1B12" stroke-width="4"/>
+    <!-- belly -->
+    <path d="M24,58 Q42,66 60,58 Q42,62 24,54 Z" fill="#D9C79A"/>
+    <!-- dorsal fin -->
+    <path d="M30,28 Q34,16 46,16 Q44,24 40,27 Z" fill="#4E7A4A" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M44,24 Q50,14 60,16 Q56,24 50,28 Z" fill="#4E7A4A" stroke="#2B1B12" stroke-width="3"/>
+    <!-- scale pattern -->
+    <path d="M34,44 q4,-5 8,0 M44,40 q4,-5 8,0 M40,52 q4,-5 8,0" fill="none" stroke="#4E7A4A" stroke-width="2.2"/>
+    <!-- big mouth (cartoon gulp) -->
+    <path d="M16,46 Q10,50 14,56 Q22,58 28,54" fill="#FFFDF6" stroke="#2B1B12" stroke-width="3"/>
+    <path d="M15,49 L13,52 M19,51 L18,54" stroke="#2B1B12" stroke-width="1.8"/>
+    <!-- eye -->
+    <circle cx="34" cy="38" r="6.8" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="32.6" cy="39" r="3" fill="#2B1B12"/>
+    <circle cx="31.6" cy="37.4" r="1" fill="#FFFDF6"/>
+    <!-- grumpy brow -->
+    <path d="M27,30 L39,33" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="44" cy="44" r="2.6" fill="#E58A63" opacity="0.5"/>
+  </g>
+</svg>

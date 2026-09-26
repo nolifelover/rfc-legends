@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <!-- slime trail -->
+    <path d="M12,72 Q30,80 58,74 Q72,71 80,74" fill="none" stroke="#A8D5BA" stroke-width="3" opacity="0.8"/>
+    <!-- golden spiral shell -->
+    <path d="M22,52 Q14,30 36,22 Q60,15 66,38 Q70,56 50,62 Q30,66 22,52 Z" fill="#E8B84B" stroke="#2B1B12" stroke-width="4"/>
+    <path d="M30,50 Q26,36 42,32 Q56,29 58,42 Q59,52 47,55 Q35,57 30,50 Z" fill="#F5D679" stroke="#2B1B12" stroke-width="2.6"/>
+    <path d="M38,46 Q37,39 46,38 Q52,38 52,44 Q52,49 46,50 Q40,50 38,46 Z" fill="#E8B84B" stroke="#2B1B12" stroke-width="2.2"/>
+    <!-- shell spikes (apple snail) -->
+    <path d="M24,36 L20,29 M32,27 L29,20 M44,23 L42,16 M56,28 L59,22" stroke="#2B1B12" stroke-width="2.6"/>
+    <!-- head + eyestalks -->
+    <path d="M58,54 Q68,50 72,42" fill="none" stroke="#2B1B12" stroke-width="6"/>
+    <path d="M58,54 Q68,50 72,42" fill="none" stroke="#D9A06B" stroke-width="3.2"/>
+    <circle cx="72" cy="38" r="6" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="73" cy="38.5" r="2.6" fill="#2B1B12"/>
+    <circle cx="72.2" cy="36.8" r="0.9" fill="#FFFDF6"/>
+    <circle cx="65" cy="45" r="5.5" fill="#FFFDF6" stroke="#2B1B12" stroke-width="2.6"/>
+    <circle cx="66" cy="45.5" r="2.4" fill="#2B1B12"/>
+    <circle cx="65.2" cy="44" r="0.8" fill="#FFFDF6"/>
+    <!-- smile -->
+    <path d="M68,53 Q71,55 74,53" stroke="#2B1B12" stroke-width="2.2" fill="none"/>
+    <circle cx="63" cy="52" r="2.6" fill="#E58A63" opacity="0.5"/>
+  </g>
+</svg>
