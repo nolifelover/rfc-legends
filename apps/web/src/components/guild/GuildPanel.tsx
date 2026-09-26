@@ -54,6 +54,7 @@ export default function GuildPanel({
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [live, setLive] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const displayName = name?.trim() || `${address.slice(0, 6)}…${address.slice(-4)}`
 
@@ -83,26 +84,42 @@ export default function GuildPanel({
     }
     refresh()
 
+    // The 5s poll ALWAYS runs (F1: realtime through some proxies — Cloudflare
+    // in front of SSE — silently never delivers, so polling is the safety
+    // net, not a fallback). Realtime, when it connects, upgrades the dot to
+    // "live" and makes updates instant; its first failure is logged.
+    poll = window.setInterval(refresh, 5000)
+
     try {
       const base = process.env.NEXT_PUBLIC_POCKETBASE_URL ?? '/pb/'
       pb = new PocketBase(base)
-    } catch {
-      /* fall through to polling */
+    } catch (err) {
+      console.warn('[guild] PocketBase client unavailable, polling only', err)
     }
     if (pb) {
       pb.autoCancellation(false)
       const msgFilter = pb.filter('guild = {:guild}', { guild })
+      let loggedFirstFailure = false
+      const firstFailure = (what: string) => (err: unknown) => {
+        if (!loggedFirstFailure) {
+          loggedFirstFailure = true
+          console.warn('[guild] realtime subscribe failed, 5s polling carries it', what, err)
+        }
+        setLive(false)
+      }
       pb.collection('guild_messages')
         .subscribe('*', (e) => {
           if (e.action !== 'create') return
           const r = e.record as unknown as ChatMessage
+          setLive(true)
           setMessages((prev) => (prev.some((m) => m.id === r.id) ? prev : [...prev, { ...r, created: String(r.created) }]))
         }, { filter: msgFilter })
-        .catch(() => {})
+        .catch(firstFailure('guild_messages'))
       pb.collection('guild_boss')
         .subscribe('*', (e) => {
           const r = e.record as unknown as { guild: string; floor: number; name: string; hp: number; max_hp: number; contributors: Record<string, { name: string; damage: number }> }
           if (r.guild !== guild) return
+          setLive(true)
           const contributors = Object.entries(r.contributors ?? {})
             .map(([a, c]) => ({ address: a, name: c.name, damage: c.damage }))
             .sort((x, y) => y.damage - x.damage)
@@ -115,9 +132,7 @@ export default function GuildPanel({
             defeated_at: 0,
           })
         }, { filter: msgFilter })
-        .catch(() => {})
-    } else {
-      poll = window.setInterval(refresh, 5000)
+        .catch(firstFailure('guild_boss'))
     }
 
     return () => {
@@ -233,8 +248,20 @@ export default function GuildPanel({
 
       {/* Chat */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="mb-1 text-xs font-semibold text-stone-300">
-          💬 Guild chat <span className="text-stone-500">#{guild}</span>
+        <div className="mb-1 flex items-center justify-between text-xs font-semibold text-stone-300">
+          <span>
+            💬 Guild chat <span className="text-stone-500">#{guild}</span>
+          </span>
+          <span
+            title={live ? ' realtime' : ' polling every 5s'}
+            className="flex items-center gap-1 text-stone-500"
+          >
+            <span
+              aria-hidden
+              className={`inline-block h-2 w-2 rounded-full ${live ? 'bg-emerald-400' : 'bg-amber-400'}`}
+            />
+            {live ? 'live' : 'polling'}
+          </span>
         </div>
         <div ref={listRef} className="h-44 overflow-y-auto rounded-lg bg-stone-900/60 p-2 text-sm">
           {messages.length === 0 && <div className="text-xs text-stone-500">No messages yet. Say hi!</div>}
