@@ -70,3 +70,27 @@ Fresh throwaway wallets, same guardrails. 10 of 12 checks PASS.
 
 QA-harness notes: Cloudflare still rejects non-browser UAs; the QA stub now performs real `wallet_switchEthereumChain` (mutable `cur`) — old stubs returning a constant chainId false-FAIL the accept-switch check.
 
+## Final e21d322 (pre-video, freeze build)
+
+Fresh throwaways, same guardrails. 12 of 14 checks PASS.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Desktop 1920×1080 full flow | ✅ | create → zone-2 ribbon → toast +71.5s → handoff `/market?dropId=0x6f27b6…`; zero page errors |
+| N1 banner on creation screen | ✅ (fixed) | "Wrong network. Your wallet is on chain 1… Switch to Sepolia" shown pre-creation |
+| N2 welcome-back + held celebration | ❌ **N2′** | see below — fix not effective, reproduced |
+| Mobile 390×844 / 360×800 / 844×390 | ✅ | no horizontal overflow; 360×800 page-scroll delta 0 (scrollHeight == innerHeight); canvas renders; zero page errors |
+| Mobile ☰ menu navigation | ✅ | menu shows Home/Game/My Roosters/Market; navigations to /market and /roosters succeed |
+| /roosters 6/6 | ✅ | all six incl. chick01 listed |
+| Guild chat 2 wallets | ✅ | 1.0s / 1.1s + boss hit accepted |
+| Unverified mint gate | ✅ | verify-gate + honest rejection copy on /market with a dropId |
+| Desktop layout vs e5334c4 | ⚠️ deltas | see V1/V2 below — core HUD intact (trainer card HP/SP/EXP numbers, rooster EXP bar, points/Rare drops/Guild cluster, KILL + boss pips) |
+
+**N2′ (P2 — the shipped fix does not work):** welcome-back still never appears when the away-settlement rolls a drop. Repro on e21d322: play 65s+ → close → 65s away → reload → the away drop renders as a normal live toast ("MVP CARD … Mint & sell … auto-hides") and "While you were away" never shows, no Collect hold. The away-settled drop is routed through the live-toast pipeline instead of the held-rewards pipeline. If the video script includes the welcome-back beat, weigh this as P1 (it will be missing most of the time in demo mode). Owner: eth-dev1.
+
+**V1 (P3 visual):** simultaneous celebrations overlap — in one still, the "MONSTER CARD DROP!" banner covers "RARE DROP UNLOCKED!" and clips "ROOSTER LEVEL UP!", and the drop toast overlaps "BOSS IN 8" (reads "…OSS IN 8"). Stacking should offset/queue vertically; currently triple-celebration moments collide. Owner: eth-dev1 (same stacking rules as N2′).
+
+**V2 (P3 info):** the desktop top-left map chip ("ทุ่งนาบ้านเกิด · Home Fields") is gone, and the canvas grew from ~74vh to ~85vh. If both are intentional from the mobile-first/GAME-MODE pass, ignore; if the map chip was meant to survive, it's a one-line re-add.
+
+No P0s. N2′ is the only item that can touch the video's planned beats.
+
