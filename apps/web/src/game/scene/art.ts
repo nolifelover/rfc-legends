@@ -499,7 +499,7 @@ export const ART: ArtSpec[] = [
   A('art-prop-rice-bundle', '/assets/scene/props/rice-bundle.svg', 200, 200, drawRiceBundle, [64, 64]),
 
   // every non-mintable item can arrive through the inventory diff, so load all of them
-  ...[101, 102, 103, 104, 201, 202, 203, 204, 205, 206, 207, 208, 1001, 1002, 1003, 2001, 2002, 2003, 3001].map((id) =>
+  ...[101, 102, 103, 104, 201, 202, 203, 204, 205, 206, 207, 208, 1001, 1002, 1003, 1004, 1005, 1006, 2001, 2002, 2003, 3001, 3002].map((id) =>
     A(itemKey(id), `/assets/items/${id}.svg`, 96, 96, drawItem(0xc9a24b), [48, 48]),
   ),
 ]
@@ -546,6 +546,7 @@ export const FX = {
   scarf: 'fx-scarf',
   cape: 'fx-cape',
   bag: 'fx-seed-bag',
+  lotus: 'fx-lotus',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -663,6 +664,20 @@ export function makeFxTextures(scene: Phaser.Scene): void {
   make(FX.confetti, 16, 16, (g) => {
     g.fillStyle(0xffffff)
     g.fillRect(2, 2, 12, 12)
+  })
+
+  // lotus on a lily pad — บึงบัวหลวง prop (origin centre)
+  make(FX.lotus, 160, 100, (g) => {
+    g.fillStyle(0x4f9a5a)
+    g.fillEllipse(80, 72, 150, 44)
+    g.lineStyle(4, OUTLINE)
+    g.strokeEllipse(80, 72, 150, 44)
+    g.fillStyle(0xff8fb1)
+    for (const [x, y] of [[62, 40], [98, 40], [80, 30], [70, 52], [90, 52]] as const) g.fillEllipse(x, y, 26, 40)
+    g.lineStyle(3, OUTLINE)
+    for (const [x, y] of [[62, 40], [98, 40], [80, 30], [70, 52], [90, 52]] as const) g.strokeEllipse(x, y, 26, 40)
+    g.fillStyle(0xffd24a)
+    g.fillCircle(80, 46, 9)
   })
 
   // --- power-tier gear (drawn over the SVG actors; tier 1 silver/teal, tier 2 gold/iridescent) ---

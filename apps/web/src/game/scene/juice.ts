@@ -154,6 +154,73 @@ export const INK = {
   lootTint: 0xb6f07a,
 } as const
 
+/**
+ * Zone variants keyed by the server's `player.mapId`: backdrop tints, props and
+ * pest skins (zone 2 reuses the zone-1 shapes with new tints until its SVGs land).
+ */
+export interface ZoneSkin {
+  key: string
+  tint?: number
+  h: number
+}
+export interface ZoneSpec {
+  en: string
+  grade: number
+  gradeAlpha: number
+  skyTint: number
+  hillsTint: number
+  paddyTint: number
+  groundTint: number
+  lotus: boolean
+  names: Record<string, string>
+  skins: Record<string, ZoneSkin>
+  bossId: string
+}
+export const ZONES: Record<string, ZoneSpec> = {
+  'thung-na': {
+    en: 'Home Fields',
+    grade: 0xffcf8a,
+    gradeAlpha: 0.14,
+    skyTint: 0xffffff,
+    hillsTint: 0xffffff,
+    paddyTint: 0xffffff,
+    groundTint: 0xffffff,
+    lotus: false,
+    names: { 'nu-na': 'Field Rat', 'takka-taen-yak': 'Giant Locust', 'pu-na': 'Rice Crab', 'raja-nu-na': 'Rat King' },
+    skins: {
+      'nu-na': { key: 'art-monster-nu-na', h: 260 },
+      'takka-taen-yak': { key: 'art-monster-takka-taen-yak', h: 290 },
+      'pu-na': { key: 'art-monster-pu-na', h: 230 },
+      'raja-nu-na': { key: 'art-monster-raja-nu-na', h: 660 },
+    },
+    bossId: 'raja-nu-na',
+  },
+  'bueng-bua': {
+    en: 'Lotus Marsh',
+    grade: 0x7fc8ec,
+    gradeAlpha: 0.22,
+    skyTint: 0xbfe0f4,
+    hillsTint: 0x8fc4b8,
+    paddyTint: 0x6fb8dc,
+    groundTint: 0xa39a84,
+    lotus: true,
+    names: {
+      'tuk-tong': 'Monitor Lizard',
+      'phak-tob-chawai-yak': 'Giant Hyacinth',
+      'pla-chon-yak': 'Giant Snakehead',
+      'jorakhe-thao-bueng': 'Marsh Crocodile',
+    },
+    skins: {
+      'tuk-tong': { key: 'art-monster-nu-na', tint: 0x9fb86a, h: 270 },
+      'phak-tob-chawai-yak': { key: 'art-monster-pu-na', tint: 0xb48cd9, h: 280 },
+      'pla-chon-yak': { key: 'art-monster-takka-taen-yak', tint: 0x5fa8c4, h: 300 },
+      'jorakhe-thao-bueng': { key: 'art-monster-raja-nu-na', tint: 0x6f9a52, h: 680 },
+    },
+    bossId: 'jorakhe-thao-bueng',
+  },
+}
+export const zoneOf = (mapId: string): ZoneSpec => ZONES[mapId] ?? ZONES['thung-na']
+
 /** Bloodline accent tints for the rooster's aura ring (5 sire lines). */
 export const SIRE_TINT: Record<string, number> = {
   kumarnjeen: 0xff8a3d,

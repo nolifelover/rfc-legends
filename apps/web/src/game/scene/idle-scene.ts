@@ -37,19 +37,14 @@ import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './ove
 import type { Tier } from './overlays'
 import { Fx } from './fx'
 import type { DamageKind } from './fx'
-import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE } from './juice'
+import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE, zoneOf } from './juice'
+import type { ZoneSpec } from './juice'
 import type { SceneBridge, SceneMountOptions } from './scene-bridge'
-import { THUNG_NA } from '@/game/data/maps'
+import { MAPS, THUNG_NA } from '@/game/data/maps'
+import type { MapDef } from '@/game/types'
 import { getItem } from '@/game/data/items'
 import type { Drop, MonsterDef, Player, Rarity } from '@/game/types'
 import { aspdOf, atkOf, critChance, expToNext, roosterAspd, roosterAtk, roosterCrit } from '@/server/game/stats'
-
-const EN_NAMES: Record<string, string> = {
-  'nu-na': 'Field Rat',
-  'takka-taen-yak': 'Giant Locust',
-  'pu-na': 'Rice Crab',
-  'raja-nu-na': 'Rat King',
-}
 
 const MINTABLE: readonly Rarity[] = ['legendary', 'monster_card', 'mvp_card']
 const DEV = process.env.NODE_ENV !== 'production'
@@ -100,6 +95,10 @@ export class IdleScene extends Phaser.Scene {
   private player!: Player
   private dropIds = new Set<string>()
   private demoMode = false
+  /** the server's current map and its visual variant */
+  private map: MapDef = THUNG_NA
+  private zone: ZoneSpec = zoneOf(THUNG_NA.id)
+  private zoneArt: { sky?: Phaser.GameObjects.Image; hills?: Phaser.GameObjects.Image; paddy?: Phaser.GameObjects.Image; ground?: Phaser.GameObjects.Image; grade?: Phaser.GameObjects.Rectangle; lotus: Phaser.GameObjects.Image[]; mapChip?: Chip } = { lotus: [] }
 
   // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
@@ -201,6 +200,8 @@ export class IdleScene extends Phaser.Scene {
     this.reduced = this.opts.reducedMotion
     this.demoMode = this.opts.demoMode
     this.player = this.opts.player
+    this.map = MAPS[this.player.mapId] ?? THUNG_NA
+    this.zone = zoneOf(this.map.id)
     for (const d of this.opts.drops) this.dropIds.add(d.dropId)
     this.killServer = this.player.killCount
     this.killShown = this.player.killCount
@@ -233,7 +234,7 @@ export class IdleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- background
 
   private buildBackground(): void {
-    this.add.image(0, 0, 'art-sky').setOrigin(0, 0).setDepth(0)
+    this.zoneArt.sky = this.add.image(0, 0, 'art-sky').setOrigin(0, 0).setDepth(0)
 
     const clouds: Array<[string, number, number, number, number, number]> = [
       [CLOUD_KEYS.stratus, -300, 70, 1.1, 0.8, 120000],
@@ -257,6 +258,8 @@ export class IdleScene extends Phaser.Scene {
     // hills drawn 1.2x tall so their ridges climb into the sky band
     const hills = this.add.image(0, L.HORIZON_Y - 400, 'art-hills').setOrigin(0, 0).setDepth(4).setDisplaySize(L.W, 480)
     const paddy = this.add.image(0, L.HORIZON_Y, 'art-paddy').setOrigin(0, 0).setDepth(6)
+    this.zoneArt.hills = hills
+    this.zoneArt.paddy = paddy
     // breathing parallax: the far layers drift a few px on an 8s sine
     if (!this.reduced) {
       this.tweens.add({ targets: hills, x: -6, duration: 8000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
@@ -293,11 +296,12 @@ export class IdleScene extends Phaser.Scene {
 
     const ground = this.add.image(0, L.GROUND_Y, 'art-ground').setOrigin(0, 0).setDepth(10)
     ground.setDisplaySize(L.W, 300)
+    this.zoneArt.ground = ground
     this.add.rectangle(0, L.GROUND_Y + 298, L.W, L.H - L.GROUND_Y - 298 + 2, 0xb96f44).setOrigin(0, 0).setDepth(10)
     this.add.rectangle(0, L.H - 46, L.W, 46, 0x9c5a35, 0.55).setOrigin(0, 0).setDepth(10)
 
     // one warm grade over the whole backdrop; actors above it keep full saturation
-    this.add.rectangle(0, 0, L.W, L.H, INK.grade, 0.14).setOrigin(0, 0).setDepth(11)
+    this.zoneArt.grade = this.add.rectangle(0, 0, L.W, L.H, INK.grade, 0.14).setOrigin(0, 0).setDepth(11)
     // time of day: morning → noon → golden hour → dusk over 6 real minutes (backdrop only)
     this.dayTint = this.add.rectangle(0, 0, L.W, L.H, 0xfff1d6, 0.1).setOrigin(0, 0).setDepth(11)
     // boss-fight darkening lives just above the grade and below every actor
@@ -363,6 +367,25 @@ export class IdleScene extends Phaser.Scene {
     this.startDayCycle()
     this.buildForeground()
     this.buildButterflies()
+    // lotus pads on the water band (บึงบัวหลวง only)
+    for (let i = 0; i < 7; i++) {
+      const lotus = this.add.image(120 + i * 270 + Phaser.Math.Between(-40, 40), L.HORIZON_Y + 40 + (i % 2) * 40, FX.lotus).setDepth(7).setScale(0.8 + (i % 3) * 0.12).setVisible(false)
+      this.tweens.add({ targets: lotus, y: lotus.y - 4, duration: 2200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.zoneArt.lotus.push(lotus)
+    }
+    this.applyZone()
+  }
+
+  /** Tint the backdrop and toggle props for the server's current zone. */
+  private applyZone(): void {
+    const z = this.zone
+    const a = this.zoneArt
+    a.sky?.setTint(z.skyTint)
+    a.hills?.setTint(z.hillsTint)
+    a.paddy?.setTint(z.paddyTint)
+    a.ground?.setTint(z.groundTint)
+    a.grade?.setFillStyle(z.grade, z.gradeAlpha)
+    for (const l of a.lotus) l.setVisible(z.lotus)
   }
 
   /** Foreground rice stalks along the bottom edge (in front of the lane, below the plates) and drifting chaff. */
@@ -828,7 +851,7 @@ export class IdleScene extends Phaser.Scene {
 
   private buildChips(): void {
     // zone pill: the HUD shows the zone too, so this one fades out after 3s
-    const mapChip = new Chip(this, `${THUNG_NA.name} · Home Fields`, { fontFamily: this.font, fontSize: 24 })
+    const mapChip = new Chip(this, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24 })
     mapChip.container.setDepth(54).setPosition(L.SAFE + mapChip.boxWidth / 2, L.SAFE)
     this.tweens.add({ targets: mapChip.container, alpha: 0, delay: 3000, duration: 600, onComplete: () => mapChip.destroy() })
 
@@ -1002,13 +1025,13 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private pickMonster(): MonsterDef {
-    const total = THUNG_NA.monsters.reduce((sum, s) => sum + s.weight, 0)
+    const total = this.map.monsters.reduce((sum, s) => sum + s.weight, 0)
     let roll = Math.random() * total
-    for (const s of THUNG_NA.monsters) {
+    for (const s of this.map.monsters) {
       roll -= s.weight
       if (roll <= 0) return s.monster
     }
-    return THUNG_NA.monsters[0].monster
+    return this.map.monsters[0].monster
   }
 
   private slotX(row: Row, slot: number): number {
@@ -1025,13 +1048,15 @@ export class IdleScene extends Phaser.Scene {
   }
 
   private makePest(def: MonsterDef, row: Row, slot: number, startX: number, boss: boolean): Pest {
-    const h = Math.round((L.PEST_H[def.id] ?? 240) * (boss ? 1 : Phaser.Math.FloatBetween(0.9, 1.15)))
-    const key = MONSTER_KEYS[def.id] ?? MONSTER_KEYS['nu-na']
+    const skin = this.zone.skins[def.id]
+    const h = Math.round((skin?.h ?? L.PEST_H[def.id] ?? 240) * (boss ? 1 : Phaser.Math.FloatBetween(0.9, 1.15)))
+    const key = skin?.key ?? MONSTER_KEYS[def.id] ?? MONSTER_KEYS['nu-na']
     const feetY = ROW_FEET[row]
     const container = this.add.container(startX, feetY).setDepth(ROW_DEPTH[row]).setScale(ROW_SCALE[row])
     const sprite = this.add.image(0, 0, key).setOrigin(0.5, 1).setDisplaySize(h, h)
+    if (skin?.tint !== undefined) sprite.setTint(skin.tint)
     container.add(sprite)
-    const en = EN_NAMES[def.id] ?? def.id
+    const en = this.zone.names[def.id] ?? def.id
     const plate = new Nameplate(this, `${en} · Lv.${def.level}`, {
       fontFamily: this.font,
       fontSize: TYPE.platePest,
@@ -1131,6 +1156,13 @@ export class IdleScene extends Phaser.Scene {
   /** TweenChain.remove(tween) has a different meaning, so chains go through the manager. */
   private killTween(t: Phaser.Tweens.Tween | Phaser.Tweens.TweenChain | null): void {
     if (t) this.tweens.remove(t as Phaser.Tweens.Tween)
+  }
+
+  /** Clear the hit flash back to the zone skin's tint (or no tint). */
+  private restoreSkin(p: Pest): void {
+    const tint = this.zone.skins[p.def.id]?.tint
+    if (tint !== undefined) p.sprite.setTint(tint)
+    else p.sprite.clearTint()
   }
 
   private topYOf(pest: Pest): number {
@@ -1283,7 +1315,7 @@ export class IdleScene extends Phaser.Scene {
 
     // freeze on contact (victim vibrates in update), then knock back and squash
     p.sprite.setTintFill(0xffffff)
-    this.time.delayedCall(JUICE.FLINCH_MS, () => p.sprite.clearTint())
+    this.time.delayedCall(JUICE.FLINCH_MS, () => this.restoreSkin(p))
     this.fx.hitStop(lethal ? (p.boss ? JUICE.STOP_BOSS_KILL : JUICE.STOP_KILL) : kind === 'crit' ? JUICE.STOP_CRIT : JUICE.STOP_HIT)
     this.victim = p
 
@@ -1501,7 +1533,7 @@ export class IdleScene extends Phaser.Scene {
     }
     for (const p of [...this.pests]) this.removePest(p)
 
-    const def = THUNG_NA.mvp
+    const def = this.map.mvp
     if (!def) {
       this.bossActive = false
       return
@@ -1528,7 +1560,7 @@ export class IdleScene extends Phaser.Scene {
         this.engage(boss)
         // heroes recoil a step
         this.tweens.add({ targets: [this.trainer, this.rooster], x: '-=30', duration: 120, yoyo: true, ease: 'Quad.easeOut' })
-        this.bossBar = new BossBar(this, `Rat King · ${def.name}`, this.font)
+        this.bossBar = new BossBar(this, `${this.zone.names[def.id] ?? def.id} · ${def.name}`, this.font)
         this.bossBar.setHp(boss.maxHp, boss.maxHp)
         this.bossBar.show(this.reduced)
         this.nextBossAt = this.time.now + 2000
@@ -1545,7 +1577,7 @@ export class IdleScene extends Phaser.Scene {
     const every = this.bossEvery()
     const near = !this.bossActive && this.killServer % every >= every - 2
     if (near && !this.bossShadow) {
-      const key = MONSTER_KEYS['raja-nu-na'] ?? MONSTER_KEYS['nu-na']
+      const key = this.zone.skins[this.zone.bossId]?.key ?? MONSTER_KEYS['raja-nu-na'] ?? MONSTER_KEYS['nu-na']
       // feet sunk behind the paddy (depth 5 < 6) so the head looms in the sky
       const sh = this.add
         .image(1300, L.HORIZON_Y + 220, key)
@@ -1579,7 +1611,7 @@ export class IdleScene extends Phaser.Scene {
     }
     // no invented damage number at the money shot: flash, freeze, and fall
     b.sprite.setTintFill(0xffffff)
-    this.time.delayedCall(20, () => b.sprite.clearTint())
+    this.time.delayedCall(20, () => this.restoreSkin(b))
     this.fx.hitStop(JUICE.STOP_BOSS_KILL)
     b.hp = 0
     b.bar.setPct(0)
@@ -1764,6 +1796,7 @@ export class IdleScene extends Phaser.Scene {
     this.trainerPlate.setMain(this.trainerLabel())
     this.roosterPlate.setMain(this.roosterLabel())
     this.applyPowerTiers()
+    if (player.mapId !== this.map.id && MAPS[player.mapId]) this.changeZone(MAPS[player.mapId])
 
     if (player.baseLevel > prev.baseLevel) {
       this.playLevelUp(prev.baseLevel, player.baseLevel, player.baseLevel - prev.baseLevel)
@@ -1812,7 +1845,7 @@ export class IdleScene extends Phaser.Scene {
     if (this.bossActive) {
       if (crossed) this.slayBoss()
       else this.mirrorBossHp(player)
-    } else if (THUNG_NA.mvp && (fighting || crossed)) {
+    } else if (this.map.mvp && (fighting || crossed)) {
       this.startBoss(crossed && !fighting)
     }
 
@@ -1859,6 +1892,26 @@ export class IdleScene extends Phaser.Scene {
     this.roosterCheer()
   }
 
+  /** The server moved the player to another map: the pack leaves, the backdrop re-tints, new pests walk in. */
+  private changeZone(map: MapDef): void {
+    this.map = map
+    this.zone = zoneOf(map.id)
+    this.applyZone()
+    this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
+    for (const p of this.pests) {
+      p.dead = true
+      p.walk?.remove()
+      p.hop?.remove()
+      p.plate.setVisible(false)
+      p.bar.setVisible(false)
+      this.tweens.add({ targets: p.container, x: p.container.x + 1400, duration: 520, ease: 'Cubic.easeIn', onComplete: () => p.container.destroy() })
+    }
+    for (const p of [...this.pests]) this.removePest(p)
+    new Ribbon(this, `${map.name} · ${this.zone.en}`, this.font, 250, 0x2f6f8f).play(1400, this.reduced)
+    this.fx.slam('NEW ZONE!', `${this.zone.en} · Lv ${map.lvRange[0]}–${map.lvRange[1]}`, 320, INK.crit)
+    this.nextSpawnAt = this.time.now + 900
+  }
+
   // -------------------------------------------------------------------- loop
 
   update(time: number, delta: number): void {
@@ -1877,7 +1930,7 @@ export class IdleScene extends Phaser.Scene {
 
     // keep the pack stocked (never during a boss)
     if (!this.bossActive) {
-      if (this.forceBoss && THUNG_NA.mvp) {
+      if (this.forceBoss && this.map.mvp) {
         this.startBoss(true)
         return
       }
