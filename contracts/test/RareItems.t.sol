@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {HumanRegistry} from "../src/HumanRegistry.sol";
 import {RareItems} from "../src/RareItems.sol";
@@ -19,6 +18,7 @@ contract RareItemsTest is Test {
     address internal gameSigner;
     address internal wrongSigner;
     address internal attestor = makeAddr("attestor");
+    address internal owner = makeAddr("owner");
     address internal alice = makeAddr("alice"); // verified human (wallet A)
     address internal bot = makeAddr("bot"); // never verified (wallet C)
 
@@ -28,8 +28,8 @@ contract RareItemsTest is Test {
     function setUp() public {
         gameSigner = vm.addr(GAME_KEY);
         wrongSigner = vm.addr(WRONG_KEY);
-        registry = new HumanRegistry(attestor);
-        rare = new RareItems(gameSigner, registry, "https://app.example/api/items/");
+        registry = new HumanRegistry(attestor, owner);
+        rare = new RareItems(gameSigner, registry, "https://app.example/api/items/", owner);
     }
 
     // ---------------------------------------------------------------- helpers
@@ -204,12 +204,107 @@ contract RareItemsTest is Test {
         rare.mintWithVoucher(v, hex"1234");
     }
 
+    function test_HighS_Signature_Rejected() public {
+        _verify(alice);
+        RareItems.MintVoucher memory v = _voucher(alice, keccak256("drop-highs"), block.timestamp + 1 hours);
+        bytes32 structHash = keccak256(
+            abi.encode(rare.MINT_VOUCHER_TYPEHASH(), v.to, v.itemId, v.amount, v.dropId, v.deadline)
+        );
+        bytes32 digest = MessageHashUtils.toTypedDataHash(rare.DOMAIN_SEPARATOR(), structHash);
+        (uint8 sv, bytes32 r, bytes32 s) = vm.sign(GAME_KEY, digest);
+
+        // Forged malleable twin: same recovered key if the precompile accepted
+        // it, but OZ rejects any s above the half-order (EIP-2).
+        uint256 secp256k1n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+        bytes32 highS = bytes32(secp256k1n - uint256(s));
+        if (uint256(s) > secp256k1n / 2) {
+            highS = s; // vm.sign already gave high-s; use it as-is
+            sv = sv == 27 ? 28 : 27; // keep validity of the twin irrelevant; must still be rejected
+        }
+        vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureS.selector, highS));
+        rare.mintWithVoucher(v, abi.encodePacked(r, highS, sv));
+    }
+
+    function test_ChainIdReplay_Reverts() public {
+        _verify(alice);
+        (RareItems.MintVoucher memory v, bytes memory sig) = _validVoucher(alice);
+
+        // A signature valid on this chain must not verify on another chain:
+        // the domain separator includes chainId.
+        vm.chainId(31338);
+
+        try rare.mintWithVoucher(v, sig) {
+            revert("cross-chain replay must not mint");
+        } catch (bytes memory err) {
+            assertEq(bytes4(err), RareItems.InvalidSigner.selector);
+        }
+        assertEq(rare.balanceOf(alice, ITEM_ID), 0, "no mint on replayed chain");
+    }
+
     function test_Constructor_ZeroArgs_Revert() public {
         vm.expectRevert(RareItems.ZeroAddress.selector);
-        new RareItems(address(0), registry, "");
+        new RareItems(address(0), registry, "", owner);
 
         vm.expectRevert(RareItems.ZeroAddress.selector);
-        new RareItems(gameSigner, HumanRegistry(address(0)), "");
+        new RareItems(gameSigner, HumanRegistry(address(0)), "", owner);
+
+        vm.expectRevert(RareItems.ZeroAddress.selector);
+        new RareItems(gameSigner, registry, "", address(0));
+    }
+
+    // ------------------------------------------------------ owner controls
+
+    function test_SetVoucherSigner_RotatesAndKillsOldVouchers() public {
+        _verify(alice);
+        address newSigner = makeAddr("newGameSigner");
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), alice));
+        rare.setVoucherSigner(newSigner);
+
+        vm.expectEmit(true, true, true, true);
+        emit RareItems.VoucherSignerTransferred(gameSigner, newSigner);
+        vm.prank(owner);
+        rare.setVoucherSigner(newSigner);
+
+        assertEq(rare.voucherSigner(), newSigner);
+
+        // A voucher signed by the OLD key no longer verifies.
+        (RareItems.MintVoucher memory v, bytes memory sig) = _validVoucher(alice);
+        try rare.mintWithVoucher(v, sig) {
+            revert("old-key voucher must fail after rotation");
+        } catch (bytes memory err) {
+            assertEq(bytes4(err), RareItems.InvalidSigner.selector);
+        }
+    }
+
+    function test_SetVoucherSigner_Zero_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RareItems.ZeroAddress.selector);
+        rare.setVoucherSigner(address(0));
+    }
+
+    function test_Pause_BlocksMint_ThenUnpause() public {
+        _verify(alice);
+        (RareItems.MintVoucher memory v, bytes memory sig) = _validVoucher(alice);
+
+        vm.prank(owner);
+        rare.pause();
+
+        vm.expectRevert(bytes4(keccak256("EnforcedPause()")));
+        rare.mintWithVoucher(v, sig);
+
+        vm.prank(owner);
+        rare.unpause();
+
+        rare.mintWithVoucher(v, sig);
+        assertEq(rare.balanceOf(alice, ITEM_ID), AMOUNT);
+    }
+
+    function test_Pause_OnlyOwner() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), alice));
+        rare.pause();
     }
 
     // -------------------------------------------------------------------- uri
@@ -219,15 +314,26 @@ contract RareItemsTest is Test {
     }
 
     function test_Uri_IdSubstitution() public {
-        RareItems templated = new RareItems(gameSigner, registry, "https://app.example/api/items/{id}/meta.json");
+        RareItems templated = new RareItems(gameSigner, registry, "https://app.example/api/items/{id}/meta.json", owner);
+        // ERC-1155: {id} => 64 lowercase hex chars, no 0x prefix.
+        // 3001 = 0xbb9.
         assertEq(
             templated.uri(3001),
-            string.concat("https://app.example/api/items/", Strings.toHexString(3001, 32), "/meta.json")
+            "https://app.example/api/items/0000000000000000000000000000000000000000000000000000000000000bb9/meta.json"
+        );
+    }
+
+    function test_Uri_IdSubstitution_UpperHexItem() public {
+        RareItems templated = new RareItems(gameSigner, registry, "https://app.example/api/items/{id}/meta.json", owner);
+        // 0xffff...fedc style big id still renders lowercase, padded to 64.
+        assertEq(
+            templated.uri(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF),
+            "https://app.example/api/items/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff/meta.json"
         );
     }
 
     function test_Uri_EmptyBase_ReturnsEmpty() public {
-        RareItems bare = new RareItems(gameSigner, registry, "");
+        RareItems bare = new RareItems(gameSigner, registry, "", owner);
         assertEq(bare.uri(3001), "");
     }
 }

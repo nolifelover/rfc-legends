@@ -46,12 +46,13 @@ contract Deploy is Script {
 
         vm.startBroadcast(deployerKey);
 
+        address owner = vm.addr(deployerKey);
         MockUSDC usdc = new MockUSDC();
-        HumanRegistry registry = new HumanRegistry(d.gameSigner);
-        RareItems rare = new RareItems(d.gameSigner, registry, baseURI);
-        RareMarket market = new RareMarket(rare, usdc, registry, d.treasury);
+        HumanRegistry registry = new HumanRegistry(d.gameSigner, owner);
+        RareItems rare = new RareItems(d.gameSigner, registry, baseURI, owner);
+        RareMarket market = new RareMarket(rare, usdc, registry, d.treasury, owner);
         // RFC Club holds mint rights; starts as deployer, transfer later.
-        RoosterRWA rooster = new RoosterRWA(d.farmSigner, vm.addr(deployerKey));
+        RoosterRWA rooster = new RoosterRWA(d.farmSigner, owner);
 
         d.usdc = address(usdc);
         d.registry = address(registry);

@@ -2,8 +2,10 @@
 pragma solidity 0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {HumanRegistry} from "./HumanRegistry.sol";
@@ -12,10 +14,16 @@ import {HumanRegistry} from "./HumanRegistry.sol";
 /// @notice Escrowed peer-to-peer market for RareItems, settled in MockUSDC.
 ///         Every sale splits in-contract: 90% to the seller, 10% to the RFC
 ///         Club treasury (FEE_BPS = 1000). Only World ID verified humans may
-///         list; anyone may buy.
-contract RareMarket is ERC1155Holder, ReentrancyGuard {
+///         list; anyone may buy. The owner can rotate the treasury address.
+contract RareMarket is ERC1155Holder, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     /// @notice Treasury share of each sale, in basis points (1000 = 10%).
     uint16 public constant FEE_BPS = 1000;
+
+    /// @notice Minimum price per unit (0.01 USDC) so the 10% fee can never
+    ///         round to zero; keeps every sale an exact 90/10 split.
+    uint256 public constant MIN_UNIT_PRICE = 10_000;
 
     /// @notice The ERC-1155 rare items traded on this market.
     IERC1155 public immutable itemToken;
@@ -27,7 +35,7 @@ contract RareMarket is ERC1155Holder, ReentrancyGuard {
     HumanRegistry public immutable humanRegistry;
 
     /// @notice RFC Club treasury, receives the fee on every sale.
-    address public immutable treasury;
+    address public treasury;
 
     struct Listing {
         address seller;
@@ -53,6 +61,7 @@ contract RareMarket is ERC1155Holder, ReentrancyGuard {
         uint256 fee
     );
     event Cancelled(uint256 indexed listingId);
+    event TreasuryTransferred(address indexed previousTreasury, address indexed newTreasury);
 
     error NotVerifiedHuman(address account);
     error InvalidListing(uint256 amount, uint256 unitPrice);
@@ -61,10 +70,16 @@ contract RareMarket is ERC1155Holder, ReentrancyGuard {
     error NotSeller(address seller);
     error ZeroAddress();
 
-    constructor(IERC1155 _itemToken, IERC20 _paymentToken, HumanRegistry _humanRegistry, address _treasury) {
+    constructor(
+        IERC1155 _itemToken,
+        IERC20 _paymentToken,
+        HumanRegistry _humanRegistry,
+        address _treasury,
+        address initialOwner
+    ) Ownable(initialOwner) {
         if (
             address(_itemToken) == address(0) || address(_paymentToken) == address(0)
-                || address(_humanRegistry) == address(0) || _treasury == address(0)
+                || address(_humanRegistry) == address(0) || _treasury == address(0) || initialOwner == address(0)
         ) {
             revert ZeroAddress();
         }
@@ -76,10 +91,11 @@ contract RareMarket is ERC1155Holder, ReentrancyGuard {
 
     /// @notice Escrows `amount` units of `itemId` for sale at `unitPrice`
     ///         each. Caller must have called setApprovalForAll on the item
-    ///         token and be a verified human.
+    ///         token and be a verified human. `unitPrice` must be at least
+    ///         MIN_UNIT_PRICE.
     function list(uint256 itemId, uint256 amount, uint256 unitPrice) external returns (uint256 listingId) {
         if (!humanRegistry.isVerified(msg.sender)) revert NotVerifiedHuman(msg.sender);
-        if (amount == 0 || unitPrice == 0) revert InvalidListing(amount, unitPrice);
+        if (amount == 0 || unitPrice < MIN_UNIT_PRICE) revert InvalidListing(amount, unitPrice);
 
         listingId = _nextListingId++;
         _listings[listingId] = Listing({
@@ -108,8 +124,8 @@ contract RareMarket is ERC1155Holder, ReentrancyGuard {
             l.active = false;
         }
 
-        paymentToken.transferFrom(msg.sender, l.seller, sellerProceeds);
-        paymentToken.transferFrom(msg.sender, treasury, fee);
+        paymentToken.safeTransferFrom(msg.sender, l.seller, sellerProceeds);
+        paymentToken.safeTransferFrom(msg.sender, treasury, fee);
         itemToken.safeTransferFrom(address(this), msg.sender, l.itemId, amount, "");
 
         emit Sold(listingId, msg.sender, l.seller, amount, total, sellerProceeds, fee);
@@ -132,5 +148,13 @@ contract RareMarket is ERC1155Holder, ReentrancyGuard {
 
     function getListing(uint256 listingId) external view returns (Listing memory) {
         return _listings[listingId];
+    }
+
+    /// @notice Rotates the treasury address (e.g. if the payment token ever
+    ///         blacklists the current one).
+    function setTreasury(address newTreasury) external onlyOwner {
+        if (newTreasury == address(0)) revert ZeroAddress();
+        emit TreasuryTransferred(treasury, newTreasury);
+        treasury = newTreasury;
     }
 }

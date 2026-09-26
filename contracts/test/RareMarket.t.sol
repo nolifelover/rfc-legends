@@ -14,6 +14,7 @@ import {RareMarket} from "../src/RareMarket.sol";
 ///      onERC1155Received callback while its buy is still in flight.
 contract ReentrantBuyer {
     RareMarket internal market;
+    uint256 internal targetListingId;
     bool internal struck;
 
     constructor(RareMarket _market) {
@@ -21,13 +22,14 @@ contract ReentrantBuyer {
     }
 
     function attack(uint256 listingId, uint256 amount) external {
+        targetListingId = listingId;
         market.buy(listingId, amount);
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) external returns (bytes4) {
         if (!struck) {
             struck = true;
-            market.buy(0, 1); // reentry attempt
+            market.buy(targetListingId, 1); // reentry attempt against the REAL listing
         }
         return this.onERC1155Received.selector;
     }
@@ -50,6 +52,7 @@ contract RareMarketTest is Test {
     uint256 internal constant GAME_KEY = 0xA11CE;
     address internal gameSigner;
     address internal attestor = makeAddr("attestor");
+    address internal owner = makeAddr("owner");
     address internal treasury = makeAddr("treasury");
     address internal alice = makeAddr("alice"); // verified human, seller (wallet A)
     address internal bob = makeAddr("bob"); // buyer (wallet B)
@@ -60,9 +63,9 @@ contract RareMarketTest is Test {
     function setUp() public {
         gameSigner = vm.addr(GAME_KEY);
         usdc = new MockUSDC();
-        registry = new HumanRegistry(attestor);
-        rare = new RareItems(gameSigner, registry, "https://app.example/api/items/");
-        market = new RareMarket(rare, usdc, registry, treasury);
+        registry = new HumanRegistry(attestor, owner);
+        rare = new RareItems(gameSigner, registry, "https://app.example/api/items/", owner);
+        market = new RareMarket(rare, usdc, registry, treasury, owner);
 
         vm.prank(attestor);
         registry.markVerified(alice, uint256(keccak256("alice:nullifier")));
@@ -102,9 +105,9 @@ contract RareMarketTest is Test {
         return market.list(ITEM_ID, amount, unitPrice);
     }
 
-    function _buyBob(uint256 listingId, uint256 amount) internal {
+    function _approveBob(uint256 amount) internal {
         vm.prank(bob);
-        market.buy(listingId, amount);
+        usdc.approve(address(market), amount);
     }
 
     // ------------------------------------------------------------- list gates
@@ -123,6 +126,31 @@ contract RareMarketTest is Test {
         vm.expectRevert(abi.encodeWithSelector(RareMarket.InvalidListing.selector, 1, 0));
         market.list(ITEM_ID, 1, 0);
         vm.stopPrank();
+    }
+
+    function test_List_PriceBelowMinimum_Reverts() public {
+        uint256 belowMin = market.MIN_UNIT_PRICE() - 1; // precompute: getters consume expectRevert
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(RareMarket.InvalidListing.selector, 1, belowMin));
+        market.list(ITEM_ID, 1, belowMin);
+    }
+
+    function test_List_AtMinimumPrice_FeeNeverRoundsToZero() public {
+        uint256 listingId = _listAlice(1, market.MIN_UNIT_PRICE());
+        _fund(bob, market.MIN_UNIT_PRICE());
+        _approveBob(type(uint256).max);
+
+        uint256 sellerBefore = usdc.balanceOf(alice);
+        uint256 treasuryBefore = usdc.balanceOf(treasury);
+
+        vm.prank(bob);
+        market.buy(listingId, 1);
+
+        uint256 fee = usdc.balanceOf(treasury) - treasuryBefore;
+        uint256 proceeds = usdc.balanceOf(alice) - sellerBefore;
+        assertGt(fee, 0, "fee must not round to zero at minimum price");
+        assertEq(fee, (market.MIN_UNIT_PRICE() * 1000) / 10_000);
+        assertEq(proceeds, market.MIN_UNIT_PRICE() - fee);
     }
 
     function test_List_EscrowsItemsAndIncrementsIds() public {
@@ -153,7 +181,7 @@ contract RareMarketTest is Test {
 
     function test_Constructor_ZeroArgs_Revert() public {
         vm.expectRevert(RareMarket.ZeroAddress.selector);
-        new RareMarket(rare, MockUSDC(address(0)), registry, treasury);
+        new RareMarket(rare, MockUSDC(address(0)), registry, treasury, owner);
     }
 
     // ----------------------------------------------------------- exact 90/10
@@ -161,11 +189,11 @@ contract RareMarketTest is Test {
     function test_Buy_ExactSplit90_10() public {
         uint256 listingId = _listAlice(10, 2_000_000); // $2/unit
         _fund(bob, 20_000_000);
-        vm.prank(bob);
-        usdc.approve(address(market), type(uint256).max);
+        _approveBob(type(uint256).max);
 
         uint256 bobBefore = usdc.balanceOf(bob);
-        _buyBob(listingId, 10);
+        vm.prank(bob);
+        market.buy(listingId, 10);
 
         uint256 total = 20_000_000;
         uint256 expectedFee = (total * 1000) / 10_000; // 2_000_000
@@ -177,17 +205,17 @@ contract RareMarketTest is Test {
     }
 
     function test_Buy_RoundingDustGoesToSeller(uint96 unitPrice, uint32 amount) public {
-        unitPrice = uint96(bound(unitPrice, 1, 1_000_000e6));
+        unitPrice = uint96(bound(unitPrice, market.MIN_UNIT_PRICE(), 1_000_000e6));
         amount = uint32(bound(amount, 1, 100)); // alice holds 100 items in setUp
         vm.assume(uint256(unitPrice) * uint256(amount) <= 50_000_000e6); // keep within faucet loop comfort
 
         uint256 listingId = _listAlice(amount, unitPrice);
         uint256 total = uint256(unitPrice) * uint256(amount);
         _fund(bob, total);
-        vm.prank(bob);
-        usdc.approve(address(market), type(uint256).max);
+        _approveBob(type(uint256).max);
 
-        _buyBob(listingId, amount);
+        vm.prank(bob);
+        market.buy(listingId, amount);
 
         uint256 expectedFee = (total * 1000) / 10_000;
         assertEq(usdc.balanceOf(treasury), expectedFee, "fee = total*1000/10000");
@@ -197,26 +225,26 @@ contract RareMarketTest is Test {
     function test_Buy_EmitsSold() public {
         uint256 listingId = _listAlice(1, 3_333_333); // odd price => rounding
         _fund(bob, 3_333_333);
-        vm.prank(bob);
-        usdc.approve(address(market), type(uint256).max);
+        _approveBob(type(uint256).max);
 
         uint256 total = 3_333_333;
         uint256 fee = (total * 1000) / 10_000;
         vm.expectEmit(true, true, true, true);
         emit RareMarket.Sold(listingId, bob, alice, 1, total, total - fee, fee);
 
-        _buyBob(listingId, 1);
+        vm.prank(bob);
+        market.buy(listingId, 1);
     }
 
     // ------------------------------------------------------------ partial buy
 
-    function test_Buy_PartialThenRest() public {
+    function test_Buy_PartialThenRest_FinalBalancesExact() public {
         uint256 listingId = _listAlice(10, 1e6);
         _fund(bob, 10e6);
-        vm.prank(bob);
-        usdc.approve(address(market), type(uint256).max);
+        _approveBob(type(uint256).max);
 
-        _buyBob(listingId, 3);
+        vm.prank(bob);
+        market.buy(listingId, 3);
 
         RareMarket.Listing memory l = market.getListing(listingId);
         assertTrue(l.active);
@@ -224,12 +252,19 @@ contract RareMarketTest is Test {
         assertEq(rare.balanceOf(bob, ITEM_ID), 3);
         assertEq(usdc.balanceOf(alice), 3e6 - (3e6 * 1000) / 10_000);
 
-        _buyBob(listingId, 7);
+        vm.prank(bob);
+        market.buy(listingId, 7);
 
         l = market.getListing(listingId);
         assertFalse(l.active, "exhausted listing deactivates");
         assertEq(l.amount, 0);
         assertEq(rare.balanceOf(bob, ITEM_ID), 10);
+
+        // Exact final balances across BOTH fills.
+        uint256 total = 10e6;
+        assertEq(usdc.balanceOf(treasury), (total * 1000) / 10_000, "treasury after both fills");
+        assertEq(usdc.balanceOf(alice), total - (total * 1000) / 10_000, "seller after both fills");
+        assertEq(usdc.balanceOf(bob), 0, "buyer spent exactly total");
     }
 
     function test_Buy_ZeroAmount_Reverts() public {
@@ -252,6 +287,41 @@ contract RareMarketTest is Test {
         market.buy(42, 1);
     }
 
+    function test_Buy_InsufficientAllowance_Reverts() public {
+        uint256 listingId = _listAlice(1, 1e6);
+        _fund(bob, 1e6);
+        _approveBob(1e6 - 1); // one base unit short of the full split
+
+        // buy pulls sellerProceeds (900_000) first — fine — then the fee
+        // (100_000) fails against the 99_999 allowance left.
+        vm.prank(bob);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("ERC20InsufficientAllowance(address,uint256,uint256)")),
+                address(market),
+                99_999,
+                100_000
+            )
+        );
+        market.buy(listingId, 1);
+    }
+
+    function test_Buy_InsufficientBalance_Reverts() public {
+        uint256 listingId = _listAlice(1, 1e6);
+        _approveBob(type(uint256).max); // approved but broke
+
+        vm.prank(bob);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("ERC20InsufficientBalance(address,uint256,uint256)")),
+                bob,
+                0,
+                900_000
+            )
+        );
+        market.buy(listingId, 1);
+    }
+
     // ----------------------------------------------------------------- cancel
 
     function test_Cancel_ReturnsEscrowToSeller() public {
@@ -264,6 +334,23 @@ contract RareMarketTest is Test {
         RareMarket.Listing memory l = market.getListing(listingId);
         assertFalse(l.active);
         assertEq(l.amount, 0);
+    }
+
+    function test_Cancel_AfterPartialFill_RefundsRemainder() public {
+        uint256 listingId = _listAlice(10, 1e6);
+        _fund(bob, 4e6);
+        _approveBob(type(uint256).max);
+        vm.prank(bob);
+        market.buy(listingId, 4);
+
+        vm.prank(alice);
+        market.cancel(listingId);
+
+        // 4 sold and gone, 6 back to the seller.
+        assertEq(rare.balanceOf(alice, ITEM_ID), 90 + 6, "remainder refunded after partial fill");
+        assertEq(rare.balanceOf(bob, ITEM_ID), 4);
+        RareMarket.Listing memory l = market.getListing(listingId);
+        assertFalse(l.active);
     }
 
     function test_Cancel_OnlySeller() public {
@@ -286,9 +373,9 @@ contract RareMarketTest is Test {
     function test_Cancel_AfterFullBuy_Reverts() public {
         uint256 listingId = _listAlice(1, 1e6);
         _fund(bob, 1e6);
+        _approveBob(type(uint256).max);
         vm.prank(bob);
-        usdc.approve(address(market), type(uint256).max);
-        _buyBob(listingId, 1);
+        market.buy(listingId, 1);
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(RareMarket.ListingNotActive.selector, listingId));
@@ -301,6 +388,38 @@ contract RareMarketTest is Test {
         emit RareMarket.Cancelled(listingId);
         vm.prank(alice);
         market.cancel(listingId);
+    }
+
+    // -------------------------------------------------------------- treasury
+
+    function test_SetTreasury_RotatesAndNextSalePaysNewTreasury() public {
+        address newTreasury = makeAddr("newTreasury");
+
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("OwnableUnauthorizedAccount(address)")), alice));
+        market.setTreasury(newTreasury);
+
+        vm.expectEmit(true, true, true, true);
+        emit RareMarket.TreasuryTransferred(treasury, newTreasury);
+        vm.prank(owner);
+        market.setTreasury(newTreasury);
+
+        assertEq(market.treasury(), newTreasury);
+
+        uint256 listingId = _listAlice(1, 1e6);
+        _fund(bob, 1e6);
+        _approveBob(type(uint256).max);
+        vm.prank(bob);
+        market.buy(listingId, 1);
+
+        assertEq(usdc.balanceOf(newTreasury), (1e6 * 1000) / 10_000, "new treasury is paid");
+        assertEq(usdc.balanceOf(treasury), 0, "old treasury gets nothing");
+    }
+
+    function test_SetTreasury_Zero_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RareMarket.ZeroAddress.selector);
+        market.setTreasury(address(0));
     }
 
     // ------------------------------------------------------------ reentrancy
@@ -316,10 +435,11 @@ contract RareMarketTest is Test {
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         attacker.attack(listingId, 5);
 
-        // State is untouched: the reentered buy never completed, the outer buy
-        // reverted atomically.
+        // The double fill never happened: the listing is untouched and the
+        // attacker kept its funds (the outer buy reverted atomically).
         RareMarket.Listing memory l = market.getListing(listingId);
         assertEq(l.amount, 10, "listing untouched after blocked reentrancy");
+        assertEq(rare.balanceOf(address(attacker), ITEM_ID), 0, "no items leaked");
         assertEq(usdc.balanceOf(address(attacker)), 10e6, "attacker kept its funds");
     }
 }
