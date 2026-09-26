@@ -193,11 +193,8 @@ export function HudStrip({
             />
           </div>
           <div className="col-span-3 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 md:col-span-1 md:justify-self-end">
-            <p className="flex items-center gap-2 text-xl font-bold leading-none text-bark-soft">
-              <span title="Monsters defeated">Defeated {player.killCount.toLocaleString()}</span>
-              <span aria-hidden>·</span>
-              <span title="Items in the bag (grows as you defeat monsters)">Bag {(bagCount ?? 0).toLocaleString()}</span>
-            </p>
+            {/* kills & harvest totals live on the canvas chips — the HUD does
+                not repeat them (dedupe); the bag opens without a number badge */}
             {typeof rareDropCount === "number" ? (
               <Pill
                 title="Open the Rare Market"
@@ -208,8 +205,8 @@ export function HudStrip({
               </Pill>
             ) : null}
             {onOpenBag ? (
-              <Pill title="Bag & drops" onClick={onOpenBag}>
-                🎒 {bagCount ?? 0}
+              <Pill title={`Bag & drops (${bagCount ?? 0} items)`} onClick={onOpenBag}>
+                🎒
               </Pill>
             ) : null}
             {onOpenGuild ? (
