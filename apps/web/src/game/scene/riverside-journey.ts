@@ -28,12 +28,14 @@ export class RiversideJourney {
     this.layers.push({ panels, period, speed })
   }
 
-  update(delta: number, bossFocused: boolean): void {
+  update(delta: number, bossFocused: boolean, manualDirection?: -1 | 0 | 1): void {
     if (this.reducedMotion || delta <= 0) return
 
     // Clamp resumed tabs and orientation changes so the scenery never jumps.
     const seconds = Math.min(delta, 50) / 1000
-    const target = bossFocused ? 0 : 1
+    // Auto retains the original steady forward travel. Manual mode supplies a
+    // signed direction so scenery stops with the player and reverses naturally.
+    const target = bossFocused ? 0 : (manualDirection ?? 1)
     const response = bossFocused ? 5 : 2.5
     const previousMotion = this.motion
     const decay = Math.exp(-response * seconds)
@@ -49,6 +51,7 @@ export class RiversideJourney {
       for (const panel of layer.panels) {
         panel.x -= step
         if (panel.x <= -layer.period) panel.x += layer.period * layer.panels.length
+        else if (panel.x >= layer.period) panel.x -= layer.period * layer.panels.length
       }
     }
   }

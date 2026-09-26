@@ -47,7 +47,7 @@ export class UiScene extends Phaser.Scene {
     this.mobileProfile = isMobileProfile(cssWidth, coarse)
     const frame = this.game.canvas.parentElement?.parentElement ?? this.game.canvas.parentElement
     const insetPx = frame ? Number.parseFloat(getComputedStyle(frame).getPropertyValue('--game-top-inset')) || 0 : 0
-    this.topInset = this.mobileProfile ? cssInsetToStageUnits(insetPx, f) : 0
+    this.topInset = cssInsetToStageUnits(insetPx, f)
     const visW = Math.min(L.W, pw / f)
     const visH = Math.min(L.H, ph / f)
     this.rect = {

@@ -62,4 +62,27 @@ describe('riverside journey', () => {
     expect(journey.debugState().motion).toBeLessThan(1)
     expect(panels[0].x).toBeLessThan(xAtStop)
   })
+
+  it('stops with manual input and reverses parallax when walking left', () => {
+    const { journey, panels } = setup()
+    for (let frame = 0; frame < 80; frame++) journey.update(50, false, 0)
+    const stoppedX = panels[0].x
+    journey.update(50, false, 0)
+    expect(journey.debugState().motion).toBe(0)
+    expect(panels[0].x).toBe(stoppedX)
+
+    for (let frame = 0; frame < 40; frame++) journey.update(50, false, -1)
+    expect(journey.debugState().motion).toBeLessThan(0)
+    expect(panels[0].x).toBeGreaterThan(stoppedX)
+  })
+
+  it('keeps the repeated band covered while travelling left in manual mode', () => {
+    const { journey, panels } = setup(false, 120)
+    for (let frame = 0; frame < 12000; frame++) journey.update(50, false, -1)
+    const xs = panels.map((panel) => panel.x).sort((a, b) => a - b)
+    expect(xs[0]).toBeGreaterThan(-1920)
+    expect(xs[0]).toBeLessThanOrEqual(0)
+    expect(xs[1]).toBeGreaterThanOrEqual(0)
+    expect(xs[1] - xs[0]).toBeCloseTo(1920, 6)
+  })
 })

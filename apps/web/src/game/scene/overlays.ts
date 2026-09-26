@@ -323,6 +323,10 @@ export class Chip {
   private readonly icon: Phaser.GameObjects.Image | null
   private readonly accent: number
   private readonly iconSize: number
+  private layoutScale = 1
+  private pulseScale = 1
+  private pulseDuration = 700
+  private pulseTween: Phaser.Tweens.Tween | null = null
 
   constructor(
     scene: Phaser.Scene,
@@ -355,40 +359,84 @@ export class Chip {
 
   /** Current pill width — lets callers pin the chip to a screen corner. */
   get boxWidth(): number {
-    return this.text.width + 40 + (this.icon ? this.iconSize + 8 : 0)
+    return this.rawBoxWidth * this.layoutScale
   }
 
   get boxHeight(): number {
+    return this.rawBoxHeight * this.layoutScale
+  }
+
+  private get rawBoxWidth(): number {
+    return this.text.width + 40 + (this.icon ? this.iconSize + 8 : 0)
+  }
+
+  private get rawBoxHeight(): number {
     return Math.max(this.text.height, this.icon ? this.iconSize : 0) + 16
+  }
+
+  setLayoutScale(scale: number): void {
+    const next = Phaser.Math.Clamp(scale, 0.25, 1)
+    if (Math.abs(next - this.layoutScale) < 0.0001) {
+      if (!this.pulseTween) this.container.setScale(next)
+      return
+    }
+    this.layoutScale = next
+    this.restartPulse()
+  }
+
+  pulse(scale = 1.04, duration = 700): void {
+    this.pulseScale = Math.max(1, scale)
+    this.pulseDuration = duration
+    this.restartPulse()
+  }
+
+  private restartPulse(): void {
+    this.pulseTween?.remove()
+    this.pulseTween = null
+    this.container.setScale(this.layoutScale)
+    if (this.pulseScale <= 1) return
+    this.pulseTween = this.scene.tweens.add({
+      targets: this.container,
+      scale: this.layoutScale * this.pulseScale,
+      duration: this.pulseDuration,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    })
   }
 
   /** Centre of the icon (or the chip) in world space — the loot flight target. */
   get anchor(): { x: number; y: number } {
-    const w = this.boxWidth
+    const w = this.rawBoxWidth
+    const localX = -w / 2 + 20 + (this.icon ? this.iconSize / 2 : w / 2 - 20)
     return {
-      x: this.container.x - w / 2 + 20 + (this.icon ? this.iconSize / 2 : w / 2 - 20),
+      x: this.container.x + localX * this.layoutScale,
       y: this.container.y,
     }
   }
 
   pop(): void {
+    this.pulseTween?.remove()
+    this.pulseTween = null
     this.scene.tweens.killTweensOf(this.container)
-    this.container.setScale(1.18)
-    this.scene.tweens.add({ targets: this.container, scale: 1, duration: 180, ease: 'Back.easeOut' })
+    this.container.setScale(this.layoutScale * 1.18)
+    this.scene.tweens.add({ targets: this.container, scale: this.layoutScale, duration: 180, ease: 'Back.easeOut' })
   }
 
   /** Big squash-and-bounce when a reward lands in the chip (the tick must be seen). */
   bounce(): void {
+    this.pulseTween?.remove()
+    this.pulseTween = null
     this.scene.tweens.killTweensOf(this.container)
     const y = this.container.y
-    this.container.setScale(1.45, 0.7)
-    this.scene.tweens.add({ targets: this.container, scaleX: 1, scaleY: 1, duration: 360, ease: 'Back.easeOut' })
+    this.container.setScale(this.layoutScale * 1.45, this.layoutScale * 0.7)
+    this.scene.tweens.add({ targets: this.container, scaleX: this.layoutScale, scaleY: this.layoutScale, duration: 360, ease: 'Back.easeOut' })
     this.scene.tweens.add({ targets: this.container, y: y - 14, duration: 120, yoyo: true, ease: 'Quad.easeOut' })
   }
 
   private redraw(): void {
-    const w = this.boxWidth
-    const h = this.boxHeight
+    const w = this.rawBoxWidth
+    const h = this.rawBoxHeight
     this.g.clear()
     this.g.fillStyle(RIVERSIDE_THEME ? 0x283b63 : PLATE_BG, PLATE_ALPHA)
     this.g.fillRoundedRect(-w / 2, -h / 2, w, h, h / 2)
@@ -403,6 +451,7 @@ export class Chip {
   }
 
   destroy(): void {
+    this.pulseTween?.remove()
     this.container.destroy()
   }
 }
@@ -418,6 +467,7 @@ export class BossPips {
   private filled = 0
   private pulse: Phaser.Tweens.Tween | null = null
   private readonly mobile: boolean
+  private layoutScale = 1
 
   constructor(scene: Phaser.Scene, total: number, fontFamily: string, mobile = false) {
     this.scene = scene
@@ -445,8 +495,23 @@ export class BossPips {
   place(x: number, y: number, align: 'left' | 'right' = 'right'): void {
     const pipW = this.mobile ? 24 : 22
     const count = Math.min(this.total, 12)
-    const rightX = align === 'left' ? bossPipsRightAnchor(x, pipW, count, this.label.width) : x
+    const width = bossPipsRightAnchor(0, pipW, count, this.label.width)
+    const rightX = align === 'left' ? x + width * this.layoutScale : x
     this.container.setPosition(rightX, y)
+  }
+
+  setLayoutScale(scale: number): void {
+    this.layoutScale = Phaser.Math.Clamp(scale, 0.25, 1)
+    this.container.setScale(this.layoutScale)
+  }
+
+  get boxWidth(): number {
+    const pipW = this.mobile ? 24 : 22
+    return bossPipsRightAnchor(0, pipW, Math.min(this.total, 12), this.label.width) * this.layoutScale
+  }
+
+  get boxHeight(): number {
+    return 30 * this.layoutScale
   }
 
   set(filled: number, total: number): void {

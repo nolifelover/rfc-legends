@@ -49,10 +49,20 @@ import type { SceneBridge, SceneMountOptions } from './scene-bridge'
 import { UiScene } from './ui-scene'
 import { riversidePortraitBackdrop } from './riverside-backdrop'
 import { RiversideJourney, riversidePlatform } from './riverside-journey'
+import { activeManualDirection, projectedManualX } from './manual-scene-state'
 import { MAPS, THUNG_NA } from '@/game/data/maps'
 import type { MapDef } from '@/game/types'
 import { getItem } from '@/game/data/items'
 import type { Drop, MonsterDef, Player, Rarity } from '@/game/types'
+import {
+  MANUAL_MAX_X,
+  MANUAL_MIN_X,
+  MANUAL_MOVE_LEASE_MS,
+  MANUAL_MOVE_SPEED,
+  MANUAL_START_X,
+  MANUAL_TARGET_X,
+} from '@/game/manual-controls'
+import type { GameActionResult, MovementDirection } from '@/game/manual-controls'
 import { aspdOf, atkOf, critChance, expToNext, hitChance, hitOf, roosterAspd, roosterAtk, roosterCrit } from '@/server/game/stats'
 import { CRIT_MULT } from '@/server/game/combat'
 
@@ -132,6 +142,7 @@ export class IdleScene extends Phaser.Scene {
   private forceBoss = false
 
   // chips
+  private mapChip: Chip | null = null
   private killChip!: Chip
   private harvestChip!: Chip
   /** เบี้ย (coins) — shown only once the server state carries a `coins` field. */
@@ -174,6 +185,8 @@ export class IdleScene extends Phaser.Scene {
   /** level-tiered power overlays (rebuilt when a tier changes) */
   private roosterPower: Phaser.GameObjects.GameObject[] = []
   private trainerPower: Phaser.GameObjects.GameObject[] = []
+  private roosterTierRise: Phaser.GameObjects.Particles.ParticleEmitter | null = null
+  private trainerTierTrail: Phaser.GameObjects.Particles.ParticleEmitter | null = null
   private roosterTier: Tier | null = null
   /** floor(level/10): every band adds +3% size, a longer plume and a stronger aura */
   private roosterBand = -1
@@ -181,6 +194,20 @@ export class IdleScene extends Phaser.Scene {
   /** "Cheer" tap: the next 3 rooster swings come 1.5× faster (cosmetic), 20s cooldown. */
   private cheerBoostLeft = 0
   private cheerReadyAt = 0
+
+  // Manual play is server-authoritative. Phaser predicts only the trainer's
+  // short movement lease and renders action results returned by the server.
+  private manualMode = false
+  private manualDirection: MovementDirection = 0
+  private manualLeaseUntil = 0
+  private manualX = MANUAL_START_X
+  private manualCorrectionX: number | null = null
+  private manualSequence = -1
+  private manualResultSequence = -1
+  private manualFacing: -1 | 1 = 1
+  private manualTarget: Pest | null = null
+  private retiredManualTarget: Pest | null = null
+  private retiredManualCleanup: Phaser.Time.TimerEvent | null = null
 
   // pack
   private pests: Pest[] = []
@@ -276,14 +303,20 @@ export class IdleScene extends Phaser.Scene {
 
     this.packTarget = Phaser.Math.Between(L.PACK_MIN, L.PACK_MAX)
     this.nextPackRollAt = this.time.now + 20000
-    // seed the stage: pests already mid-walk so the first frame is a fight
-    for (let i = 0; i < 5; i++) this.spawnPest(ROWS[i % 3], 700 + i * 220)
+    if (this.isManualPlayer()) this.enterManualMode(true)
+    else {
+      // seed the stage: pests already mid-walk so the first frame is a fight
+      for (let i = 0; i < 5; i++) this.spawnPest(ROWS[i % 3], 700 + i * 220)
+    }
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.fx.dispose())
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.fx.dispose())
 
     this.bridge.sceneReady({
       updateState: (player, drops, demoMode) => this.applyState(player, drops, demoMode),
+      setMovement: (direction) => this.setManualMovement(direction),
+      pauseManualMovement: () => this.setManualMovement(0),
+      showActionResult: (result) => this.showManualActionResult(result),
       destroy: () => this.game.destroy(true),
     })
   }
@@ -831,7 +864,7 @@ export class IdleScene extends Phaser.Scene {
     this.time.addEvent({
       delay: Phaser.Math.Between(4000, 8000),
       callback: () => {
-        const busy = this.trainerChain?.isPlaying() || this.nextTrainerAt - this.time.now < 800
+        const busy = this.manualMode || this.trainerChain?.isPlaying() || this.nextTrainerAt - this.time.now < 800
         if (!busy && !this.trainerLook) {
           this.trainerLook = true
           this.trainerBody.setScale(-1, 1)
@@ -866,6 +899,7 @@ export class IdleScene extends Phaser.Scene {
         o.destroy()
       }
       this.roosterPower = []
+      this.roosterTierRise = null
       // continuous growth: +3% size per 10 levels, on top of the tier gear
       const H = L.ROOSTER_H * this.roosterArtScale * (1 + 0.03 * band)
       this.roosterSprite.setDisplaySize(H, H)
@@ -913,6 +947,7 @@ export class IdleScene extends Phaser.Scene {
             maxAliveParticles: 8,
           })
           .setDepth(26)
+        this.roosterTierRise = rise
         keep(rise)
       }
     }
@@ -923,6 +958,7 @@ export class IdleScene extends Phaser.Scene {
         o.destroy()
       }
       this.trainerPower = []
+      this.trainerTierTrail = null
       const H = L.TRAINER_H
       if (tt >= 1) {
         // cape (tier 2, crimson with a gold hem) or scarf (tier 1, teal) behind the shoulders
@@ -949,6 +985,7 @@ export class IdleScene extends Phaser.Scene {
             maxAliveParticles: 6,
           })
           .setDepth(26)
+        this.trainerTierTrail = trail
         this.trainerPower.push(trail)
       }
     }
@@ -961,7 +998,7 @@ export class IdleScene extends Phaser.Scene {
     this.time.addEvent({
       delay: Phaser.Math.Between(3000, 6000),
       callback: () => {
-        const busy = this.roosterChain?.isPlaying() || this.nextRoosterAt - this.time.now < 700
+        const busy = this.manualMode || this.roosterChain?.isPlaying() || this.nextRoosterAt - this.time.now < 700
         if (!busy) this.roosterIdleOnce()
         this.scheduleRoosterIdle()
       },
@@ -1057,7 +1094,8 @@ export class IdleScene extends Phaser.Scene {
 
   private startRoosterBob(): void {
     this.roosterBob?.remove()
-    this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
+    const x = this.manualMode ? this.manualRoosterX() : L.ROOSTER_X
+    this.rooster.setPosition(x, L.ROOSTER_FEET)
     this.roosterBob = this.tweens.add({
       targets: this.rooster,
       y: L.ROOSTER_FEET - 8,
@@ -1071,18 +1109,21 @@ export class IdleScene extends Phaser.Scene {
   private buildChips(): void {
     // zone pill: the HUD shows the zone too, so this one fades out after 3s
     const mapChip = new Chip(this.ui, `${this.map.name} · ${this.zone.en}`, { fontFamily: this.font, fontSize: 24, mobile: this.ui.mobileProfile })
-    let mapTop = this.ui.rect.y0 + L.SAFE + this.ui.topInset
-    if (!this.ui.mobileProfile) {
-      const nav = document.querySelector('[data-riverside-nav]')?.getBoundingClientRect()
-      const canvas = this.game.canvas.getBoundingClientRect()
-      const scale = this.scale.displaySize.width / L.W
-      const left = canvas.left + (this.ui.rect.x0 + L.SAFE) * scale
-      if (nav && scale > 0 && nav.right > left && nav.left < left + mapChip.boxWidth * scale) {
-        mapTop = Math.max(mapTop, (nav.bottom - canvas.top + 8) / scale + mapChip.boxHeight / 2)
-      }
-    }
-    mapChip.container.setDepth(54).setPosition(this.ui.rect.x0 + L.SAFE + mapChip.boxWidth / 2, mapTop)
-    this.tweens.add({ targets: mapChip.container, alpha: 0, delay: 3000, duration: 600, onComplete: () => mapChip.destroy() })
+    this.mapChip = mapChip
+    mapChip.container.setDepth(54)
+    this.tweens.add({
+      targets: mapChip.container,
+      alpha: 0,
+      delay: 3000,
+      duration: 600,
+      onComplete: () => {
+        if (this.mapChip === mapChip) {
+          this.mapChip = null
+          this.layoutHeroLabels()
+        }
+        mapChip.destroy()
+      },
+    })
 
     this.killChip = new Chip(this.ui, this.killLabel(), { fontFamily: this.font, accent: 0xe0a93e, mobile: this.ui.mobileProfile })
     this.killChip.container.setDepth(54)
@@ -1112,14 +1153,56 @@ export class IdleScene extends Phaser.Scene {
   /** Chips hug the VISIBLE top-right corner (the container may crop the stage). */
   private pinChips(): void {
     const r = this.ui.rect
+    const portrait = this.ui.mobileProfile && typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+    const displayScale = this.scale.displaySize.width > 0 ? this.scale.displaySize.width / L.W : 1
+    const layoutScale = portrait ? Math.min(1, 0.4 / displayScale) : 1
+    const available = r.x1 - r.x0 - L.SAFE * 2
+    const columnWidth = portrait ? available * 0.48 : available
+    const fit = (chip: Chip): void => {
+      chip.setLayoutScale(layoutScale)
+      if (chip.boxWidth > columnWidth) chip.setLayoutScale(layoutScale * columnWidth / chip.boxWidth)
+    }
+    if (this.mapChip) fit(this.mapChip)
+    fit(this.killChip)
+    fit(this.harvestChip)
+    fit(this.coinChip)
+    this.pips.setLayoutScale(layoutScale)
+    if (portrait && this.pips.boxWidth > columnWidth) {
+      this.pips.setLayoutScale(layoutScale * columnWidth / this.pips.boxWidth)
+    }
+
     const right = r.x1 - L.SAFE
     const top = r.y0 + L.SAFE + this.ui.topInset
-    this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, top)
-    this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, top + 70)
-    const coinRow = this.coinsKnown ? 70 : 0
-    this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, top + 140)
-    if (this.ui.mobileProfile) this.pips.place(r.x0 + L.SAFE, top + 72, 'left')
-    else this.pips.place(right, top + 132 + coinRow)
+    if (!portrait) {
+      let mapTop = top
+      if (this.mapChip && !this.ui.mobileProfile) {
+        const nav = document.querySelector('[data-riverside-nav]')?.getBoundingClientRect()
+        const canvas = this.game.canvas.getBoundingClientRect()
+        const left = canvas.left + (r.x0 + L.SAFE) * displayScale
+        if (nav && displayScale > 0 && nav.right > left && nav.left < left + this.mapChip.boxWidth * displayScale) {
+          mapTop = Math.max(mapTop, (nav.bottom - canvas.top + 8) / displayScale + this.mapChip.boxHeight / 2)
+        }
+      }
+      this.mapChip?.container.setPosition(r.x0 + L.SAFE + (this.mapChip?.boxWidth ?? 0) / 2, mapTop)
+      this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, top)
+      this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, top + 70)
+      this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, top + 140)
+      if (this.ui.mobileProfile) this.pips.place(r.x0 + L.SAFE, top + 72, 'left')
+      else this.pips.place(right, top + 132 + (this.coinsKnown ? 70 : 0))
+      this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
+      return
+    }
+    const firstHeight = Math.max(this.mapChip?.boxHeight ?? 0, this.killChip.boxHeight)
+    const secondHeight = Math.max(this.pips.boxHeight, this.harvestChip.boxHeight)
+    const firstY = top + firstHeight / 2
+    const secondY = firstY + firstHeight / 2 + 12 + secondHeight / 2
+    const thirdY = secondY + secondHeight / 2 + 12 + this.coinChip.boxHeight / 2
+    this.mapChip?.container.setPosition(r.x0 + L.SAFE + this.mapChip.boxWidth / 2, firstY)
+    this.killChip.container.setPosition(right - this.killChip.boxWidth / 2, firstY)
+    this.harvestChip.container.setPosition(right - this.harvestChip.boxWidth / 2, secondY)
+    this.coinChip.container.setPosition(right - this.coinChip.boxWidth / 2, thirdY)
+    if (this.ui.mobileProfile) this.pips.place(r.x0 + L.SAFE, secondY, 'left')
+    else this.pips.place(right, secondY + (this.coinsKnown ? this.coinChip.boxHeight + 12 : 0))
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
   }
 
@@ -1152,6 +1235,325 @@ export class IdleScene extends Phaser.Scene {
     return n
   }
 
+  // ------------------------------------------------------------ manual play
+
+  private isManualPlayer(player: Player = this.player): boolean {
+    return player.control?.mode === 'manual'
+  }
+
+  private clearPestsImmediate(): void {
+    this.destroyRetiredManualTarget()
+    for (const pest of [...this.pests]) {
+      pest.dead = true
+      this.tweens.killTweensOf(pest.container)
+      this.tweens.killTweensOf(pest.sprite)
+      pest.container.destroy()
+      this.removePest(pest)
+    }
+    this.focus = null
+    this.manualTarget = null
+  }
+
+  private destroyRetiredManualTarget(): void {
+    this.retiredManualCleanup?.remove(false)
+    this.retiredManualCleanup = null
+    const target = this.retiredManualTarget
+    if (!target) return
+    this.retiredManualTarget = null
+    this.tweens.killTweensOf(target.container)
+    this.tweens.killTweensOf(target.sprite)
+    target.container.destroy()
+    target.plate.destroy()
+    target.bar.destroy()
+  }
+
+  /** Keep the just-resolved target for one synchronous action-result handoff. */
+  private retireManualTarget(target: Pest): void {
+    this.destroyRetiredManualTarget()
+    this.pests = this.pests.filter((pest) => pest !== target)
+    if (this.focus === target) this.focus = null
+    target.ready = false
+    target.plate.setVisible(false)
+    target.bar.setVisible(false)
+    target.container.setVisible(false)
+    this.retiredManualTarget = target
+    this.retiredManualCleanup = this.time.delayedCall(120, () => this.destroyRetiredManualTarget())
+  }
+
+  private enterManualMode(initial = false): void {
+    this.manualMode = true
+    this.forceBoss = false
+    this.bossActive = false
+    this.bossServerDead = false
+    this.bossBar?.hide()
+    this.bossBar = null
+    this.clearBossPreview()
+    this.bossDim.setAlpha(0)
+    this.clearPestsImmediate()
+    this.killTween(this.trainerChain)
+    this.killTween(this.roosterChain)
+    this.trainerChain = null
+    this.roosterChain = null
+    this.trainerBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
+    this.roosterBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
+
+    const control = this.player.control
+    const now = Date.now()
+    this.manualX = control ? projectedManualX(control, now) : MANUAL_START_X
+    this.manualCorrectionX = null
+    this.manualSequence = control?.sequence ?? -1
+    const moving = control ? activeManualDirection(control, now) : 0
+    this.manualDirection = moving
+    this.manualLeaseUntil = moving === 0
+      ? 0
+      : this.time.now + Math.min(MANUAL_MOVE_LEASE_MS, Math.max(0, control!.moveUntil - now))
+    if (moving !== 0) this.manualFacing = moving
+    this.startTrainerBob()
+    this.startRoosterBob()
+    this.syncManualTarget()
+    this.positionManualActors()
+    if (!initial) this.frameWorld()
+  }
+
+  private leaveManualMode(): void {
+    this.manualMode = false
+    this.manualDirection = 0
+    this.manualLeaseUntil = 0
+    this.manualCorrectionX = null
+    this.clearPestsImmediate()
+    this.killTween(this.trainerChain)
+    this.killTween(this.roosterChain)
+    this.trainerChain = null
+    this.roosterChain = null
+    this.trainerBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
+    this.trainerSprite.setTexture(TRAINER_KEY)
+    this.roosterBody.setPosition(0, 0).setAngle(0).setScale(1, 1)
+    this.trainer.setPosition(L.TRAINER_X, L.TRAINER_FEET)
+    this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
+    this.roosterAura.setPosition(L.ROOSTER_X, L.ROOSTER_FEET - 4)
+    this.roosterTierRise?.setPosition(L.ROOSTER_X, L.ROOSTER_FEET - 10)
+    this.trainerTierTrail?.setPosition(L.TRAINER_X + 0.31 * L.TRAINER_H, L.TRAINER_FEET - 0.8 * L.TRAINER_H)
+    this.startTrainerBob()
+    this.startRoosterBob()
+    this.placeHeroLabels()
+    this.nextTrainerAt = this.time.now + 250
+    this.nextRoosterAt = this.time.now + 450
+    this.nextSpawnAt = this.time.now
+    this.nextPackRollAt = this.time.now + 20000
+    for (let i = 0; i < 5; i++) this.spawnPest(ROWS[i % 3], 700 + i * 220)
+    this.frameWorld()
+  }
+
+  private monsterById(id: string): MonsterDef | null {
+    if (this.map.mvp?.id === id) return this.map.mvp
+    return this.map.monsters.find(({ monster }) => monster.id === id)?.monster ?? null
+  }
+
+  private syncManualTarget(): void {
+    if (!this.manualMode) return
+    const combat = this.player.combat
+    const def = combat?.monsterId ? this.monsterById(combat.monsterId) : null
+    if (!combat || !def) {
+      if (this.manualTarget) this.retireManualTarget(this.manualTarget)
+      this.manualTarget = null
+      return
+    }
+    if (!this.manualTarget || this.manualTarget.dead || this.manualTarget.def.id !== def.id) {
+      if (this.manualTarget) this.retireManualTarget(this.manualTarget)
+      for (const pest of [...this.pests]) {
+        pest.container.destroy()
+        this.removePest(pest)
+      }
+      const target = this.makePest(def, 2, 0, MANUAL_TARGET_X, def.isMvp === true)
+      target.baseX = MANUAL_TARGET_X
+      target.container.setPosition(MANUAL_TARGET_X, target.feetY)
+      target.ready = true
+      this.manualTarget = target
+      this.setFocus(target)
+    }
+    const target = this.manualTarget
+    target.hp = Phaser.Math.Clamp(combat.monsterHp, 0, target.maxHp)
+    target.bar.setPct(target.hp / target.maxHp)
+    this.setFocus(target)
+  }
+
+  private setManualMovement(direction: MovementDirection): void {
+    if (!this.manualMode) return
+    this.manualDirection = direction
+    this.manualCorrectionX = null
+    this.manualLeaseUntil = direction === 0 ? 0 : this.time.now + MANUAL_MOVE_LEASE_MS
+    if (direction !== 0) this.manualFacing = direction
+  }
+
+  private reconcileManualControl(): void {
+    const control = this.player.control
+    if (!this.manualMode || !control || control.sequence <= this.manualSequence) return
+    const now = Date.now()
+    this.manualSequence = control.sequence
+    this.manualCorrectionX = projectedManualX(control, now)
+    const activeDirection = activeManualDirection(control, now)
+    this.manualDirection = activeDirection
+    this.manualLeaseUntil = activeDirection === 0
+      ? 0
+      : this.time.now + Math.min(MANUAL_MOVE_LEASE_MS, control.moveUntil - now)
+    if (activeDirection !== 0) this.manualFacing = activeDirection
+  }
+
+  private updateManualMovement(delta: number): void {
+    if (!this.manualMode) return
+    if (this.manualDirection !== 0 && this.time.now >= this.manualLeaseUntil) this.manualDirection = 0
+    const seconds = Math.min(delta, 50) / 1000
+    if (this.manualDirection !== 0) {
+      this.manualX = Phaser.Math.Clamp(
+        this.manualX + this.manualDirection * MANUAL_MOVE_SPEED * seconds,
+        MANUAL_MIN_X,
+        MANUAL_MAX_X,
+      )
+    }
+    if (this.manualCorrectionX !== null) {
+      const diff = this.manualCorrectionX - this.manualX
+      if (Math.abs(diff) > 120) this.manualX = this.manualCorrectionX
+      else this.manualX += diff * Math.min(1, seconds * 8)
+      if (Math.abs(this.manualCorrectionX - this.manualX) < 0.5) {
+        this.manualX = this.manualCorrectionX
+        this.manualCorrectionX = null
+      }
+    }
+    this.positionManualActors()
+  }
+
+  private positionManualActors(): void {
+    if (!this.manualMode) return
+    const roosterX = this.manualRoosterX()
+    this.trainer.x = this.manualX
+    this.rooster.x = roosterX
+    this.roosterAura.setPosition(roosterX, L.ROOSTER_FEET - 4)
+    this.roosterTierRise?.setPosition(roosterX, L.ROOSTER_FEET - 10)
+    this.trainerTierTrail?.setPosition(this.manualX + 0.31 * L.TRAINER_H, L.TRAINER_FEET - 0.8 * L.TRAINER_H)
+    if (!this.trainerChain?.isPlaying()) {
+      this.trainerBody.setScale(this.manualFacing, 1)
+      this.trainerSprite.setTexture(this.manualDirection === 0 ? TRAINER_KEY : TRAINER_WALK_KEY)
+    }
+    if (!this.roosterChain?.isPlaying() && !this.roosterIdle) this.roosterBody.setScale(this.manualFacing, 1)
+    this.placeHeroLabels()
+  }
+
+  private manualRoosterX(): number {
+    const behind = Phaser.Math.Clamp(this.manualX - this.manualFacing * 150, MANUAL_MIN_X, MANUAL_MAX_X)
+    if (Math.abs(behind - this.manualX) >= 100) return behind
+    return Phaser.Math.Clamp(this.manualX + this.manualFacing * 150, MANUAL_MIN_X, MANUAL_MAX_X)
+  }
+
+  private placeHeroLabels(): void {
+    this.trainerPlate.place(this.trainer.x, L.TRAINER_FEET - L.TRAINER_H - 64)
+    this.roosterPlate.place(this.rooster.x, L.ROOSTER_FEET - this.roosterSprite.displayHeight - 58)
+    this.layoutHeroLabels()
+  }
+
+  private layoutHeroLabels(): void {
+    const view = this.fx.visibleWorld()
+    const trainerY = L.TRAINER_FEET - L.TRAINER_H - 64
+      + (this.manualMode ? -80 : (!this.ui.mobileProfile && this.mapChip ? 80 : 0))
+    const roosterY = L.ROOSTER_FEET - this.roosterSprite.displayHeight - 58 + (this.manualMode ? 20 : 0)
+    this.trainerPlate.container.y = Math.round(trainerY)
+    this.roosterPlate.container.y = Math.round(roosterY)
+    if (!this.ui.mobileProfile) {
+      this.trainerPlate.container.x = Math.round(this.trainer.x)
+      this.roosterPlate.container.x = Math.round(this.rooster.x)
+      return
+    }
+    this.trainerPlate.container.x = Math.round(Phaser.Math.Clamp(
+      this.trainer.x,
+      view.left + this.trainerPlate.width / 2 + 12,
+      view.right - this.trainerPlate.width / 2 - 12,
+    ))
+    this.roosterPlate.container.x = Math.round(Phaser.Math.Clamp(
+      this.rooster.x,
+      view.left + this.roosterPlate.width / 2 + 12,
+      view.right - this.roosterPlate.width / 2 - 12,
+    ))
+  }
+
+  private showManualActionResult(result: GameActionResult): void {
+    if (!this.manualMode || !result.accepted || result.sequence <= this.manualResultSequence) return
+    this.manualResultSequence = result.sequence
+    const target = this.manualTarget?.def.id === result.targetId
+      ? this.manualTarget
+      : this.retiredManualTarget?.def.id === result.targetId
+        ? this.retiredManualTarget
+        : this.manualTarget
+    if (!target || (result.targetId && target.def.id !== result.targetId)) return
+    if (target === this.retiredManualTarget) {
+      this.retiredManualCleanup?.remove(false)
+      this.retiredManualCleanup = null
+      target.container.setVisible(true)
+    }
+    this.manualFacing = target.container.x >= this.trainer.x ? 1 : -1
+    this.positionManualActors()
+    const body = this.trainerBody
+    this.killTween(this.trainerChain)
+    body.setPosition(0, 0).setAngle(0).setScale(this.manualFacing, 1)
+    this.trainerChain = this.tweens.chain({
+      targets: body,
+      tweens: [
+        { x: -18 * this.manualFacing, angle: -5 * this.manualFacing, duration: JUICE.WINDUP, ease: 'Quad.easeOut' },
+        {
+          x: 54 * this.manualFacing,
+          angle: 7 * this.manualFacing,
+          duration: JUICE.STRIKE,
+          ease: 'Expo.easeIn',
+          onComplete: () => this.playManualImpact(target, result),
+        },
+        { x: 0, angle: 0, duration: JUICE.RECOVER, ease: 'Back.easeOut' },
+      ],
+    })
+  }
+
+  private playManualImpact(target: Pest, result: GameActionResult): void {
+    if (target.dead || !target.container.active) return
+    const rsz = target.h * ROW_SCALE[target.row]
+    const hitY = this.topYOf(target) + rsz * 0.45
+    this.fx.slash(target.container.x - rsz * 0.35, hitY, 1, result.crit ? 0.95 : 0.72, result.crit ? 0xffd24a : 0x3fb8c9)
+    this.fx.impactStar(target.container.x - rsz * 0.38, hitY + rsz * 0.12, result.crit ? 1 : 0.72, result.crit ? 0xffd24a : 0xbff2ff)
+    const damage = result.miss ? 0 : Math.max(0, result.damage ?? 0)
+    const kind: DamageKind = result.crit ? 'crit' : 'trainer'
+    this.fx.damage(target.container.x - rsz * 0.2, hitY, damage, kind)
+    if (result.miss) return
+    target.sprite.setTintFill(0xffffff)
+    this.time.delayedCall(JUICE.FLINCH_MS, () => {
+      if (target.container.active) this.restoreSkin(target)
+    })
+    this.fx.hitStop(result.killed ? JUICE.STOP_KILL : result.crit ? JUICE.STOP_CRIT : JUICE.STOP_HIT)
+    if (result.killed) this.killManualTarget(target)
+    else if (target === this.retiredManualTarget) this.retiredManualCleanup = this.time.delayedCall(300, () => this.destroyRetiredManualTarget())
+  }
+
+  private killManualTarget(target: Pest): void {
+    if (target.dead) return
+    target.dead = true
+    target.ready = false
+    target.plate.setVisible(false)
+    target.bar.setVisible(false)
+    const x = target.container.x
+    const midY = target.feetY - target.h / 2
+    this.fx.poof(x, midY, target.boss ? 2.2 : 1)
+    this.fx.groundRing(x, target.feetY, INK.goldSoft, target.boss ? 900 : 380)
+    this.fx.shake(target.boss ? JUICE.SHAKE_BOSS_KILL : JUICE.SHAKE_KILL)
+    this.tweens.add({
+      targets: target.sprite,
+      scale: 0,
+      angle: 180,
+      duration: 220,
+      ease: 'Back.easeIn',
+      onComplete: () => {
+        target.container.destroy()
+        this.removePest(target)
+      },
+    })
+    if (this.manualTarget === target) this.manualTarget = null
+    if (this.retiredManualTarget === target) this.retiredManualTarget = null
+  }
+
   // ------------------------------------------------------------------ camera
 
   /**
@@ -1168,12 +1570,13 @@ export class IdleScene extends Phaser.Scene {
     this.fx.setBaseZoom(zoom)
     this.fx.setVisibleStage(r)
     cam.setZoom(zoom)
+    const centerX = this.manualMode ? (this.manualX + MANUAL_TARGET_X) / 2 : L.W / 2
     if (mobile) {
-      cam.centerOn((L.TRAINER_X + L.ENGAGE_BACK_X) / 2, L.H / 2)
+      cam.centerOn(this.manualMode ? centerX : (L.TRAINER_X + L.ENGAGE_BACK_X) / 2, L.H / 2)
     } else {
       const top = (L.H / 2 - r.y0) / zoom
       const bottom = L.H - (r.y1 - L.H / 2) / zoom
-      cam.centerOn(L.W / 2, Phaser.Math.Clamp(L.FOCUS_Y, top, bottom))
+      cam.centerOn(centerX, Phaser.Math.Clamp(L.FOCUS_Y, top, bottom))
     }
     const p = cam.getWorldPoint(r.x1 - 460, r.y0 + 270)
     this.fx.setNoSpawn(p.x, p.y)
@@ -1193,7 +1596,7 @@ export class IdleScene extends Phaser.Scene {
       this.hintChip = new Chip(this.ui, '✦ Spend stat points to hit harder', { fontFamily: this.font, fontSize: 24, accent: 0xffd24a, mobile: this.ui.mobileProfile })
       this.hintChip.container.setDepth(55).setAlpha(0)
       this.ui.tweens.add({ targets: this.hintChip.container, alpha: 1, duration: 300 })
-      this.ui.tweens.add({ targets: this.hintChip.container, scale: 1.04, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.hintChip.pulse()
     } else if (!show && this.hintChip) {
       const chip = this.hintChip
       this.hintChip = null
@@ -1202,7 +1605,18 @@ export class IdleScene extends Phaser.Scene {
     }
     if (this.hintChip) {
       const r = this.ui.rect
-      this.hintChip.container.setPosition(r.x0 + L.SAFE + this.hintChip.boxWidth / 2, r.y1 - L.SAFE - 24)
+      const portrait = this.ui.mobileProfile && typeof window !== 'undefined' && window.innerHeight > window.innerWidth
+      const displayScale = this.scale.displaySize.width > 0 ? this.scale.displaySize.width / L.W : 1
+      const available = r.x1 - r.x0 - L.SAFE * 2
+      const baseScale = portrait ? Math.min(1, 0.4 / displayScale) : 1
+      this.hintChip.setLayoutScale(baseScale)
+      if (this.hintChip.boxWidth > available) {
+        this.hintChip.setLayoutScale(baseScale * available / this.hintChip.boxWidth)
+      }
+      const frame = this.game.canvas.parentElement?.parentElement ?? this.game.canvas.parentElement
+      const insetPx = frame ? Number.parseFloat(getComputedStyle(frame).getPropertyValue('--game-bottom-inset')) || 180 : 180
+      const bottomInset = insetPx / Math.max(displayScale, 0.001)
+      this.hintChip.container.setPosition((r.x0 + r.x1) / 2, r.y1 - bottomInset - this.hintChip.boxHeight / 2 - 12)
     }
   }
 
@@ -1826,11 +2240,12 @@ export class IdleScene extends Phaser.Scene {
    *   victory  hit-stop 260, flash, confetti, "MVP DEFEATED!", card fly-out
    */
   private startBoss(pendingKill: boolean): void {
+    if (this.manualMode) return
     this.bossActive = true
     this.bossServerDead = false
     this.forceBoss = false
     this.sweepLoot()
-    this.updateBossShadow()
+    this.clearBossPreview()
     new Ribbon(this.ui, 'BOSS APPROACHING', this.font, this.ui.rect.y0 + 250).play(700, this.reduced)
     if (!this.reduced) {
       const vig = this.cameras.main.postFX?.addVignette(0.5, 0.5, 0.9, 0)
@@ -1867,10 +2282,13 @@ export class IdleScene extends Phaser.Scene {
       this.bossActive = false
       return
     }
-    this.time.delayedCall(JUICE.BOSS_WARN_MS, () => this.dropBoss(def, pendingKill))
+    this.time.delayedCall(JUICE.BOSS_WARN_MS, () => {
+      if (!this.manualMode) this.dropBoss(def, pendingKill)
+    })
   }
 
   private dropBoss(def: MonsterDef, pendingKill: boolean): void {
+    if (this.manualMode) return
     const boss = this.makePest(def, 2, 0, L.ENGAGE_FRONT_X + 220, true)
     boss.baseX = L.ENGAGE_FRONT_X + 220
     boss.container.setPosition(boss.baseX, -520)
@@ -1880,6 +2298,7 @@ export class IdleScene extends Phaser.Scene {
       duration: JUICE.BOSS_DROP_MS,
       ease: 'Bounce.easeOut',
       onComplete: () => {
+        if (this.manualMode || !this.bossActive || boss.dead || !boss.container.active) return
         this.fx.hitStop(JUICE.STOP_BOSS_LAND)
         this.fx.shake(JUICE.SHAKE_BOSS_LAND)
         this.fx.groundRing(boss.baseX, boss.feetY, 0xcaa273, 1100, 380)
@@ -1899,7 +2318,11 @@ export class IdleScene extends Phaser.Scene {
         this.bridge.emit('boss-spawn', { name: def.name })
         // the server already crossed this boss kill (fast fight or dev key): a short
         // brawl, then the victory beat
-        if (pendingKill) this.time.delayedCall(2600, () => this.slayBoss())
+        if (pendingKill) {
+          this.time.delayedCall(2600, () => {
+            if (!this.manualMode && this.bossActive && !boss.dead && boss.container.active) this.slayBoss()
+          })
+        }
       },
     })
   }
@@ -1949,17 +2372,33 @@ export class IdleScene extends Phaser.Scene {
     }
   }
 
+  private clearBossPreview(): void {
+    const shadow = this.bossShadow
+    const eyes = this.bossEyes
+    this.bossShadow = null
+    this.bossEyes = []
+    if (shadow) {
+      this.tweens.killTweensOf(shadow)
+      shadow.destroy()
+    }
+    this.tweens.killTweensOf(eyes)
+    for (const eye of eyes) eye.destroy()
+  }
+
   private bossPest(): Pest | null {
     return this.pests.find((p) => p.boss && !p.dead) ?? null
   }
 
   /** The server confirmed the boss kill: let the next hit (or this call) finish it. */
   private slayBoss(): void {
+    if (this.manualMode || !this.bossActive) return
     this.bossServerDead = true
     const b = this.bossPest()
     if (!b) return
     if (!b.ready) {
-      this.time.delayedCall(600, () => this.slayBoss())
+      this.time.delayedCall(600, () => {
+        if (!this.manualMode && this.bossActive) this.slayBoss()
+      })
       return
     }
     // no invented damage number at the money shot: flash, freeze, and fall
@@ -1997,6 +2436,7 @@ export class IdleScene extends Phaser.Scene {
       ],
     })
     this.time.delayedCall(340, () => {
+      if (this.manualMode || !this.bossActive || b.dead || !b.container.active) return
       this.fx.slash(L.TRAINER_X + 120, L.TRAINER_FEET - L.TRAINER_H * 0.5, -1, 1.2)
       this.fx.impactStar(L.TRAINER_X + 60, L.TRAINER_FEET - L.TRAINER_H * 0.55, 1.1, 0xffb0a0)
       this.fx.shake([90, 0.0022])
@@ -2149,9 +2589,19 @@ export class IdleScene extends Phaser.Scene {
     this.demoMode = demoMode
     this.tuneCadence()
 
+    const nextManual = this.isManualPlayer(player)
+    if (nextManual && !this.manualMode) this.enterManualMode()
+    else if (!nextManual && this.manualMode) this.leaveManualMode()
+    else if (nextManual) {
+      this.reconcileManualControl()
+      this.syncManualTarget()
+      this.positionManualActors()
+    }
+
     this.trainerPlate.setMain(this.trainerLabel())
     this.roosterPlate.setMain(this.roosterLabel())
     this.applyPowerTiers()
+    if (this.manualMode) this.positionManualActors()
     if (player.mapId !== this.map.id && MAPS[player.mapId]) {
       // the zone banner is a strong beat: it follows the RARE DROPS UNLOCKED! slam
       const next = MAPS[player.mapId]
@@ -2181,15 +2631,32 @@ export class IdleScene extends Phaser.Scene {
     const nextCoins = this.serverCoins(player)
     const coinGain = prevCoins !== null && nextCoins !== null ? Math.max(0, nextCoins - prevCoins) : 0
     if (nextCoins !== null && !this.coinsKnown) this.readCoins(player)
-    // on a level-up sync the EXP is shown once, in the banner's subline
-    this.pushCredits(player.killCount - prevKills, leveled ? 0 : gain, coinGain)
+    // Auto drains authoritative gains through visual kill credits. Manual mode
+    // receives one explicit server action result, so its counters snap directly
+    // to that same authoritative state instead of waiting for a local kill loop.
+    if (this.manualMode) {
+      this.credits = []
+      this.killShown = this.killServer
+      this.killChip.setLabel(this.killLabel())
+      if (nextCoins !== null) {
+        this.coinsShown = nextCoins
+        this.coinChip.setLabel(nextCoins.toLocaleString('en-US'))
+      }
+      this.harvestShown = this.countInventory(player)
+      this.pendingLoot = []
+      this.harvestChip.setLabel(this.harvestLabel())
+      this.pinChips()
+    } else {
+      // on a level-up sync the EXP is shown once, in the banner's subline
+      this.pushCredits(player.killCount - prevKills, leveled ? 0 : gain, coinGain)
+    }
     if (this.killShown > this.killServer) {
       this.killShown = this.killServer
       this.killChip.setLabel(this.killLabel())
       this.pinChips()
     }
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
-    this.updateBossShadow()
+    if (!this.manualMode) this.updateBossShadow()
 
     // every 10th server-confirmed kill gets a slam (after a level-up slam, if any)
     if (Math.floor(this.killServer / 10) > Math.floor(prevKills / 10)) {
@@ -2206,14 +2673,16 @@ export class IdleScene extends Phaser.Scene {
     const every = this.bossEvery()
     const crossed = Math.floor(this.killServer / every) > Math.floor(prevKills / every)
     const fighting = this.killServer % every === every - 1
-    if (this.bossActive) {
-      if (crossed) this.slayBoss()
-      else this.mirrorBossHp(player)
-    } else if (this.map.mvp && (fighting || crossed)) {
-      this.startBoss(crossed && !fighting)
+    if (!this.manualMode) {
+      if (this.bossActive) {
+        if (crossed) this.slayBoss()
+        else this.mirrorBossHp(player)
+      } else if (this.map.mvp && (fighting || crossed)) {
+        this.startBoss(crossed && !fighting)
+      }
     }
 
-    this.queueLoot(prev, player)
+    if (!this.manualMode) this.queueLoot(prev, player)
 
     for (const drop of drops) {
       if (this.dropIds.has(drop.dropId)) continue
@@ -2280,7 +2749,8 @@ export class IdleScene extends Phaser.Scene {
       new Ribbon(this.ui, `NEW ZONE: ${map.name} · ${this.zone.en}`, this.font, this.ui.rect.y0 + 250, 0x5a3a8a).play(1600, this.reduced)
       this.fx.slam('NEW ZONE!', `${this.zone.en} · Lv ${map.lvRange[0]}–${map.lvRange[1]}`, 520, INK.crit)
     })
-    this.nextSpawnAt = this.time.now + 1300
+    if (this.manualMode) this.syncManualTarget()
+    else this.nextSpawnAt = this.time.now + 1300
   }
 
   // -------------------------------------------------------------------- loop
@@ -2298,7 +2768,28 @@ export class IdleScene extends Phaser.Scene {
       return
     }
     this.victim = null
-    this.riversideJourney?.update(delta, this.bossActive || this.forceBoss)
+    const manualJourneyDirection = this.manualMode
+      ? (this.time.now < this.manualLeaseUntil ? this.manualDirection : 0)
+      : undefined
+    this.riversideJourney?.update(delta, this.bossActive || this.forceBoss, manualJourneyDirection)
+
+    if (this.manualMode) {
+      this.updateManualMovement(delta)
+      this.frameWorld()
+      this.placeHeroLabels()
+      const target = this.manualTarget
+      if (target && !target.dead) {
+        const view = this.fx.visibleWorld()
+        const halfPlate = target.plate.width / 2 + 12
+        target.plate.container.x = Math.round(Phaser.Math.Clamp(target.container.x, view.left + halfPlate, view.right - halfPlate))
+        target.bar.container.x = Math.round(target.container.x)
+      }
+      return
+    }
+
+    // Keep labels clear of temporary canvas chrome and clamp them when the
+    // mobile camera intentionally crops an actor near the stage edge.
+    this.layoutHeroLabels()
 
     // keep the pack stocked (never during a boss)
     if (!this.bossActive) {

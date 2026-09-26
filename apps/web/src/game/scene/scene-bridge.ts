@@ -3,6 +3,7 @@
 // React holds one SceneBridge; the scene registers itself once booted.
 
 import type { Drop, Player, Rarity } from '../types'
+import type { GameActionResult, MovementDirection } from '../manual-controls'
 
 /** Events the scene emits for React-side celebrations (G5 hooks). */
 export type SceneEventMap = {
@@ -25,6 +26,9 @@ export interface SceneMountOptions {
 /** What the running game exposes back to the bridge. */
 export interface SceneHandle {
   updateState(player: Player, drops: Drop[], demoMode: boolean): void
+  setMovement(direction: MovementDirection): void
+  pauseManualMovement(): void
+  showActionResult(result: GameActionResult): void
   destroy(): void
 }
 
@@ -82,6 +86,21 @@ export class SceneBridge {
   updateState(player: Player, drops: Drop[], demoMode: boolean): void {
     this.latest = { player, drops, demoMode }
     this.handle?.updateState(player, drops, demoMode)
+  }
+
+  /** Predict movement immediately while the server validates the same input. */
+  setMovement(direction: MovementDirection): void {
+    this.handle?.setMovement(direction)
+  }
+
+  /** Stop predicted motion on blur, pointer cancellation, or an opened modal. */
+  pauseManualMovement(): void {
+    this.handle?.pauseManualMovement()
+  }
+
+  /** Play combat feedback only from the authoritative action response. */
+  showActionResult(result: GameActionResult): void {
+    this.handle?.showActionResult(result)
   }
 
   destroy(): void {
