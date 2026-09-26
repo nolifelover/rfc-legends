@@ -1275,7 +1275,8 @@ export class IdleScene extends Phaser.Scene {
     // never sits under them; the boss's crown reaches the boss bar, so its numbers
     // sit on the forehead
     const numY = this.topYOf(p) + (p.boss ? 320 : 0)
-    const numX = p.container.x + (kind === 'rooster' ? JUICE.DMG_SPLIT_X + 100 : 60)
+    // one column per target (colour tells the source); the stack keeps hits apart
+    const numX = p.container.x + JUICE.DMG_SPLIT_X + 30
     this.fx.damage(numX, numY, value, kind)
     p.bar.setPct(p.hp / p.maxHp)
     if (p.boss) this.bossBar?.setHp(p.hp, p.maxHp)

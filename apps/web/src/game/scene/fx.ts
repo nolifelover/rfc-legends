@@ -706,7 +706,7 @@ export class Fx {
   jackpot(x: number, feetY: number, itemKey: string, rarity: Rarity, flyTo?: { x: number; y: number; onArrive: () => void }): void {
     const color: number = RARITY_COLORS[rarity] ?? INK.gold
     this.slowMo(JUICE.JACKPOT_SLOWMO, JUICE.JACKPOT_SLOWMO_MS)
-    this.dim(0.5, 200)
+    this.dim(0.3, 200) // a light dim only: the playfield stays readable under the beam
     this.pillar(x, feetY, color, 1080, 1400)
     this.groundRing(x, feetY, color, 640, 420)
     this.flash(200, 255, 245, 220)
