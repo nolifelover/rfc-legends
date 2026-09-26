@@ -534,7 +534,7 @@ export class IdleScene extends Phaser.Scene {
         break
       case 2: // feather ruffle
         this.roosterIdle = this.tweens.add({ targets: sp, scaleX: s0 * 0.92, duration: 90, yoyo: true, repeat: 2 })
-        this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 3)
+        this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 2)
         break
       default: // look back at the trainer
         sp.setFlipX(true)
@@ -548,7 +548,7 @@ export class IdleScene extends Phaser.Scene {
   private roosterReactKill(): void {
     if (Math.random() > 0.25 || this.roosterChain?.isPlaying()) return
     this.fx.emote(L.ROOSTER_X + 60, L.ROOSTER_FEET - L.ROOSTER_H - 20, Phaser.Utils.Array.GetRandom(['♪', '!', '♥', '✦']))
-    this.fx.featherPuff(L.ROOSTER_X + 40, L.ROOSTER_FEET - L.ROOSTER_H * 0.5, 2)
+    this.fx.sparkle(L.ROOSTER_X + 40, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 4)
     this.roosterBob?.remove()
     this.roosterBob = null
     this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
@@ -568,7 +568,7 @@ export class IdleScene extends Phaser.Scene {
     const s0 = this.roosterS0
     this.roosterIdle = this.tweens.add({ targets: this.roosterSprite, scaleX: s0 * 1.14, scaleY: s0 * 0.94, duration: 90, yoyo: true, repeat: 3 })
     this.fx.speech(L.ROOSTER_X + 120, L.ROOSTER_FEET - L.ROOSTER_H - 10, 'Cock-a-doodle-doo!')
-    this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.55, 6)
+    this.fx.sparkle(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 10)
     this.roosterCheer()
   }
 
@@ -977,7 +977,7 @@ export class IdleScene extends Phaser.Scene {
             const tx = target.container.x
             const ty = this.topYOf(target) + target.h * rs * 0.45
             this.fx.impactStar(tx - 30, ty, 1.1, INK.roosterTint)
-            if (crit) this.fx.featherPuff(dashX, dashY - L.ROOSTER_H * 0.5, 5)
+            if (crit) this.fx.sparkle(dashX + 40, dashY - L.ROOSTER_H * 0.55, 8)
             this.hitPest(target, value, crit ? 'crit' : 'rooster', time)
           },
         },

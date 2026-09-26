@@ -499,9 +499,15 @@ export class Fx {
 
   // ----------------------------------------------------------- personality
 
-  /** Cream feathers puff off the rooster (ruffle, crit, cheer). Never blood. */
-  featherPuff(x: number, y: number, n = 6): void {
+  /** A few cream feathers on the idle ruffle — grooming, kept small. */
+  featherPuff(x: number, y: number, n = 2): void {
     this.feathers.explode(this.count(n), x, y)
+  }
+
+  /** Golden sparkle burst (rooster crits, chirps, crows) — flair, never shed feathers. */
+  sparkle(x: number, y: number, n = 6, tint: number = INK.gold): void {
+    this.stars.setParticleTint(tint)
+    this.stars.explode(this.count(n), x, y)
   }
 
   /** Emote glyph (♪ ! ♥ ✦) that pops above a head, holds, then fades. */
