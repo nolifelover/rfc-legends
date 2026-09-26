@@ -50,6 +50,31 @@ async function fallbackFromRpc(chainId: number, limit: number) {
     }))
 }
 
+/** Sold carries no itemId, so resolve it from the listing itself. */
+async function enrichItemIds(sales: { listingId: string; itemId?: string }[], chainId: number) {
+  const addresses = getAddresses(chainId)
+  const chain = chainId === 31337 ? foundry : sepolia
+  const client = createPublicClient({ chain, transport: http(process.env.SEPOLIA_RPC_URL ?? 'http://localhost:8546') })
+  const uniqueIds = [...new Set(sales.map((s) => s.listingId))]
+  const items = new Map<string, string>()
+  await Promise.all(
+    uniqueIds.map(async (id) => {
+      try {
+        const l = (await client.readContract({
+          address: addresses.RareMarket as `0x${string}`,
+          abi: rareMarketAbi,
+          functionName: 'getListing',
+          args: [BigInt(id)],
+        })) as { itemId?: bigint }
+        items.set(id, (l.itemId ?? 0n).toString())
+      } catch {
+        items.set(id, '0')
+      }
+    }),
+  )
+  return sales.map((s) => ({ ...s, itemId: items.get(s.listingId) ?? '0' }))
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url)
   const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? 20)))
@@ -68,14 +93,11 @@ export async function GET(req: Request) {
       if (raw && sales) {
         return NextResponse.json({ configured: true, source: 'multibaas', raw: sales.map((s) => s.raw) })
       }
-      return NextResponse.json({
-        configured: true,
-        source: 'multibaas',
-        sales: (sales ?? []).map((s) => ({
+      const rows = await enrichItemIds(
+        (sales ?? []).map((s) => ({
           listingId: s.listingId.toString(),
           buyer: s.buyer,
           seller: s.seller,
-          itemId: s.itemId.toString(),
           amount: s.amount.toString(),
           total: s.total.toString(),
           sellerProceeds: s.sellerProceeds.toString(),
@@ -83,6 +105,12 @@ export async function GET(req: Request) {
           txHash: s.txHash,
           blockTimestamp: s.blockTimestamp,
         })),
+        11155111,
+      )
+      return NextResponse.json({
+        configured: true,
+        source: 'multibaas',
+        sales: rows,
       })
     } catch (err) {
       // MultiBaas reachable but the saved query is missing/stale: say so and
@@ -101,6 +129,6 @@ export async function GET(req: Request) {
     }
   }
 
-  const sales = await fallbackFromRpc(11155111, limit)
+  const sales = await enrichItemIds(await fallbackFromRpc(11155111, limit), 11155111)
   return NextResponse.json({ configured: false, source: 'rpc', sales }, { status: 200 })
 }
