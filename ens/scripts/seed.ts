@@ -16,7 +16,7 @@
 import { readFileSync } from 'node:fs';
 import { existsSync } from 'node:fs';
 import { namehash, parseAbi, type Hex } from 'viem';
-import { PARENT_NAME } from '../src/config';
+import { PARENT_NAME, FARM_SIGNER_PRIVATE_KEY } from '../src/config';
 import { registryAbi, resolverAbi } from '../src/abis';
 import { publicClient, ownerWallet, send, walletFor } from '../src/client';
 import { loadState, saveState, labelhash, deployUserRegistry, ensureRegistered, parentExpiry, SUBNAME_OWNER_ROLES } from '../src/ensv2';
@@ -28,12 +28,25 @@ type Bird = {
 };
 
 const roosterRwaAbi = parseAbi([
-  'function mintRooster(address to, (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName) r) returns (uint256 tokenId)',
+  'function mintRooster(address to, (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName) r, uint64 nonce, bytes farmSig) returns (uint256 tokenId)',
   'function setEnsName(uint256 tokenId, string ensName)',
   'function roosters(uint256 tokenId) view returns (string name, string ringId, uint8 sireLine, uint64 hatchedAt, uint256 sireTokenId, uint256 damTokenId, string ensName)',
   'function farmSigner() view returns (address)',
   'event RoosterMinted(uint256 indexed tokenId, address indexed to, uint8 sireLine, uint256 sireTokenId, string ensName)',
 ]);
+
+// TODO: import from apps/web/src/lib/contracts/eip712.ts once eth-dev1 exports it.
+// Byte-order must match RoosterRwa.REGISTRATION_TYPEHASH exactly:
+// keccak256("Registration(string ringId,uint8 sireLine,uint64 hatchedAt,uint256 sireTokenId,uint256 damTokenId,address to,uint64 nonce)")
+const REGISTRATION_TYPE = [
+  { name: 'ringId', type: 'string' },
+  { name: 'sireLine', type: 'uint8' },
+  { name: 'hatchedAt', type: 'uint64' },
+  { name: 'sireTokenId', type: 'uint256' },
+  { name: 'damTokenId', type: 'uint256' },
+  { name: 'to', type: 'address' },
+  { name: 'nonce', type: 'uint64' },
+] as const;
 
 async function main() {
   const withNft = process.argv.includes('--with-nft');
@@ -84,14 +97,27 @@ async function main() {
     console.log(`offspring ${b.label}.${b.sireLabel}.${PARENT_NAME} ready`);
   }
 
-  // ---------- NFT mint + setEnsName ----------
+  // ---------- NFT mint + setEnsName (parents first, then offspring) ----------
   if (rwa) {
-    for (const b of birds) {
+    const { privateKeyToAccount } = await import('viem/accounts');
+    const { roosterRwaDomain } = await import('../../apps/web/src/lib/contracts/eip712');
+    const farm = privateKeyToAccount(FARM_SIGNER_PRIVATE_KEY as Hex);
+    const domain = roosterRwaDomain(11155111, rwa.address);
+    let nonce = BigInt(Math.floor(Date.now() / 1000));
+    for (const b of [...birds.filter((x) => x.sireLabel === null), ...birds.filter((x) => x.sireLabel !== null)]) {
       const ensName = b.sireLabel ? `${b.label}.${b.sireLabel}.${PARENT_NAME}` : `${b.label}.${PARENT_NAME}`;
       const sireTid = b.sireLabel ? (tokenIds[b.sireLabel] ?? 0n) : 0n;
+      const to = ownerWallet.account.address;
+      // custodian co-signature: RFC Club issues, Ninlanee Farm attests the bird is real
+      const farmSig = await farm.signTypedData({
+        domain,
+        types: { Registration: REGISTRATION_TYPE },
+        primaryType: 'Registration',
+        message: { ringId: b.ringId, sireLine: sireLineIndex[b.sireLine], hatchedAt: BigInt(b.hatchedAt), sireTokenId: sireTid, damTokenId: 0n, to, nonce },
+      });
       const { receipt } = await send(`mintRooster ${b.label}`, rwa.ownerWallet, {
         address: rwa.address, abi: roosterRwaAbi, functionName: 'mintRooster',
-        args: [ownerWallet.account.address, [b.displayName, b.ringId, BigInt(sireLineIndex[b.sireLine]), BigInt(b.hatchedAt), sireTid, 0n, ensName]],
+        args: [to, [b.displayName, b.ringId, BigInt(sireLineIndex[b.sireLine]), BigInt(b.hatchedAt), sireTid, 0n, ensName], nonce, farmSig],
       });
       const { parseEventLogs } = await import('viem');
       const [log] = parseEventLogs({ abi: roosterRwaAbi, eventName: 'RoosterMinted', logs: receipt.logs });
@@ -99,6 +125,7 @@ async function main() {
       await send(`setEnsName ${b.label} -> ${ensName}`, rwa.ownerWallet, {
         address: rwa.address, abi: roosterRwaAbi, functionName: 'setEnsName', args: [log.args.tokenId, ensName],
       });
+      nonce += 1n;
     }
   }
 
