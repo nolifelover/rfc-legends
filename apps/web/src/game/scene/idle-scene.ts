@@ -33,7 +33,8 @@ import {
   itemKey,
   makeFxTextures,
 } from './art'
-import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon } from './overlays'
+import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './overlays'
+import type { Tier } from './overlays'
 import { Fx } from './fx'
 import type { DamageKind } from './fx'
 import { INK, JUICE, LAYOUT as L, SIRE_TINT, TYPE } from './juice'
@@ -139,6 +140,11 @@ export class IdleScene extends Phaser.Scene {
   private roosterPulse: Phaser.Tweens.Tween | null = null
   private roosterHot = false
   private roosterIdle: Phaser.Tweens.Tween | Phaser.Tweens.TweenChain | null = null
+  /** level-tiered power overlays (rebuilt when a tier changes) */
+  private roosterPower: Phaser.GameObjects.GameObject[] = []
+  private trainerPower: Phaser.GameObjects.GameObject[] = []
+  private roosterTier: Tier | null = null
+  private trainerTier: Tier | null = null
   /** "Cheer" tap: the next 3 rooster swings come 1.5× faster (cosmetic), 20s cooldown. */
   private cheerBoostLeft = 0
   private cheerReadyAt = 0
@@ -571,6 +577,7 @@ export class IdleScene extends Phaser.Scene {
     this.roosterPlate.place(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H - 58)
     this.startRoosterBob()
     this.updateRoosterPulse()
+    this.applyPowerTiers()
     this.scheduleRoosterIdle()
     this.roosterSprite.setInteractive({ useHandCursor: true })
     this.roosterSprite.on('pointerdown', () => this.cheerTap())
@@ -593,6 +600,72 @@ export class IdleScene extends Phaser.Scene {
         this.scheduleTrainerLook()
       },
     })
+  }
+
+  // ----------------------------------------------------------- power tiers
+
+  /**
+   * Visible character power from real levels (tier 0 <30, 1 30–69, 2 70+):
+   * rooster comb/tail glow colour, glowing spurs and a bigger aura at high tiers;
+   * trainer hat trim and hoe glow; bronze / silver / gold nameplate frames.
+   */
+  private applyPowerTiers(): void {
+    const rt = tierOf(this.player.rooster.level)
+    const tt = tierOf(this.player.baseLevel)
+    this.roosterPlate.setTier(rt)
+    this.trainerPlate.setTier(tt)
+    if (rt !== this.roosterTier) {
+      this.roosterTier = rt
+      for (const o of this.roosterPower) o.destroy()
+      this.roosterPower = []
+      const H = L.ROOSTER_H
+      const add = (x: number, y: number, key: string, tint: number, scale: number, alpha: number, pulse = false): void => {
+        const img = this.add.image(x, y, key).setTint(tint).setScale(scale).setAlpha(alpha).setBlendMode(Phaser.BlendModes.ADD)
+        this.rooster.add(img)
+        this.roosterPower.push(img)
+        if (pulse && !this.reduced) {
+          this.tweens.add({ targets: img, alpha: alpha * 0.55, scale: scale * 1.15, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        }
+      }
+      // aura tier: size and strength under the feet
+      this.roosterAura.setAlpha(rt === 2 ? 0.95 : rt === 1 ? 0.75 : 0.45).setScale(rt === 2 ? 1.2 : rt === 1 ? 1.05 : 0.9)
+      if (rt >= 1) {
+        add(0.12 * H, -0.93 * H, FX.glow, rt === 2 ? 0xffd24a : 0xff8a3d, rt === 2 ? 2.6 : 1.8, 0.7, true) // comb
+        add(-0.3 * H, -0.62 * H, FX.glow, rt === 2 ? 0xffd24a : 0xff8a3d, rt === 2 ? 3 : 2, 0.45, true) // tail
+      }
+      if (rt === 2) {
+        add(-0.09 * H, -0.08 * H, FX.star, 0xffd24a, 0.7, 0.95, true) // spurs
+        add(0.1 * H, -0.06 * H, FX.star, 0xffd24a, 0.7, 0.95, true)
+        const ring = this.add.image(0, -4, FX.ring).setTint(0xffd24a).setScale(3.4, 1.1).setAlpha(0.6).setDepth(22)
+        this.roosterPower.push(ring)
+        this.rooster.add(ring)
+        this.rooster.sendToBack(ring)
+        this.tweens.add({ targets: ring, angle: 360, duration: 6000, repeat: -1 })
+      }
+    }
+    if (tt !== this.trainerTier) {
+      this.trainerTier = tt
+      for (const o of this.trainerPower) o.destroy()
+      this.trainerPower = []
+      const H = L.TRAINER_H
+      if (tt >= 1) {
+        const trim = this.add
+          .image(0.02 * H, -0.86 * H, FX.glow)
+          .setTint(tt === 2 ? 0xffd24a : 0xdfe6ee)
+          .setScale(3.2, 0.55)
+          .setAlpha(tt === 2 ? 0.75 : 0.5)
+          .setBlendMode(Phaser.BlendModes.ADD)
+        const hoe = this.add
+          .image(0.3 * H, -0.62 * H, FX.glow)
+          .setTint(tt === 2 ? 0xffd24a : 0x7ee0ff)
+          .setScale(tt === 2 ? 2.4 : 1.7)
+          .setAlpha(tt === 2 ? 0.8 : 0.55)
+          .setBlendMode(Phaser.BlendModes.ADD)
+        this.trainer.add([trim, hoe])
+        this.trainerPower.push(trim, hoe)
+        if (!this.reduced) this.tweens.add({ targets: hoe, alpha: 0.35, scale: hoe.scale * 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      }
+    }
   }
 
   // ------------------------------------------------------ rooster personality
@@ -1641,6 +1714,7 @@ export class IdleScene extends Phaser.Scene {
 
     this.trainerPlate.setMain(this.trainerLabel())
     this.roosterPlate.setMain(this.roosterLabel())
+    this.applyPowerTiers()
 
     if (player.baseLevel > prev.baseLevel) {
       this.playLevelUp(prev.baseLevel, player.baseLevel, player.baseLevel - prev.baseLevel)

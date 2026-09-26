@@ -17,11 +17,21 @@ export interface LabelStyle {
 }
 
 /** Dark pill with one bold line, e.g. "Verify Guy · Lv.5" or "Field Rat · Lv.2". */
+/** Frame tier by real level: 0 bronze (<30), 1 silver (30–69), 2 gold (70+). */
+export type Tier = 0 | 1 | 2
+export const tierOf = (level: number): Tier => (level >= 70 ? 2 : level >= 30 ? 1 : 0)
+const TIER_FRAME: Record<Tier, { color: number; width: number }> = {
+  0: { color: 0xb87333, width: 2 },
+  1: { color: 0xd6dde6, width: 3 },
+  2: { color: 0xffd24a, width: 4 },
+}
+
 export class Nameplate {
   readonly container: Phaser.GameObjects.Container
 
   private readonly bg: Phaser.GameObjects.Graphics
   private readonly main: Phaser.GameObjects.Text
+  private tier: Tier | null = null
 
   constructor(scene: Phaser.Scene, main: string, style: LabelStyle = {}) {
     this.container = scene.add.container(0, 0).setDepth(style.depth ?? 50)
@@ -49,6 +59,13 @@ export class Nameplate {
     return this.main.width + 30
   }
 
+  /** Bronze / silver / gold frame from the real level. */
+  setTier(tier: Tier): void {
+    if (this.tier === tier) return
+    this.tier = tier
+    this.redraw()
+  }
+
   private redraw(): void {
     const w = this.main.width + 30
     const h = this.main.height + 12
@@ -56,8 +73,18 @@ export class Nameplate {
     this.bg.clear()
     this.bg.fillStyle(PLATE_BG, PLATE_ALPHA)
     this.bg.fillRoundedRect(-w / 2, 0, w, h, 10)
-    this.bg.lineStyle(2, 0xf3dfb2, 0.35)
+    if (this.tier === null) {
+      this.bg.lineStyle(2, 0xf3dfb2, 0.35)
+      this.bg.strokeRoundedRect(-w / 2, 0, w, h, 10)
+      return
+    }
+    const f = TIER_FRAME[this.tier]
+    this.bg.lineStyle(f.width, f.color, 0.95)
     this.bg.strokeRoundedRect(-w / 2, 0, w, h, 10)
+    if (this.tier === 2) {
+      this.bg.lineStyle(1.5, 0xfff3d6, 0.7)
+      this.bg.strokeRoundedRect(-w / 2 + 5, 5, w - 10, h - 10, 7)
+    }
   }
 
   /** Top-centre anchor. */
