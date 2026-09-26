@@ -314,6 +314,15 @@ export class Chip {
     this.scene.tweens.add({ targets: this.container, scale: 1, duration: 180, ease: 'Back.easeOut' })
   }
 
+  /** Big squash-and-bounce when a reward lands in the chip (the tick must be seen). */
+  bounce(): void {
+    this.scene.tweens.killTweensOf(this.container)
+    const y = this.container.y
+    this.container.setScale(1.45, 0.7)
+    this.scene.tweens.add({ targets: this.container, scaleX: 1, scaleY: 1, duration: 360, ease: 'Back.easeOut' })
+    this.scene.tweens.add({ targets: this.container, y: y - 14, duration: 120, yoyo: true, ease: 'Quad.easeOut' })
+  }
+
   private redraw(): void {
     const w = this.boxWidth
     const h = this.boxHeight

@@ -1153,8 +1153,9 @@ export class IdleScene extends Phaser.Scene {
     const rarity = item?.rarity ?? 'common'
     const tier = rarity === 'rare' || rarity === 'epic'
     if (tier) {
-      this.fx.pillar(x, feetY, RARITY_COLORS[rarity], 520, 800)
-      this.fx.groundRing(x, feetY, RARITY_COLORS[rarity], 520, 420)
+      // rare / epic gain: a coloured beam to the sky and a ground ring
+      this.fx.pillar(x, feetY, RARITY_COLORS[rarity], 1080, 1100)
+      this.fx.groundRing(x, feetY, RARITY_COLORS[rarity], 640, 480)
     }
     const icon = this.add.image(x, y, itemKey(entry.id)).setDisplaySize(entry.n > 1 ? 80 : 64, entry.n > 1 ? 80 : 64).setDepth(30)
     const restX = Phaser.Math.Clamp(x - Phaser.Math.Between(JUICE.LOOT_ARC_MIN, JUICE.LOOT_ARC_MAX), 900, 1600)
@@ -1164,12 +1165,17 @@ export class IdleScene extends Phaser.Scene {
     this.fx.lootArc(icon, restX, restY, () => {
       this.time.delayedCall(JUICE.LOOT_REST, () => {
         const a = this.harvestChip.anchor
+        // two coins ride along as sparkle (decorative: the count is items only)
+        for (let i = 0; i < 2; i++) {
+          const coin = this.add.image(icon.x + (i ? 36 : -36), icon.y - 10, FX.coin).setDepth(30).setScale(1.1)
+          this.fx.vacuum(coin, a.x, a.y, () => undefined, 80 + i * 70)
+        }
         this.fx.vacuum(icon, a.x, a.y, () => {
           this.lootFlying -= entry.n
           this.harvestShown += entry.n
           this.harvestChip.setLabel(this.harvestLabel())
           this.pinChips()
-          this.harvestChip.pop()
+          this.harvestChip.bounce()
           this.fx.tick(this.harvestChip.container.x, this.harvestChip.container.y + 62, label, INK.loot)
         })
       })
