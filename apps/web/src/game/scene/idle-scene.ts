@@ -797,8 +797,9 @@ export class IdleScene extends Phaser.Scene {
     // the boss only dies when the server says so; cosmetic hits stop at 1 HP
     p.hp = Math.max(p.boss && !this.bossServerDead ? 1 : 0, p.hp - value)
     const lethal = p.hp <= 0
-    const rs = ROW_SCALE[p.row]
-    this.fx.damage(p.container.x + (kind === 'rooster' ? JUICE.DMG_SPLIT_X : -JUICE.DMG_SPLIT_X), this.topYOf(p), value, kind)
+    // the boss's crown reaches the boss bar, so its numbers sit on the forehead
+    const numY = this.topYOf(p) + (p.boss ? 170 : 0)
+    this.fx.damage(p.container.x + (kind === 'rooster' ? JUICE.DMG_SPLIT_X : -JUICE.DMG_SPLIT_X), numY, value, kind)
     p.bar.setPct(p.hp / p.maxHp)
     if (p.boss) this.bossBar?.setHp(p.hp, p.maxHp)
 
@@ -827,7 +828,6 @@ export class IdleScene extends Phaser.Scene {
       yoyo: true,
       ease: 'Quad.easeOut',
     })
-    void rs
 
     if (lethal) this.killPest(p, time)
   }
@@ -947,7 +947,7 @@ export class IdleScene extends Phaser.Scene {
    *   fight    boss lunges at the trainer every 2.2–3s (cosmetic knockback)
    *   victory  hit-stop 260, flash, confetti, "MVP DEFEATED!", card fly-out
    */
-  private startBoss(time: number, pendingKill: boolean): void {
+  private startBoss(pendingKill: boolean): void {
     this.bossActive = true
     this.bossServerDead = false
     this.forceBoss = false
@@ -990,7 +990,6 @@ export class IdleScene extends Phaser.Scene {
       return
     }
     this.time.delayedCall(JUICE.BOSS_WARN_MS, () => this.dropBoss(def, pendingKill))
-    void time
   }
 
   private dropBoss(def: MonsterDef, pendingKill: boolean): void {
@@ -1037,7 +1036,14 @@ export class IdleScene extends Phaser.Scene {
       this.time.delayedCall(600, () => this.slayBoss())
       return
     }
-    this.hitPest(b, b.hp, 'crit', this.time.now)
+    // no invented damage number at the money shot: flash, freeze, and fall
+    b.sprite.setTintFill(0xffffff)
+    this.time.delayedCall(20, () => b.sprite.clearTint())
+    this.fx.hitStop(JUICE.STOP_BOSS_KILL)
+    b.hp = 0
+    b.bar.setPct(0)
+    this.bossBar?.setHp(0, b.maxHp)
+    this.killPest(b, this.time.now)
   }
 
   /** Mirror the server's boss HP when a sync carries the live fight. */
@@ -1084,21 +1090,8 @@ export class IdleScene extends Phaser.Scene {
     this.fx.confettiBurst(p.container.x, p.feetY - 300, 40)
     this.fx.slam('MVP DEFEATED!', undefined, 300, INK.crit)
     this.roosterCheer()
-
-    // framed card flies out toward the camera — the demo's money shot
-    const card = this.add.container(p.container.x, p.feetY - 300).setDepth(46).setScale(0.6)
-    const rays = this.add.image(0, 0, FX.glow).setTint(INK.gold).setAlpha(0.7).setScale(5)
-    const frame = this.add.image(0, 0, FX.card).setScale(1.6)
-    const icon = this.add.image(0, 4, itemKey(p.def.cardId ?? 3001)).setDisplaySize(60, 60)
-    card.add([rays, frame, icon])
-    this.tweens.chain({
-      targets: card,
-      tweens: [
-        { scale: 2.6, angle: 720, duration: 640, ease: 'Cubic.easeOut' },
-        { alpha: 0, y: card.y - 60, duration: 320 },
-      ],
-      onComplete: () => card.destroy(),
-    })
+    // no card fly-out here: a card only rises (fx.jackpot) when the server's drop
+    // list confirms one on this same poll — ~55% of boss kills in demo mode
     this.bridge.emit('boss-kill', { name: p.def.name })
     this.packTarget = Phaser.Math.Between(L.PACK_MIN, L.PACK_MAX)
     this.nextSpawnAt = time + 900
@@ -1215,7 +1208,7 @@ export class IdleScene extends Phaser.Scene {
       if (crossed) this.slayBoss()
       else this.mirrorBossHp(player)
     } else if (THUNG_NA.mvp && (fighting || crossed)) {
-      this.startBoss(this.time.now, crossed && !fighting)
+      this.startBoss(crossed && !fighting)
     }
 
     this.queueLoot(prev, player)
@@ -1252,7 +1245,7 @@ export class IdleScene extends Phaser.Scene {
     // keep the pack stocked (never during a boss)
     if (!this.bossActive) {
       if (this.forceBoss && THUNG_NA.mvp) {
-        this.startBoss(time, true)
+        this.startBoss(true)
         return
       }
       if (time >= this.nextPackRollAt) {
