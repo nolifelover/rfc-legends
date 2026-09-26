@@ -210,6 +210,7 @@ ENS_OWNER_PRIVATE_KEY=
 
 - **English-first UI** (08:08 UTC). Judges are international. Thai stays as flavor: sire-line names with romanization, map and farm names.
 - **World ID 4** needs an RP (`WORLD_RP_ID`, `WORLD_RP_SIGNING_KEY`). The demo uses `WORLD_ENVIRONMENT=production` with a real World App. Staging needs a 24h token (World portal PR #2307).
+- **Key hygiene** (C3.1, 08:30 UTC). All contracts take `initialOwner` and are Ownable. HumanRegistry adds `revoke(account)` (the nullifier stays bound), `setAttestor`, `pause` and `unpause`. RareItems adds `setVoucherSigner`, `pause` and `unpause`. RareMarket adds `setTreasury`, uses SafeERC20 and enforces `MIN_UNIT_PRICE` = 0.01 USDC so the fee is never zero. The ERC-1155 `{id}` is 64 lowercase hex characters with no `0x`.
 - **RoosterRWA mint is co-signed by the farm key** (08:20 UTC, from the blind RWA critic): one ringId = one token.
 
 ## 9. Hard rules (from CLAUDE.md)
