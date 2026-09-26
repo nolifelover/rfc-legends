@@ -115,6 +115,7 @@ export class IdleScene extends Phaser.Scene {
     walkway: Phaser.GameObjects.Image[]
     shimmers: Phaser.GameObjects.Image[]
   } = { lotus: [], walkway: [], shimmers: [] }
+  private mobileBackdrop: Phaser.GameObjects.Rectangle[] = []
 
   // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
@@ -267,6 +268,11 @@ export class IdleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- background
 
   private buildBackground(): void {
+    // Portrait framing can extend beyond the 1920×1080 art bounds. Keep its
+    // letterbox on the field palette; desktop cameras remain clamped to the art.
+    const mobileSky = this.add.rectangle(-5000, -5000, 10000, 7000, 0xbddbd4).setOrigin(0, 0).setDepth(-1).setVisible(false)
+    const mobileGround = this.add.rectangle(-5000, L.H - 46, 10000, 3000, 0xb96f44).setOrigin(0, 0).setDepth(9.8).setVisible(false)
+    this.mobileBackdrop = [mobileSky, mobileGround]
     this.zoneArt.sky = this.add.image(0, 0, 'art-sky').setOrigin(0, 0).setDepth(0)
 
     const clouds: Array<[string, number, number, number, number, number]> = [
@@ -993,6 +999,7 @@ export class IdleScene extends Phaser.Scene {
     const r = this.ui.rect
     const cam = this.cameras.main
     const mobile = this.ui.mobileProfile
+    for (const layer of this.mobileBackdrop) layer.setVisible(mobile)
     const zoom = mobile ? mobileCameraZoom(r.x1 - r.x0) : L.WORLD_ZOOM
     this.fx.setBaseZoom(zoom)
     cam.setZoom(zoom)

@@ -69,7 +69,7 @@ export const LAYOUT = {
 export const MOBILE_PROFILE_MAX_WIDTH = 700
 const MOBILE_COMBAT_LANE_WIDTH = 1480
 export function isMobileProfile(cssWidth: number, pointerCoarse: boolean): boolean {
-  return cssWidth < MOBILE_PROFILE_MAX_WIDTH || pointerCoarse
+  return cssWidth < MOBILE_PROFILE_MAX_WIDTH || (pointerCoarse && cssWidth < 1024)
 }
 export function mobileCameraZoom(visibleWidth: number): number {
   if (!Number.isFinite(visibleWidth) || visibleWidth <= 0) return LAYOUT.WORLD_ZOOM
