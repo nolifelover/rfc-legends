@@ -36,18 +36,7 @@ const roosterRwaAbi = parseAbi([
   'function ringToken(bytes32 ringHash) view returns (uint256 tokenId)',
 ]);
 
-// TODO: import from apps/web/src/lib/contracts/eip712.ts once eth-dev1 exports it.
-// Byte-order must match RoosterRwa.REGISTRATION_TYPEHASH exactly:
-// keccak256("Registration(string ringId,uint8 sireLine,uint64 hatchedAt,uint256 sireTokenId,uint256 damTokenId,address to,uint64 nonce)")
-const REGISTRATION_TYPE = [
-  { name: 'ringId', type: 'string' },
-  { name: 'sireLine', type: 'uint8' },
-  { name: 'hatchedAt', type: 'uint64' },
-  { name: 'sireTokenId', type: 'uint256' },
-  { name: 'damTokenId', type: 'uint256' },
-  { name: 'to', type: 'address' },
-  { name: 'nonce', type: 'uint64' },
-] as const;
+// EIP-712 types shared with the Solidity tests (single source of truth).
 
 async function main() {
   const withNft = process.argv.includes('--with-nft');
@@ -101,7 +90,7 @@ async function main() {
   // ---------- NFT mint + setEnsName (parents first, then offspring) ----------
   if (rwa) {
     const { privateKeyToAccount } = await import('viem/accounts');
-    const { roosterRwaDomain } = await import('../../apps/web/src/lib/contracts/eip712');
+    const { roosterRwaDomain, REGISTRATION_TYPE } = await import('../../apps/web/src/lib/contracts/eip712');
     const farm = privateKeyToAccount(FARM_SIGNER_PRIVATE_KEY as Hex);
     const domain = roosterRwaDomain(11155111, rwa.address);
     let nonce = BigInt(Math.floor(Date.now() / 1000));
