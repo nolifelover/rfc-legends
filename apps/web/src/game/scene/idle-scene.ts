@@ -32,6 +32,7 @@ import {
   ensureFallbacks,
   itemKey,
   makeFxTextures,
+  tintedTexture,
 } from './art'
 import { BossBar, BossPips, Chip, HpBar, Nameplate, Ribbon, tierOf } from './overlays'
 import type { Tier } from './overlays'
@@ -98,7 +99,16 @@ export class IdleScene extends Phaser.Scene {
   /** the server's current map and its visual variant */
   private map: MapDef = THUNG_NA
   private zone: ZoneSpec = zoneOf(THUNG_NA.id)
-  private zoneArt: { sky?: Phaser.GameObjects.Image; hills?: Phaser.GameObjects.Image; paddy?: Phaser.GameObjects.Image; ground?: Phaser.GameObjects.Image; grade?: Phaser.GameObjects.Rectangle; lotus: Phaser.GameObjects.Image[]; mapChip?: Chip } = { lotus: [] }
+  private zoneArt: {
+    sky?: Phaser.GameObjects.Image
+    hills?: Phaser.GameObjects.Image
+    paddy?: Phaser.GameObjects.Image
+    ground?: Phaser.GameObjects.Image
+    grade?: Phaser.GameObjects.Rectangle
+    lotus: Phaser.GameObjects.Image[]
+    walkway: Phaser.GameObjects.Image[]
+    shimmers: Phaser.GameObjects.Image[]
+  } = { lotus: [], walkway: [], shimmers: [] }
 
   // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
@@ -278,6 +288,7 @@ export class IdleScene extends Phaser.Scene {
     ]
     for (const [x, y, s, delay] of shimmers) {
       const sh = this.add.image(x, y, FX.shimmer).setDepth(7).setScale(s, s * 0.9).setAlpha(0)
+      this.zoneArt.shimmers.push(sh)
       this.tweens.add({
         targets: sh,
         alpha: { from: 0, to: 0.85 },
@@ -367,11 +378,20 @@ export class IdleScene extends Phaser.Scene {
     this.startDayCycle()
     this.buildForeground()
     this.buildButterflies()
-    // lotus pads on the water band (บึงบัวหลวง only)
-    for (let i = 0; i < 7; i++) {
-      const lotus = this.add.image(120 + i * 270 + Phaser.Math.Between(-40, 40), L.HORIZON_Y + 40 + (i % 2) * 40, FX.lotus).setDepth(7).setScale(0.8 + (i % 3) * 0.12).setVisible(false)
+    // lotus pads (pink and white) on the water band, and a wooden walkway along
+    // the pond's edge (บึงบัวหลวง only)
+    for (let i = 0; i < 9; i++) {
+      const lotus = this.add
+        .image(90 + i * 215 + Phaser.Math.Between(-40, 40), L.HORIZON_Y + 36 + (i % 2) * 44, i % 3 === 1 ? FX.lotusWhite : FX.lotus)
+        .setDepth(7)
+        .setScale(0.75 + (i % 3) * 0.12)
+        .setVisible(false)
       this.tweens.add({ targets: lotus, y: lotus.y - 4, duration: 2200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
       this.zoneArt.lotus.push(lotus)
+    }
+    for (let i = 0; i < 9; i++) {
+      const plank = this.add.image(i * 240, L.GROUND_Y + 22, FX.walkway).setOrigin(0, 0.5).setDepth(9).setVisible(false)
+      this.zoneArt.walkway.push(plank)
     }
     this.applyZone()
   }
@@ -380,12 +400,15 @@ export class IdleScene extends Phaser.Scene {
   private applyZone(): void {
     const z = this.zone
     const a = this.zoneArt
-    a.sky?.setTint(z.skyTint)
-    a.hills?.setTint(z.hillsTint)
-    a.paddy?.setTint(z.paddyTint)
-    a.ground?.setTint(z.groundTint)
+    // baked tints (not setTint) so the palette shows on the Canvas renderer too
+    a.sky?.setTexture(tintedTexture(this, 'art-sky', z.skyTint))
+    a.hills?.setTexture(tintedTexture(this, 'art-hills', z.hillsTint)).setDisplaySize(L.W, 480)
+    a.paddy?.setTexture(tintedTexture(this, 'art-paddy', z.paddyTint))
+    a.ground?.setTexture(tintedTexture(this, 'art-ground', z.groundTint)).setDisplaySize(L.W, 300)
     a.grade?.setFillStyle(z.grade, z.gradeAlpha)
     for (const l of a.lotus) l.setVisible(z.lotus)
+    for (const w of a.walkway) w.setVisible(z.walkway)
+    for (const s of a.shimmers) s.setTexture(tintedTexture(this, FX.shimmer, z.glint))
   }
 
   /** Foreground rice stalks along the bottom edge (in front of the lane, below the plates) and drifting chaff. */
@@ -933,6 +956,11 @@ export class IdleScene extends Phaser.Scene {
     kb.on('keydown-M', () => {
       this.playLevelUp(29, 30, 1) // preview the Lv 30 "Rare drops unlocked" ceremony
     })
+    kb.on('keydown-Z', () => {
+      // preview the zone transition (FX only; the next sync snaps back to the server's map)
+      const other = this.map.id === THUNG_NA.id ? 'bueng-bua' : THUNG_NA.id
+      if (MAPS[other]) this.changeZone(MAPS[other])
+    })
     kb.on('keydown-J', () => {
       this.playDropMoment(1001, 'monster_card')
     })
@@ -1050,11 +1078,11 @@ export class IdleScene extends Phaser.Scene {
   private makePest(def: MonsterDef, row: Row, slot: number, startX: number, boss: boolean): Pest {
     const skin = this.zone.skins[def.id]
     const h = Math.round((skin?.h ?? L.PEST_H[def.id] ?? 240) * (boss ? 1 : Phaser.Math.FloatBetween(0.9, 1.15)))
-    const key = skin?.key ?? MONSTER_KEYS[def.id] ?? MONSTER_KEYS['nu-na']
+    const baseKey = skin?.key ?? MONSTER_KEYS[def.id] ?? MONSTER_KEYS['nu-na']
+    const key = skin?.tint !== undefined ? tintedTexture(this, baseKey, skin.tint) : baseKey
     const feetY = ROW_FEET[row]
     const container = this.add.container(startX, feetY).setDepth(ROW_DEPTH[row]).setScale(ROW_SCALE[row])
     const sprite = this.add.image(0, 0, key).setOrigin(0.5, 1).setDisplaySize(h, h)
-    if (skin?.tint !== undefined) sprite.setTint(skin.tint)
     container.add(sprite)
     const en = this.zone.names[def.id] ?? def.id
     const plate = new Nameplate(this, `${en} · Lv.${def.level}`, {
@@ -1158,11 +1186,9 @@ export class IdleScene extends Phaser.Scene {
     if (t) this.tweens.remove(t as Phaser.Tweens.Tween)
   }
 
-  /** Clear the hit flash back to the zone skin's tint (or no tint). */
+  /** Clear the hit flash (the zone skin's tint is baked into its texture). */
   private restoreSkin(p: Pest): void {
-    const tint = this.zone.skins[p.def.id]?.tint
-    if (tint !== undefined) p.sprite.setTint(tint)
-    else p.sprite.clearTint()
+    p.sprite.clearTint()
   }
 
   private topYOf(pest: Pest): number {
@@ -1580,10 +1606,9 @@ export class IdleScene extends Phaser.Scene {
       const key = this.zone.skins[this.zone.bossId]?.key ?? MONSTER_KEYS['raja-nu-na'] ?? MONSTER_KEYS['nu-na']
       // feet sunk behind the paddy (depth 5 < 6) so the head looms in the sky
       const sh = this.add
-        .image(1300, L.HORIZON_Y + 220, key)
+        .image(1300, L.HORIZON_Y + 220, tintedTexture(this, key, INK.outline))
         .setOrigin(0.5, 1)
         .setDisplaySize(560, 560)
-        .setTint(INK.outline)
         .setAlpha(0)
         .setDepth(5)
       this.tweens.add({ targets: sh, alpha: 0.32, duration: 1200 })
@@ -1796,7 +1821,12 @@ export class IdleScene extends Phaser.Scene {
     this.trainerPlate.setMain(this.trainerLabel())
     this.roosterPlate.setMain(this.roosterLabel())
     this.applyPowerTiers()
-    if (player.mapId !== this.map.id && MAPS[player.mapId]) this.changeZone(MAPS[player.mapId])
+    if (player.mapId !== this.map.id && MAPS[player.mapId]) {
+      // the zone banner is a strong beat: it follows the RARE DROPS UNLOCKED! slam
+      const next = MAPS[player.mapId]
+      const wait = player.baseLevel > prev.baseLevel ? 2600 : 0
+      this.time.delayedCall(wait, () => this.changeZone(next))
+    }
 
     if (player.baseLevel > prev.baseLevel) {
       this.playLevelUp(prev.baseLevel, player.baseLevel, player.baseLevel - prev.baseLevel)
@@ -1894,9 +1924,14 @@ export class IdleScene extends Phaser.Scene {
 
   /** The server moved the player to another map: the pack leaves, the backdrop re-tints, new pests walk in. */
   private changeZone(map: MapDef): void {
+    // cross-fade: dip to dark, swap the palette underneath, come back up
+    this.fx.dim(0.85, 350)
+    this.time.delayedCall(380, () => {
+      this.applyZone()
+      this.fx.dim(0, 700)
+    })
     this.map = map
     this.zone = zoneOf(map.id)
-    this.applyZone()
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
     for (const p of this.pests) {
       p.dead = true
@@ -1907,9 +1942,11 @@ export class IdleScene extends Phaser.Scene {
       this.tweens.add({ targets: p.container, x: p.container.x + 1400, duration: 520, ease: 'Cubic.easeIn', onComplete: () => p.container.destroy() })
     }
     for (const p of [...this.pests]) this.removePest(p)
-    new Ribbon(this, `${map.name} · ${this.zone.en}`, this.font, 250, 0x2f6f8f).play(1400, this.reduced)
-    this.fx.slam('NEW ZONE!', `${this.zone.en} · Lv ${map.lvRange[0]}–${map.lvRange[1]}`, 320, INK.crit)
-    this.nextSpawnAt = this.time.now + 900
+    this.time.delayedCall(400, () => {
+      new Ribbon(this, `NEW ZONE: ${map.name} · ${this.zone.en}`, this.font, 250, 0x5a3a8a).play(1600, this.reduced)
+      this.fx.slam('NEW ZONE!', `${this.zone.en} · Lv ${map.lvRange[0]}–${map.lvRange[1]}`, 440, INK.crit)
+    })
+    this.nextSpawnAt = this.time.now + 1300
   }
 
   // -------------------------------------------------------------------- loop

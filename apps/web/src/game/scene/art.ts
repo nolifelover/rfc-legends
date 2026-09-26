@@ -504,6 +504,33 @@ export const ART: ArtSpec[] = [
   ),
 ]
 
+/**
+ * A tinted copy of a texture baked into a canvas, so zone palettes and pest skins
+ * render the same on the Canvas renderer (Phaser's setTint is WebGL-only, and the
+ * capture rig runs on Canvas). Cached per (key, tint); 0xffffff returns the base.
+ */
+export function tintedTexture(scene: Phaser.Scene, baseKey: string, tint: number): string {
+  if (tint === 0xffffff) return baseKey
+  const key = `${baseKey}-tint-${tint.toString(16)}`
+  if (scene.textures.exists(key)) return key
+  const src = scene.textures.get(baseKey).getSourceImage() as HTMLImageElement | HTMLCanvasElement
+  const w = src.width
+  const h = src.height
+  if (!w || !h) return baseKey
+  const ct = scene.textures.createCanvas(key, w, h)
+  if (!ct) return baseKey
+  const ctx = ct.context
+  ctx.drawImage(src, 0, 0)
+  ctx.globalCompositeOperation = 'multiply'
+  ctx.fillStyle = `#${tint.toString(16).padStart(6, '0')}`
+  ctx.fillRect(0, 0, w, h)
+  ctx.globalCompositeOperation = 'destination-in'
+  ctx.drawImage(src, 0, 0)
+  ctx.globalCompositeOperation = 'source-over'
+  ct.refresh()
+  return key
+}
+
 /** Generate the code-drawn stand-in for every asset whose SVG never arrived. */
 export function ensureFallbacks(scene: Phaser.Scene): void {
   for (const spec of ART) {
@@ -547,6 +574,8 @@ export const FX = {
   cape: 'fx-cape',
   bag: 'fx-seed-bag',
   lotus: 'fx-lotus',
+  lotusWhite: 'fx-lotus-white',
+  walkway: 'fx-walkway',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -678,6 +707,37 @@ export function makeFxTextures(scene: Phaser.Scene): void {
     for (const [x, y] of [[62, 40], [98, 40], [80, 30], [70, 52], [90, 52]] as const) g.strokeEllipse(x, y, 26, 40)
     g.fillStyle(0xffd24a)
     g.fillCircle(80, 46, 9)
+  })
+
+  make(FX.lotusWhite, 160, 100, (g) => {
+    g.fillStyle(0x3f8a52)
+    g.fillEllipse(80, 72, 150, 44)
+    g.lineStyle(4, OUTLINE)
+    g.strokeEllipse(80, 72, 150, 44)
+    g.fillStyle(0xfff8ec)
+    for (const [x, y] of [[62, 40], [98, 40], [80, 30], [70, 52], [90, 52]] as const) g.fillEllipse(x, y, 26, 40)
+    g.lineStyle(3, OUTLINE)
+    for (const [x, y] of [[62, 40], [98, 40], [80, 30], [70, 52], [90, 52]] as const) g.strokeEllipse(x, y, 26, 40)
+    g.fillStyle(0xffd24a)
+    g.fillCircle(80, 46, 9)
+  })
+  // wooden walkway planks (tiled along the bottom of the pond)
+  make(FX.walkway, 240, 110, (g) => {
+    g.fillStyle(0x8a5a33)
+    g.fillRect(0, 20, 240, 70)
+    g.lineStyle(4, OUTLINE)
+    g.strokeRect(2, 20, 236, 70)
+    g.lineStyle(3, 0x5c3a1e)
+    for (const x of [60, 120, 180]) g.lineBetween(x, 22, x, 88)
+    g.fillStyle(0xa9774c)
+    g.fillRect(0, 26, 240, 10)
+    // posts
+    g.fillStyle(0x6e4a2e)
+    g.fillRect(14, 0, 16, 30)
+    g.fillRect(210, 0, 16, 30)
+    g.lineStyle(3, OUTLINE)
+    g.strokeRect(14, 0, 16, 30)
+    g.strokeRect(210, 0, 16, 30)
   })
 
   // --- power-tier gear (drawn over the SVG actors; tier 1 silver/teal, tier 2 gold/iridescent) ---

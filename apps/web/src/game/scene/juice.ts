@@ -172,6 +172,9 @@ export interface ZoneSpec {
   paddyTint: number
   groundTint: number
   lotus: boolean
+  walkway: boolean
+  /** water-shimmer tint (gold glints on the pond) */
+  glint: number
   names: Record<string, string>
   skins: Record<string, ZoneSkin>
   bossId: string
@@ -186,6 +189,8 @@ export const ZONES: Record<string, ZoneSpec> = {
     paddyTint: 0xffffff,
     groundTint: 0xffffff,
     lotus: false,
+    walkway: false,
+    glint: 0xffffff,
     names: { 'nu-na': 'Field Rat', 'takka-taen-yak': 'Giant Locust', 'pu-na': 'Rice Crab', 'raja-nu-na': 'Rat King' },
     skins: {
       'nu-na': { key: 'art-monster-nu-na', h: 260 },
@@ -195,25 +200,28 @@ export const ZONES: Record<string, ZoneSpec> = {
     },
     bossId: 'raja-nu-na',
   },
+  // dusk lotus pond: purple-orange sky, deep green water, gold glints, a walkway
   'bueng-bua': {
-    en: 'Lotus Marsh',
-    grade: 0x7fc8ec,
-    gradeAlpha: 0.22,
-    skyTint: 0xbfe0f4,
-    hillsTint: 0x8fc4b8,
-    paddyTint: 0x6fb8dc,
-    groundTint: 0xa39a84,
+    en: 'Royal Lotus Pond',
+    grade: 0x8a4fb0,
+    gradeAlpha: 0.2,
+    skyTint: 0xffb08a,
+    hillsTint: 0x6f8f8a,
+    paddyTint: 0x3f8f5a,
+    groundTint: 0x8f8470,
     lotus: true,
+    walkway: true,
+    glint: 0xffd24a,
     names: {
       'hoi-cherry': 'Golden Apple Snail',
-      'phak-tob-chawai-yak': 'Giant Hyacinth',
+      'phak-tob-chawai-yak': 'Giant Water Hyacinth',
       'pla-chon-yak': 'Giant Snakehead',
-      'jorakhe-thao-bueng': 'Marsh Crocodile',
+      'jorakhe-thao-bueng': 'Old Pond Crocodile',
     },
     skins: {
-      'hoi-cherry': { key: 'art-monster-nu-na', tint: 0xd9b86a, h: 270 },
-      'phak-tob-chawai-yak': { key: 'art-monster-pu-na', tint: 0xb48cd9, h: 280 },
-      'pla-chon-yak': { key: 'art-monster-takka-taen-yak', tint: 0x5fa8c4, h: 300 },
+      'hoi-cherry': { key: 'art-monster-pu-na', tint: 0xe0b34a, h: 250 },
+      'phak-tob-chawai-yak': { key: 'art-monster-nu-na', tint: 0xb48cd9, h: 290 },
+      'pla-chon-yak': { key: 'art-monster-takka-taen-yak', tint: 0x4f9fb8, h: 300 },
       'jorakhe-thao-bueng': { key: 'art-monster-raja-nu-na', tint: 0x6f9a52, h: 680 },
     },
     bossId: 'jorakhe-thao-bueng',
