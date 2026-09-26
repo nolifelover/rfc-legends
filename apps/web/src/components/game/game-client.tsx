@@ -256,7 +256,7 @@ export function GameClient() {
         </div>
       </div>
 
-      <NextGoalRibbon player={player} demoMode={state.demoMode} />
+      <NextGoalRibbon player={player} />
 
       <HudStrip
         player={player}
