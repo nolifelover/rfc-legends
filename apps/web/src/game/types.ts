@@ -91,10 +91,21 @@ export interface Rooster {
 }
 
 /** Server-authoritative player state, keyed by wallet address. */
-/** Mid-fight monster carried between syncs so short sync windows can't reset boss HP. */
+/** Mid-fight state carried between syncs so short sync windows can't reset boss HP or attack
+ *  cooldowns (a 1.2s cooldown that never fits inside a 1s poll window would mean zero attacks). */
 export interface CombatState {
   monsterId: string
   monsterHp: number
+  /** attack cooldowns remaining (seconds) at the moment the last window ended */
+  playerAtkIn?: number
+  roosterAtkIn?: number
+  monsterAtkIn?: number
+  /** player HP at window end — without it every sync boundary is a free full heal (cadence bug) */
+  hp?: number
+  /** death-respawn seconds remaining at window end (--equivalent of reviveAt) */
+  reviveIn?: number
+  /** monster-respawn seconds remaining at window end, when no monster is engaged */
+  spawnIn?: number
 }
 
 export interface Player {
