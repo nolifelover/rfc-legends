@@ -135,6 +135,12 @@ human verifying many wallets. **Our server-side binding is the only sybil guard:
 a UNIQUE index on the nullifier and on the wallet in PocketBase, mirrored onchain
 by `HumanRegistry.nullifierOwner`.
 
+## Friction from the demo rehearsal (W7)
+
+- **The simulator can't give two identities**, so a staging demo can show one accepted human and every other wallet rejected, but never two different humans. We rehearse on staging and film on production.
+- **Error codes only.** `onError` gives `credential_unavailable`, `world_id_4_not_available`, `timeout` and so on, with no human-readable text. We wrote our own copy for them (for example, "This World ID doesn't hold the proof-of-human (Orb) credential"). A `message` field would help.
+- **`handleVerify` failures show a generic error screen** in the widget. We close the widget and show our server's reason in the page instead (for example "already linked to wallet 0x4f6b…f395"). A way to pass the host's reason to the widget's error screen would keep users inside one UI.
+
 ## How we integrated it (for the README's file pointers)
 
 | Piece | File |
