@@ -600,7 +600,10 @@ export class IdleScene extends Phaser.Scene {
             y: bird.y + Phaser.Math.Between(-40, 40),
             duration: dur,
             ease: 'Sine.easeInOut',
-            onComplete: () => bird.destroy(),
+            onComplete: () => {
+              this.tweens.killTweensOf(bird) // the flap loop would outlive the bird
+              bird.destroy()
+            },
           })
         }
         this.scheduleFlock()
@@ -695,7 +698,10 @@ export class IdleScene extends Phaser.Scene {
     if (band !== this.roosterBand) {
       this.roosterBand = band
       this.roosterTier = rt
-      for (const o of this.roosterPower) o.destroy()
+      for (const o of this.roosterPower) {
+        this.tweens.killTweensOf(o)
+        o.destroy()
+      }
       this.roosterPower = []
       // continuous growth: +3% size per 10 levels, on top of the tier gear
       const H = L.ROOSTER_H * (1 + 0.03 * band)
@@ -749,7 +755,10 @@ export class IdleScene extends Phaser.Scene {
     }
     if (tt !== this.trainerTier) {
       this.trainerTier = tt
-      for (const o of this.trainerPower) o.destroy()
+      for (const o of this.trainerPower) {
+        this.tweens.killTweensOf(o)
+        o.destroy()
+      }
       this.trainerPower = []
       const H = L.TRAINER_H
       if (tt >= 1) {
@@ -1651,8 +1660,7 @@ export class IdleScene extends Phaser.Scene {
     // the pack scatters
     for (const p of this.pests) {
       p.dead = true
-      p.walk?.remove()
-      p.hop?.remove()
+      this.tweens.killTweensOf(p.container)
       p.plate.setVisible(false)
       p.bar.setVisible(false)
       this.tweens.add({
@@ -1737,7 +1745,16 @@ export class IdleScene extends Phaser.Scene {
       const eyes = this.bossEyes
       this.bossShadow = null
       this.bossEyes = []
-      this.tweens.add({ targets: [sh, ...eyes], alpha: 0, duration: 500, onComplete: () => { sh.destroy(); for (const e of eyes) e.destroy() } })
+      this.tweens.add({
+        targets: [sh, ...eyes],
+        alpha: 0,
+        duration: 500,
+        onComplete: () => {
+          this.tweens.killTweensOf(eyes) // the eye pulse loops
+          sh.destroy()
+          for (const e of eyes) e.destroy()
+        },
+      })
     }
   }
 
@@ -2062,8 +2079,7 @@ export class IdleScene extends Phaser.Scene {
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
     for (const p of this.pests) {
       p.dead = true
-      p.walk?.remove()
-      p.hop?.remove()
+      this.tweens.killTweensOf(p.container)
       p.plate.setVisible(false)
       p.bar.setVisible(false)
       this.tweens.add({ targets: p.container, x: p.container.x + 1400, duration: 520, ease: 'Cubic.easeIn', onComplete: () => p.container.destroy() })
