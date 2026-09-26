@@ -14,7 +14,8 @@ Only edit paths your lane owns. If you need something in another lane's path, me
 | Game (shell, idle engine, Phaser) | eth-dev2 | `apps/web/src/app/layout.tsx`, `apps/web/src/app/page.tsx`, `apps/web/src/app/(game)/**`, `apps/web/src/app/api/game/**`, `apps/web/src/game/**`, `apps/web/src/server/game/**`, `apps/web/src/components/game/**`, `apps/web/src/components/providers.tsx`, `apps/web/src/lib/wagmi.ts`, `apps/web/public/assets/**`, `apps/web/src/app/globals.css` |
 | RWA + ENSv2 pedigree | eth-dev3 | `ens/**`, `apps/web/src/app/roosters/**`, `apps/web/src/app/api/ens/**`, `apps/web/src/app/api/roosters/**`, `apps/web/src/lib/ens/**`, `apps/web/src/components/pedigree/**` |
 | Drop economy (World ID, voucher, mint, Rare Market UI) | manager's subagent | `apps/web/src/app/api/worldid/**`, `apps/web/src/app/api/voucher/**`, `apps/web/src/server/worldid/**`, `apps/web/src/lib/worldid/**`, `apps/web/src/components/worldid/**`, `apps/web/src/components/market/**`, `apps/web/src/app/market/**` |
-| Manager | eth-tokyo-8f | `docs/**`, `README.md`, root files, `apps/web/package.json`, `apps/web/package-lock.json`, `.gitignore`, `**/.env.example` |
+| Submission docs (delegated) | eth-dev1 | `README.md`, `docs/ethglobal-submission-draft.md` |
+| Manager | eth-tokyo-8f | `docs/**` (except the delegated files above), root files, `apps/web/package.json`, `apps/web/package-lock.json`, `.gitignore`, `**/.env.example` |
 
 **Dependencies:** nobody edits `apps/web/package.json` or runs `npm install <pkg>` in `apps/web`. Message the manager with the package name, and the manager installs it. Already installed: `next@16`, `react@19`, `wagmi@3`, `viem@2`, `@tanstack/react-query@5`, `@worldcoin/idkit@4.3.0`, `phaser@3`, `pocketbase@0.28` (JS SDK), `zod`, `vitest`, `tailwindcss@4`.
 
