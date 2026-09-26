@@ -249,4 +249,4 @@ export const namehashOf = (name: string) => namehash(name);
 
 export const ETHERSCAN = (hashOrAddr: string, kind: "tx" | "address" | "token" = "address") =>
   `https://sepolia.etherscan.io/${kind}/${hashOrAddr}`;
-export const ENS_APP = (name: string) => `https://app.ens.dev/name/${name}`;
+export const ENS_APP = (name: string) => `https://explorer.ens.dev/name/${name}`;

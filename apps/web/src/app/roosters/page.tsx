@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Roosters — RFC Legends",
-  description: "Real Thai gamefowl from Ninlanee Farm as RWA cards, with onchain ENSv2 pedigree.",
+  description: "Thai native breed roosters cared for at Ninlanee Farm, as RWA cards with ENSv2 pedigree (sample records in this build).",
 };
 
 export default async function RoostersPage() {
@@ -33,10 +33,10 @@ export default async function RoostersPage() {
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-bark">Roosters of Ninlanee Farm</h1>
         <p className="mt-2 max-w-2xl text-sm text-bark-soft">
-          Each card is one real bird — a Thai native breed raised at Ninlanee Farm — minted as an
+          Each card is a Thai native breed rooster cared for at Ninlanee Farm — minted as an
           RWA with its pedigree written straight into the ENSv2 hierarchy on Sepolia
           (<span className="font-mono text-xs">{PARENT_NAME}</span>). Weight and health records are
-          attested weekly by the farm&apos;s key and can only be written by that key.
+          signed by the farm&apos;s key (weekly in production) and can only be written by that key.
         </p>
         <div className="mt-3 rounded-lg border border-amber-400/40 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           <strong>Sample data</strong> — placeholder ring IDs until Ninlanee Farm&apos;s real records

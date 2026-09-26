@@ -37,7 +37,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     { trait_type: "Ring ID", value: recs.ringId ?? "unknown" },
     { trait_type: "Rarity", value: "Mythic" },
     { trait_type: "Type", value: "RWA — real bird" },
-    { trait_type: "Custodian", value: "Ninlanee Farm" },
+    { trait_type: "Custodian", value: "Ninlanee Farm (sample records)" },
     { trait_type: "Issuer", value: "RFC Club" },
   ];
   if (att) {
@@ -57,8 +57,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   return NextResponse.json({
     name: `${recs.displayName ?? rooster.ensName.split(".")[0]} #${id}`,
     description:
-      `A real Thai native gamefowl from Ninlanee Farm, represented as an RWA card. ` +
-      `Pedigree and weekly farm attestations live onchain via ENSv2 (${rooster.ensName}).`,
+      `A Thai native breed rooster cared for at Ninlanee Farm, represented as a RoosterRWA card ` +
+      `with ENSv2 pedigree (sample records in this build) — ${rooster.ensName}.`,
     external_url: recs.url ?? undefined,
     image: recs.url ? `${recs.url.replace(/\/roosters.*$/, "")}/api/roosters/${id}/image.svg` : `https://placeholder.pics/svg/512/ffd166/e85d04/%F0%9F%90%93`,
     image_data: {
