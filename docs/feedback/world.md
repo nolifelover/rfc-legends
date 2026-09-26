@@ -28,7 +28,19 @@ Mandatory feedback for the World "Best Use of IDKit" prize. Written as it happen
    the bridge: QR code shown, staging "Use the simulator" callout shown, and
    closing it gave our "cancelled" state. We can't do a real verify until we
    have `app_id`/`rp_id`/signing key from the Developer Portal.
-3. **07:50Z — No testing page.** `docs.world.org/world-id/idkit/testing` is a 404.
+3. **08:38Z — The simulator ignored the `connect_url` link from the widget.** The staging
+   callout in the IDKit widget links to `simulator.worldcoin.org?connect_url=…`, but
+   in our headless runs the simulator opened on its credentials screen and never
+   picked the request up. Pasting the connector URL through "Paste code" worked
+   right away.
+4. **08:41Z — The staging simulator has one identity worldwide.** A fresh browser
+   profile gets the same nullifier. Our first live verify therefore bound the
+   simulator's only identity to our test wallet onchain for good (HumanRegistry
+   never frees a nullifier). On this deployment, any other wallet verified through
+   the simulator is refused as a second wallet. That's correct behaviour, but it
+   means staging can show the rejected path and not a fresh accepted one. The demo
+   uses production with a real World App.
+5. **07:50Z — No testing page.** `docs.world.org/world-id/idkit/testing` is a 404.
    Simulator guidance is scattered across the integrate page and `SKILL.md`.
 
 ## W1 research: IDKit 4.x (primary sources)
@@ -108,6 +120,20 @@ docs.world.org (integrate, react, API reference `verify`), the official
 | `WORLD_STAGING_VERIFICATION_TOKEN` | server, secret | only for staging; sent as `x-staging-verification-token` |
 | `WORLD_VERIFY_BASE_URL` | server, optional | defaults to `https://developer.world.org` |
 
+## Live evidence (2026-09-26, staging, simulator)
+
+| Wallet | Result | Evidence |
+|---|---|---|
+| `0x4f6b…f395` (first) | **Verified**, `HumanRegistry.markVerified` sent | [tx 0xa081ee7f…858ff](https://sepolia.etherscan.io/tx/0xa081ee7fd146ed9437061e71af91a39348a1f1c18ff28ee4985588388f0858ff); `isVerified` = true |
+| `0x4141…8673` (same simulator human) | **Rejected** 409 `nullifier_bound_to_other_wallet` | World's Portal returned success for the reused nullifier; our binding refused it |
+| `0x2862…a79b` (fresh browser profile) | **Rejected** 409, same nullifier | shows the simulator's identity is global |
+
+**Portal v4 accepts nullifier reuse:** a repeat verification succeeds, with a message
+noting the reuse. We confirmed this live (row 2). World's API alone won't stop one
+human verifying many wallets. **Our server-side binding is the only sybil guard:**
+a UNIQUE index on the nullifier and on the wallet in PocketBase, mirrored onchain
+by `HumanRegistry.nullifierOwner`.
+
 ## How we integrated it (for the README's file pointers)
 
 | Piece | File |
@@ -115,21 +141,27 @@ docs.world.org (integrate, react, API reference `verify`), the official
 | RP signature (backend), nonce bound to the wallet | `apps/web/src/server/worldid/rp-context.ts`, route `apps/web/src/app/api/worldid/rp-context/route.ts` |
 | IDKit widget, `proofOfHuman({ signal: wallet })`, states | `apps/web/src/components/worldid/WorldIdWidget.tsx`, `apps/web/src/components/worldid/VerifyHuman.tsx` |
 | Server-side verify: pin action/env/signal, call `/api/v4/verify/{rp_id}` | `apps/web/src/server/worldid/portal.ts` |
-| Nonce check, nullifier to one wallet, onchain mirror | `apps/web/src/server/worldid/verify.ts`, `apps/web/src/server/worldid/nullifier.ts`, `apps/web/src/server/worldid/store.ts` |
+| Nonce check, nullifier to one wallet, onchain mirror | `apps/web/src/server/worldid/verify.ts`, `apps/web/src/server/worldid/store.ts` |
+| Sybil guard in the database (UNIQUE nullifier + UNIQUE wallet) | `pocketbase/pb_migrations/1790410000_worldid_bindings.js`, `apps/web/src/server/worldid/store-pb.ts` |
+| Wallet ownership (EIP-191 signature over wallet + nonce + expiry) | `apps/web/src/lib/worldid/ownership.ts`, `apps/web/src/server/worldid/ownership.ts` |
 | `HumanRegistry.markVerified` with GAME_SIGNER | `apps/web/src/server/worldid/registry.ts` |
 | Mint gate (verified human → Base Lv 30 → drop → daily limit) | `apps/web/src/server/worldid/voucher.ts` |
-| Tests (41) | `apps/web/src/server/worldid/verify.test.ts`, `apps/web/src/server/worldid/voucher.test.ts` |
+| Tests (77, incl. a real PocketBase) | `apps/web/src/server/worldid/{verify,voucher,store,deps}.test.ts` |
 
 What we do beyond the official example (which forwards the widget result verbatim):
 
 - We overwrite `signal_hash` with `hashSignal(wallet)` and reject a mismatch before calling World, so a proof made for wallet A can't verify wallet B.
 - `action` and `environment` come from server config, never from the body.
 - Every RP nonce is issued for one wallet and consumed on first use, so a proof can't be replayed.
-- The nullifier is taken from the Portal's response, stored as a canonical decimal, and bound to one wallet. The binding is reserved under a lock before the onchain write, so two wallets racing with the same World ID can't both win. `HumanRegistry` enforces the same rule onchain.
+- We accept exactly one proof-of-human response (issuer 1). We bind only the nullifier the Portal reports as `success: true` for that credential, and it must match the proof. There's no fallback to client values.
+- The nullifier is stored as a canonical decimal and bound to one wallet by a UNIQUE-index insert, before the onchain write, so two wallets racing with the same World ID can't both win. `HumanRegistry` enforces the same rule onchain.
+- The caller proves it owns the wallet with an EIP-191 signature over wallet + RP nonce + expiry, so nobody can bind their World ID to someone else's wallet or spend their daily mints.
 - Every rejection is non-2xx with a `code` and a readable `reason`, which the UI shows as is.
 
-## Feedback for World (draft, final numbers pending the first live verify)
+## Feedback for World
 
+- **Minutes to first successful verify:** 62 wall-clock minutes from the first IDKit line to a live verify, including about 35 minutes waiting for Portal credentials. About 27 minutes of actual integration.
+- **Blockers:** the staging window and token (#2307, not in the docs); the simulator ignored `connect_url` in our runs (we pasted the code instead); the simulator's single global identity.
 - **What was missing:** the docs don't cover the staging-verification window and token (#2307). A testing page is also missing (404). And the docs never say that `signal_hash` in the verify body is caller-controlled. The examples forward the client payload verbatim, which never checks the signal.
 - **What worked well:** the `.d.ts` files in `@worldcoin/idkit` are excellent and read like documentation. `signRequest` is pure JS (no WASM on the server). The widget runs `handleVerify` automatically and fails cleanly when it throws. Thai (`language: "th"`) is built in.
-- **Top improvement request:** add a `signal` (or `expected_signal_hash`) parameter to `POST /api/v4/verify` that the Portal checks. Also make the Next.js example pin `action`/`environment`/`signal` server-side instead of forwarding the widget result.
+- **Top improvement request:** a Portal option to reject nullifier reuse per action (today a repeat verification succeeds), and add a `signal` (or `expected_signal_hash`) parameter to `POST /api/v4/verify` that the Portal checks. Also make the Next.js example pin `action`/`environment`/`signal` server-side instead of forwarding the widget result.
