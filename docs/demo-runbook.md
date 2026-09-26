@@ -62,42 +62,43 @@ Top up from the deployer (`contracts/.env` `DEPLOYER_PRIVATE_KEY`) with at most 
 Expected on-screen text is quoted exactly as rehearsed.
 
 ### Scene 1: play to Base Lv 30 (wallet A)
-1. Open **/game** and click **Connect wallet**, then pick A in MetaMask.
+1. Open **/game**. **Wait 2 seconds after the page loads**, then click **Connect wallet** and pick A in MetaMask. Clicking earlier does nothing, because wagmi is still hydrating; the game lane has a fix queued as G5-4.
 2. Type a trainer name (for example "Khun Gai"), pick a sire line (for example **Thep**), and click **Begin the journey**.
-   Expected: the play screen with "Demo mode: boosted rates", "Sync now" and "SPEND STAT POINTS 48 left".
-3. Spend points by clicking **+** on **STR, AGI and DEX** (about 8/6/6). That clearly speeds up kills. Keep the tab visible so live combat runs ("auto-syncs every few seconds"); a hidden tab only earns the slower offline rate. Rehearsal: Lv 1 to Lv 30 took about 4 minutes with points spent.
-4. *(Optional, shows rejection c)* before Lv 30, open **Market** and press **Mint as NFT** on any drop.
-   Expected: "⛔ Rejected `base_level_too_low` Base Lv 1: reach Base Lv 30 to mint rare drops."
+   Expected: the live field scene ("ทุ่งนาบ้านเกิด · Home Fields") with the "Demo mode: boosted rates" badge, a **Stat points: 48 ▸** button, and the HUD (Base Lv, HP/SP/EXP, **✨ Rare drops (0)**).
+3. Click **Stat points: 48 ▸**. In the "SPEND STAT POINTS" dialog, press **+** on **STR** ×8, **AGI** ×6 and **DEX** ×6, then close it with **×**.
+4. Let it play. Keep **exactly one tab with /game open**, and keep it visible. A second /game tab (or anything else polling the game) makes the server sync about once a second, and combat freezes. Rehearsal: **Lv 1 to Lv 30 took 1.2 minutes.**
+5. *(Optional, shows rejection c)* before Lv 30, open **Market** and press **Mint as NFT** on any drop. Expected: "⛔ Rejected `base_level_too_low` Base Lv N: reach Base Lv 30 to mint rare drops." Toasts before Lv 30 are real drops too, but they hit this same level rejection.
 
-### Scene 2: the drop, then Mint & sell
-5. When a Monster Card or MVP Card drops, click the game's **Mint & sell →** popup. It opens `/market?dropId=0x…`. *(The game lane is adding this popup. Until it ships, click **Market** in the nav: every mintable drop is listed there.)*
-   Expected: the drop card highlighted in yellow, "From your latest boss drop".
+### Scene 2: the drop toast, then Mint & sell
+6. At the Lv-30 kill, a Monster Card drop is guaranteed. MVP Cards drop at 55% per boss kill. Toasts slide in at the bottom right: "RARE DROP! MVP CARD การ์ดราชาหนูนา" with **Mint & sell →** and **Keep playing**. In the rehearsal, both the Monster Card and the MVP Card toasts appeared within 3 seconds of reaching Lv 30.
+7. Click **Mint & sell →** on the red **MVP Card** toast. **Toasts vanish after about 7 seconds.** If you miss one, click **✨ Rare drops (N)** in the HUD: it opens /market, where every drop is listed (without the highlight).
+   Expected: `/market?dropId=0x…` with "MVP Card #3001 การ์ดราชาหนูนา" highlighted in yellow, "From your latest boss drop", and **Mint as NFT**.
 
 ### Scene 3: World ID verify (wallet A)
-6. In the **World ID · proof of human** card, click **Verify with World ID**.
-7. MetaMask asks for a signature ("RFC Legends: confirm this is your wallet. Action: verify-world-id …"). Click **Sign**. It costs no gas.
-8. The IDKit modal shows "Connect your World ID" with a QR code. Scan it with World App and approve.
-9. Expected: the button reads "Verifying proof & recording onchain…", then the card turns green: "Verified human ✓ Wallet 0xa29e…e5e7 is bound to one World ID. It can mint and sell rare drops." with a **HumanRegistry.markVerified tx ↗** link. Step 1 of the progress row gets a ✓.
+8. In the **World ID · proof of human** card, click **Verify with World ID**.
+9. MetaMask asks for a signature ("RFC Legends: confirm this is your wallet. Action: verify-world-id …"). Click **Sign**. It costs no gas.
+10. The IDKit modal shows "Connect your World ID" with a QR code. Scan it with World App and approve.
+11. Expected: the button reads "Verifying proof & recording onchain…", then the card turns green: "Verified human ✓ Wallet 0xa29e…e5e7 is bound to one World ID. It can mint and sell rare drops." with a **HumanRegistry.markVerified tx ↗** link. Step 1 of the progress row gets a ✓.
 
 ### Scene 4: mint and list (wallet A)
-10. On the highlighted drop, click **Mint as NFT**. MetaMask first asks for a signature ("Action: mint-rare-drop … Drop: 0x…"); sign it. Then it asks you to confirm the `mintWithVoucher` transaction; confirm it.
+12. On the highlighted drop, click **Mint as NFT**. MetaMask first asks for a signature ("Action: mint-rare-drop … Drop: 0x…"); sign it. Then it asks you to confirm the `mintWithVoucher` transaction; confirm it.
     Expected: "Minted as ERC-1155 ✓ view tx ↗".
-11. Under **Your minted items**, set a price (for example `10`) and click **List 1**. Confirm **setApprovalForAll** (only the first time), then the **list** transaction.
-    Expected: "Listed ✓ Monster Card #1001 is in escrow and shows up in the listings below. view tx ↗". The listing shows "seller you" under **Rare Market listings**.
+13. Under **Your minted items**, set a price (for example `10`) and click **List 1**. Confirm **setApprovalForAll** (only the first time), then the **list** transaction.
+    Expected: "Listed ✓ MVP Card #3001 is in escrow and shows up in the listings below. view tx ↗". The listing shows "seller you" under **Rare Market listings**.
 
 ### Scene 5: buy and the 90/10 receipt (wallet B, second browser profile)
-12. Open **/market** as B and click **+100 test USDC**. Confirm the transaction. Expected: "Balance: 100.00 USDC" (B already has 90, so it goes to 190).
-13. On A's listing, click **Buy for 10.00 USDC**. Confirm **approve** (USDC), then **buy**.
-14. Expected: the receipt card "SOLD ✓ · SPLIT ONCHAIN Monster Card #1001 × 1 for 10.00 USDC". It shows a 90% / 10% bar, "Seller receives (90%) 9.00 USDC … USDC transfer 9.00 ✓" and "RFC Club treasury (10%) 1.00 USDC to 0x845b…F4B2 … USDC transfer 1.00 ✓". Open **Decoded Sold event**, then click **View on Sepolia Etherscan ↗**.
+14. Open **/market** as B and click **+100 test USDC**. Confirm the transaction. Expected: the "Balance" figure goes up by 100.00 USDC.
+15. On A's listing, click **Buy for 10.00 USDC**. Confirm **approve** (USDC), then **buy**.
+16. Expected: the receipt card "SOLD ✓ · SPLIT ONCHAIN MVP Card #3001 × 1 for 10.00 USDC". It shows a 90% / 10% bar, "Seller receives (90%) 9.00 USDC … USDC transfer 9.00 ✓" and "RFC Club treasury (10%) 1.00 USDC to 0x845b…F4B2 … USDC transfer 1.00 ✓". Open **Decoded Sold event**, then click **View on Sepolia Etherscan ↗**.
 
 ### Scene 6: the rejections
-15. **(a) Bot, wallet C:** open `/market` as C, then **Mint as NFT** on **MVP Card #3001**, then sign.
+17. **(a) Bot, wallet C:** open `/market` as C, then **Mint as NFT** on **MVP Card #3001**, then sign.
     Expected: "⛔ Rejected `not_verified_human` Wallet 0xb8eb…529b hasn't verified with World ID. Only verified humans can mint rare drops, so bot farms can't cash out."
     Selling is locked too. As **B** (holds a card, never verified), **Your minted items** shows "Selling is locked for this wallet…". Clicking **Verify with World ID to list** gives "⛔ Rejected `NotVerifiedHuman` … Refused onchain by the contract". That's RareMarket's own revert, simulated before any wallet prompt.
-16. **(b) Same human, second wallet A2:** as A2, click **Verify with World ID**, sign, and scan with the **same phone**.
+18. **(b) Same human, second wallet A2:** as A2, click **Verify with World ID**, sign, and scan with the **same phone**.
     Expected: "Rejected `nullifier_bound_to_other_wallet` This World ID is already linked to wallet 0xa29e…e5e7. One human, one wallet: a second wallet can't verify with the same World ID."
     Worth saying on camera: World's API accepts the repeat verification; our server and `HumanRegistry` refuse it.
-17. **(c) Low level:** shown in step 4.
+19. **(c) Low level:** shown in step 5.
 
 ## 5. Staging fallback (World App misbehaves)
 
@@ -135,3 +136,15 @@ Rehearsed through the real UI with an injected wallet in headless Chromium, on s
 | (a) C mints MVP Card #3001 | 403 `not_verified_human` | 09:05:26Z |
 | (a) B (unverified) tries to resell | contract `NotVerifiedHuman`, no wallet prompt | 09:05:46Z |
 | (b) A2-staging verifies | 409 `nullifier_bound_to_other_wallet` | 08:40:27Z |
+
+**W9 run through the game's toast.** Wallet A-staging was first reset as in §6 (character, drops, app-side binding), then played end to end in one headless browser. The whole beat took **2.7 minutes**.
+
+| Step (elapsed) | Result | Tx / evidence |
+|---|---|---|
+| Create character (0:06), then stats | Live scene, points spent through the dialog | — |
+| Base Lv 30 (1:16) | Toasts: Monster Card (pity) + MVP Card | — |
+| **Mint & sell →** on the MVP toast (1:19) | `/market?dropId=0x5285…fbad`, MVP Card #3001 highlighted | — |
+| Verify (1:39) | Verified (onchain record already present after the reset) | — |
+| Mint MVP Card #3001 (1:55) | RareMinted | [`0xefa0b616…36d0`](https://sepolia.etherscan.io/tx/0xefa0b61606a7b1280b247005816a0be0288642f77ef2541d389855d617e936d0) |
+| List #4 at 10 USDC (2:05) | Listed | [`0xfd2fc22a…4b33`](https://sepolia.etherscan.io/tx/0xfd2fc22a7b928d0169b7c0774543ed7b68bd9b5f494ad76b4540951f7f1b4b33) |
+| B approve + buy (2:44) | Sold, 9.00 to seller / 1.00 to treasury | [`0x393d3d8e…a22f`](https://sepolia.etherscan.io/tx/0x393d3d8e64d5e52b6693cbf17992f0ee9609f10bccfe80a3875b0d39c64aa22f) · [`0x03235628…9bbc`](https://sepolia.etherscan.io/tx/0x032356283b4c20abd049982bb110bd9f06023585d32a086faf5ab3817d089bbc) |
