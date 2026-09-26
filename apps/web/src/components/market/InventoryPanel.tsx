@@ -122,7 +122,7 @@ function ListForm({
   const [price, setPrice] = useState("10");
   const [qty, setQty] = useState("1");
   const [step, setStep] = useState<string | null>(null);
-  const [rejection, setRejection] = useState<{ code?: string; reason: string } | null>(null);
+  const [rejection, setRejection] = useState<{ code?: string; reason: string; precheck?: boolean } | null>(null);
   const info = itemInfo(itemId);
 
   const list = () => flight.run(doList);
@@ -131,18 +131,18 @@ function ListForm({
     setRejection(null);
     const amount = Number(qty);
     if (!Number.isInteger(amount) || amount < 1 || BigInt(amount) > balance) {
-      setRejection({ reason: `Quantity must be a whole number from 1 to ${balance.toString()}.` });
+      setRejection({ reason: `Quantity must be a whole number from 1 to ${balance.toString()}.`, precheck: true });
       return;
     }
     let unitPrice: bigint;
     try {
       unitPrice = parseUnits(price, 6);
     } catch {
-      setRejection({ reason: "Enter a price like 10 or 12.5." });
+      setRejection({ reason: "Enter a price like 10 or 12.5.", precheck: true });
       return;
     }
     if (unitPrice <= BigInt(0)) {
-      setRejection({ reason: "Price must be more than 0 USDC." });
+      setRejection({ reason: "Price must be more than 0 USDC.", precheck: true });
       return;
     }
     const listArgs = {
@@ -198,7 +198,7 @@ function ListForm({
       </div>
       {rejection ? (
         <RejectionCard
-          source={rejection.code ? "contract" : "wallet"}
+          source={rejection.precheck ? "precheck" : rejection.code ? "contract" : "wallet"}
           code={rejection.code}
           reason={rejection.reason}
           onDismiss={() => setRejection(null)}

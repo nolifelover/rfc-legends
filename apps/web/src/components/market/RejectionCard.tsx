@@ -12,7 +12,7 @@ export function RejectionCard({
   code?: string;
   reason: string;
   /** Who refused: our game server (after World ID) or the contract itself. */
-  source: "server" | "contract" | "wallet";
+  source: "server" | "contract" | "wallet" | "precheck";
   onDismiss?: () => void;
   /** Optional next step offered right in the card (e.g. the USDC faucet). */
   action?: { label: string; onClick: () => void; disabled?: boolean };
@@ -21,6 +21,7 @@ export function RejectionCard({
     server: "Refused by the game server's mint checks",
     contract: "Refused onchain by the contract",
     wallet: "Stopped in your wallet",
+    precheck: "Checked before sending: nothing was sent",
   }[source];
   return (
     <div role="alert" className="rounded-2xl border-2 border-clay/60 bg-clay/10 px-4 py-3 text-sm text-clay-deep">

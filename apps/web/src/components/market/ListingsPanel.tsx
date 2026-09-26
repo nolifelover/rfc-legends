@@ -209,7 +209,7 @@ function ListingCard({
   const flight = useSingleFlight();
   const blocked = useTxBlocked();
   const [step, setStep] = useState<string | null>(null);
-  const [rejection, setRejection] = useState<{ code?: string; reason: string; needsUsdc?: boolean } | null>(null);
+  const [rejection, setRejection] = useState<{ code?: string; reason: string; needsUsdc?: boolean; precheck?: boolean } | null>(null);
   const info = itemInfo(listing.itemId);
   const mine = address?.toLowerCase() === listing.seller.toLowerCase();
 
@@ -252,6 +252,7 @@ function ListingCard({
         setRejection({
           reason: `Not enough test USDC: this costs ${fmtUsdc(total)} and you have ${fmtUsdc(balance)}.`,
           needsUsdc: true,
+          precheck: true,
         });
         return;
       }
@@ -348,7 +349,7 @@ function ListingCard({
       {rejection ? (
         <RejectionCard
           title="Couldn't complete"
-          source={rejection.code ? "contract" : "wallet"}
+          source={rejection.precheck ? "precheck" : rejection.code ? "contract" : "wallet"}
           code={rejection.code}
           reason={rejection.reason}
           onDismiss={() => setRejection(null)}
