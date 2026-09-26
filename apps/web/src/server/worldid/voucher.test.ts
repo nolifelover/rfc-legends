@@ -2,7 +2,7 @@ import { encodeAbiParameters, encodeEventTopics, recoverTypedDataAddress } from 
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it, vi } from "vitest";
 import { MINT_VOUCHER_TYPE, rareItemsDomain } from "../../lib/contracts/eip712";
-import { rareItemsAbi } from "../../lib/worldid/contracts";
+import { rareItemsAbi } from "../../lib/contracts/abis";
 import type { Hex } from "../../lib/worldid/types";
 import type { Drop, GameApi, Player } from "./deps";
 import { emptyState, MemoryWorldIdStore } from "./store";

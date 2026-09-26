@@ -1,30 +1,16 @@
 "use client";
 
-// Market-side chain helpers: deployment config, tx runner with readable
-// reverts, and item display names.
+// Market-side chain helpers: tx runner with readable reverts, and item display names.
 
-import { useQuery } from "@tanstack/react-query";
 import { BaseError, ContractFunctionRevertedError, formatUnits, type Abi } from "viem";
 import { sepolia } from "viem/chains";
 import type { Config } from "wagmi";
 import { getChainId, simulateContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
-import type { Deployment } from "@/lib/worldid/contracts";
 import type { Hex } from "@/lib/worldid/types";
 
 export const USDC_DECIMALS = 6;
 export const fmtUsdc = (v: bigint) =>
   Number(formatUnits(v, USDC_DECIMALS)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-export function useDeployment() {
-  return useQuery({
-    queryKey: ["market-deployment"],
-    staleTime: 60_000,
-    queryFn: async (): Promise<{ deployment: Deployment | null; dailyLimit: number }> => {
-      const res = await fetch("/api/voucher/config", { cache: "no-store" });
-      return res.json();
-    },
-  });
-}
 
 export class TxRejected extends Error {
   constructor(

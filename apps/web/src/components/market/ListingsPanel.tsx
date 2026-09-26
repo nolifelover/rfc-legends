@@ -10,7 +10,8 @@ import { erc20Abi, parseEventLogs, parseUnits } from "viem";
 import { sepolia } from "viem/chains";
 import { useConfig, usePublicClient } from "wagmi";
 import { readContract } from "wagmi/actions";
-import { mockUsdcAbi, rareMarketAbi, type Deployment } from "@/lib/worldid/contracts";
+import { mockUsdcAbi, rareMarketAbi } from "@/lib/contracts/abis";
+import type { Deployment } from "@/lib/worldid/deployment";
 import { shortAddress } from "@/lib/worldid/client";
 import type { Hex } from "@/lib/worldid/types";
 import { describeError, fmtUsdc, itemInfo, runTx } from "./chain";
@@ -27,10 +28,9 @@ export function useListings(deployment: Deployment | null | undefined) {
     refetchInterval: 15_000,
     queryFn: async (): Promise<{ active: ActiveListing[]; everListedItemIds: number[] }> => {
       const market = deployment!.RareMarket;
-      // Public Sepolia RPCs refuse getLogs from block 0; fall back to a recent window.
-      const fromBlock = deployment!.startBlock
-        ? BigInt(deployment!.startBlock)
-        : (await client!.getBlockNumber()) - BigInt(50_000);
+      // Public Sepolia RPCs refuse getLogs from block 0, and the address export
+      // has no deploy block, so scan a recent window (~1 week of blocks).
+      const fromBlock = (await client!.getBlockNumber()) - BigInt(50_000);
       const logs = await client!.getContractEvents({
         address: market,
         abi: rareMarketAbi,
@@ -76,7 +76,7 @@ export function ListingsPanel({
     <section className="rounded-3xl border-2 border-clay/20 bg-cream p-5 shadow-sm">
       <header className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-bold text-bark">
-          Rare Market listings <span className="text-sm font-medium text-bark-soft">· ซื้อของหายาก</span>
+          Rare Market listings
         </h2>
         {address && deployment ? (
           <UsdcFaucet address={address} deployment={deployment} balance={usdc.data} onDone={() => usdc.refetch()} />
@@ -223,9 +223,8 @@ function ListingCard({
       const transfers = parseEventLogs({ abi: erc20Abi, logs: receipt.logs, eventName: "Transfer" })
         .filter((t) => t.address.toLowerCase() === deployment.MockUSDC.toLowerCase())
         .map((t) => ({ to: t.args.to as Hex, value: t.args.value }));
-      const treasury =
-        deployment.treasury ??
-        ((await readContract(config, {
+      // Treasury is owner-settable, so read it rather than trust a config value.
+      const treasury = ((await readContract(config, {
           address: deployment.RareMarket,
           abi: rareMarketAbi,
           functionName: "treasury",

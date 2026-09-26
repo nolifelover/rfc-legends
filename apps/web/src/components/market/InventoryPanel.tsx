@@ -11,7 +11,8 @@ import { parseUnits } from "viem";
 import { sepolia } from "viem/chains";
 import { useConfig, usePublicClient } from "wagmi";
 import { readContract, simulateContract } from "wagmi/actions";
-import { rareItemsAbi, rareMarketAbi, type Deployment } from "@/lib/worldid/contracts";
+import { rareItemsAbi, rareMarketAbi } from "@/lib/contracts/abis";
+import type { Deployment } from "@/lib/worldid/deployment";
 import type { Hex } from "@/lib/worldid/types";
 import { describeError, itemInfo, runTx } from "./chain";
 import { RejectionCard } from "./RejectionCard";
@@ -49,7 +50,7 @@ export function InventoryPanel({
   return (
     <section className="rounded-3xl border-2 border-clay/20 bg-cream p-5 shadow-sm">
       <h2 className="mb-4 text-lg font-bold text-bark">
-        Your minted items <span className="text-sm font-medium text-bark-soft">· ลงขายใน Rare Market</span>
+        Your minted items
       </h2>
       {!address || !deployment ? (
         <p className="text-sm text-bark-soft">{!address ? "Connect a wallet." : "Contracts aren't deployed yet."}</p>

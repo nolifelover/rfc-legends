@@ -11,7 +11,7 @@ import { decodeEventLog, getAddress, isAddress, isHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { z } from "zod";
 import { MINT_VOUCHER_TYPE, rareItemsDomain } from "../../lib/contracts/eip712";
-import { rareItemsAbi } from "../../lib/worldid/contracts";
+import { rareItemsAbi } from "../../lib/contracts/abis";
 import type { Hex, VoucherRejectCode, VoucherResponse } from "../../lib/worldid/types";
 import type { Drop, GameApi } from "./deps";
 import { maskAddress } from "./nullifier";

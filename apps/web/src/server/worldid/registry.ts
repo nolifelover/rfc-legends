@@ -4,9 +4,9 @@
 import { BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, http, zeroAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import { humanRegistryAbi } from "../../lib/worldid/contracts";
+import { humanRegistryAbi } from "../../lib/contracts/abis";
+import { getDeployment } from "../../lib/worldid/deployment";
 import type { Hex } from "../../lib/worldid/types";
-import { loadDeployment } from "./deps";
 
 export interface HumanRegistryClient {
   /** Account the nullifier is bound to onchain, or null if unbound. */
@@ -19,9 +19,9 @@ export interface HumanRegistryClient {
 export type RegistryResolution = { client: HumanRegistryClient } | { client: null; note: string };
 
 export async function resolveHumanRegistry(env: NodeJS.ProcessEnv = process.env): Promise<RegistryResolution> {
-  const deployment = await loadDeployment();
+  const deployment = getDeployment();
   if (!deployment) {
-    return { client: null, note: "Contracts not deployed yet (no contracts/deployments/sepolia.json); onchain mirror skipped." };
+    return { client: null, note: "Contracts not deployed to Sepolia yet; onchain mirror skipped." };
   }
   const key = env.GAME_SIGNER_PRIVATE_KEY?.trim();
   if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) {

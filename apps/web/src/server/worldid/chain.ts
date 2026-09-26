@@ -2,9 +2,10 @@
 
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
-import { rareItemsAbi } from "../../lib/worldid/contracts";
+import { rareItemsAbi } from "../../lib/contracts/abis";
+import { getDeployment } from "../../lib/worldid/deployment";
 import type { Hex } from "../../lib/worldid/types";
-import { getGameApi, loadDeployment } from "./deps";
+import { getGameApi } from "./deps";
 import { getWorldIdStore } from "./store";
 import type { ConfirmDeps, VoucherDeps } from "./voucher";
 
@@ -19,7 +20,7 @@ export function dailyMintLimit(): number {
 }
 
 export async function resolveVoucherDeps(): Promise<VoucherDeps> {
-  const deployment = await loadDeployment();
+  const deployment = getDeployment();
   const client = deployment ? publicClient() : null;
   return {
     store: getWorldIdStore(),
@@ -41,7 +42,7 @@ export async function resolveVoucherDeps(): Promise<VoucherDeps> {
 }
 
 export async function resolveConfirmDeps(): Promise<ConfirmDeps> {
-  const deployment = await loadDeployment();
+  const deployment = getDeployment();
   const client = publicClient();
   return {
     game: await getGameApi(),
