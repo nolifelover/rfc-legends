@@ -179,7 +179,9 @@ export function GameClient() {
           Your wallet <strong className="text-bark">is</strong> your player identity — your
           trainer, rooster and rare drops all live under its address.
         </p>
-        <ConnectButton className="text-base" />
+        {/* The primary action, front and center: a cold visitor (or the
+            presenter) should never have to hunt for the ☰ menu to start. */}
+        <ConnectButton className="!px-8 !py-4 !text-xl" />
       </CenterCard>
     );
   }

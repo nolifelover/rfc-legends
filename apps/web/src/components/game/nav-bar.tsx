@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useConnection } from "wagmi";
 import { ConnectButton } from "./connect-button";
 import { RoosterMark } from "./rooster-mark";
 
@@ -47,6 +48,7 @@ function NavLink({
 export function NavBar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isConnected } = useConnection();
 
   // GAME MODE (/game): the chrome collapses to a floating brand + menu
   // button so the canvas keeps the viewport.
@@ -69,6 +71,13 @@ export function NavBar() {
         >
           ☰
         </button>
+        {/* the connected chip stays reachable while playing (the demo
+            badge pill sits further right; they stack without overlap) */}
+        {isConnected ? (
+          <span className="pointer-events-auto ml-1 [&_button]:!px-3 [&_button]:!py-1 [&_button]:!text-xs">
+            <ConnectButton />
+          </span>
+        ) : null}
         {menuOpen ? (
           <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-clay/25 bg-cream/95 px-2 py-1 shadow-lg backdrop-blur">
             {NAV_LINKS.map((link) => (
