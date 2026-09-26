@@ -20,6 +20,7 @@ export type State = {
   secret?: Hex;          // commit-reveal secret for the parent registration
   userRegistry?: Hex;      // registry holding the 5 sire labels
   resolver?: Hex;          // dedicated PermissionedResolver serving the whole namespace
+  resolverV2?: Hex;        // hardened instance: owner holds admin bits only, farm key scoped per name+key
   farmSignerAddress?: Hex; // address granted rfc.weight/health/attestedAt writes
   sires?: Record<string, Hex>;          // sire label -> its child UserRegistry
   registered?: Record<string, boolean>; // "label@registry" -> done
