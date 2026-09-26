@@ -6,6 +6,7 @@ import { BaseError, ContractFunctionRevertedError, formatUnits, type Abi } from 
 import { sepolia } from "viem/chains";
 import type { Config } from "wagmi";
 import { getChainId, simulateContract, switchChain, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { getItem } from "@/game/data/items";
 import type { Hex } from "@/lib/worldid/types";
 
 export const USDC_DECIMALS = 6;
@@ -56,11 +57,15 @@ export async function runTx(
   return receipt;
 }
 
-// TEMPORARY SHIM: display names until apps/web/src/game/data/items.ts (eth-dev2) exists.
-export function itemInfo(itemId: number | bigint): { name: string; kind: string; glyph: string; tone: string } {
+export type ItemInfo = { name: string; thai?: string; image?: string; kind: string; glyph: string; tone: string };
+
+/** English-first display name plus the game catalog's Thai name and art (game/data/items.ts). */
+export function itemInfo(itemId: number | bigint): ItemInfo {
   const id = Number(itemId);
-  if (id >= 3000) return { name: `MVP Card #${id}`, kind: "MVP Card", glyph: "👑", tone: "from-sun to-clay" };
-  if (id >= 2000) return { name: `Legendary Gear #${id}`, kind: "Legendary", glyph: "🛡️", tone: "from-clay to-clay-deep" };
-  if (id >= 1000) return { name: `Monster Card #${id}`, kind: "Monster Card", glyph: "🃏", tone: "from-field to-field-deep" };
-  return { name: `Item #${id}`, kind: "Item", glyph: "📦", tone: "from-bark-soft to-bark" };
+  const def = getItem(id);
+  const extra = { thai: def?.name, image: def?.image };
+  if (id >= 3000) return { name: `MVP Card #${id}`, kind: "MVP Card", glyph: def?.emoji ?? "👑", tone: "from-sun to-clay", ...extra };
+  if (id >= 2000) return { name: `Legendary Gear #${id}`, kind: "Legendary", glyph: def?.emoji ?? "🛡️", tone: "from-clay to-clay-deep", ...extra };
+  if (id >= 1000) return { name: `Monster Card #${id}`, kind: "Monster Card", glyph: def?.emoji ?? "🃏", tone: "from-field to-field-deep", ...extra };
+  return { name: `Item #${id}`, kind: "Item", glyph: def?.emoji ?? "📦", tone: "from-bark-soft to-bark", ...extra };
 }

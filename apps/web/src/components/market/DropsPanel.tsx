@@ -15,6 +15,7 @@ import { txUrl } from "@/lib/worldid/client";
 import { ownershipMessage, randomNonce } from "@/lib/worldid/ownership";
 import type { Hex, VoucherResponse } from "@/lib/worldid/types";
 import { describeError, itemInfo, runTx } from "./chain";
+import { ItemArt, ItemTitle } from "./ItemArt";
 import { RejectionCard } from "./RejectionCard";
 
 type Drop = { dropId: Hex; itemId: number; rarity: string; status: "unminted" | "minting" | "minted"; txHash?: string };
@@ -211,14 +212,9 @@ function DropCard({
       }`}
     >
       <div className="flex items-center gap-3">
-        <div
-          aria-hidden
-          className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-2xl shadow-inner ${info.tone}`}
-        >
-          {info.glyph}
-        </div>
+        <ItemArt info={info} />
         <div className="min-w-0">
-          <p className="truncate font-bold text-bark">{info.name}</p>
+          <ItemTitle info={info} />
           <p className="text-xs text-bark-soft">
             {rarity ? rarity.replace("_", " ") : info.kind} · drop <span className="font-mono">{dropId.slice(0, 10)}…</span>
           </p>

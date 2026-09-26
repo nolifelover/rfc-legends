@@ -16,6 +16,7 @@ import type { Deployment } from "@/lib/worldid/deployment";
 import type { Hex } from "@/lib/worldid/types";
 import { txUrl } from "@/lib/worldid/client";
 import { describeError, itemInfo, runTx } from "./chain";
+import { ItemArt, ItemTitle } from "./ItemArt";
 import { RejectionCard } from "./RejectionCard";
 
 export function InventoryPanel({
@@ -185,14 +186,9 @@ function ListForm({
   return (
     <li className="flex flex-col gap-3 rounded-2xl border-2 border-clay/15 bg-background/60 p-4">
       <div className="flex items-center gap-3">
-        <div
-          aria-hidden
-          className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-2xl shadow-inner ${info.tone}`}
-        >
-          {info.glyph}
-        </div>
+        <ItemArt info={info} />
         <div className="min-w-0">
-          <p className="truncate font-bold text-bark">{info.name}</p>
+          <ItemTitle info={info} />
           <p className="text-xs text-bark-soft">You hold {balance.toString()}</p>
         </div>
       </div>
