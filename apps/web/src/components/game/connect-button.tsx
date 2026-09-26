@@ -60,7 +60,7 @@ export function ConnectButton({ className = "" }: { className?: string }) {
     <span className="group relative inline-flex flex-col items-end">
       <button
         type="button"
-        disabled={isPending || !connector}
+        disabled={isPending || !connector || connectors.length === 0}
         onClick={() => connector && connect({ connector })}
         aria-describedby={walletMissing ? "connect-wallet-hint" : undefined}
         className={`inline-flex items-center gap-2 rounded-full border-2 border-clay/40 bg-cream px-4 py-2 text-sm font-bold text-clay-deep transition hover:border-clay hover:bg-sun-soft/60 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${className}`}
