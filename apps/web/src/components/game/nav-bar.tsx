@@ -54,7 +54,7 @@ export function NavBar() {
   // button so the canvas keeps the viewport.
   if (pathname?.startsWith("/game")) {
     return (
-      <header className="pointer-events-none fixed left-3 top-2 z-40 flex items-center gap-2">
+      <header className="static z-40 flex items-center gap-2 px-3 py-1.5 lg:pointer-events-none lg:fixed lg:left-3 lg:top-2 lg:px-0 lg:py-0">
         <Link
           href="/"
           className="pointer-events-auto flex items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"

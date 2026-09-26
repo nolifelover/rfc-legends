@@ -329,7 +329,7 @@ export function GameClient() {
               box derives width from that height, clamped by the viewport */}
           {/* --game-top-inset tells the scene how much chrome sits above it
               (mobile top bar) so in-canvas chips stay clear; 0 on desktop */}
-          <SceneFrame className="h-full w-auto max-w-full [--game-top-inset:52px] lg:[--game-top-inset:0px]">
+          <SceneFrame className="h-full w-auto max-w-full [--game-top-inset:0px]">
             <IdleScene player={player} drops={state.drops} demoMode={state.demoMode} />
           </SceneFrame>
         </div>

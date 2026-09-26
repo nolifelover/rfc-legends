@@ -44,10 +44,10 @@ function Bar({
   // they stop taking the widest slots (critic r5 #1); damage re-expands them.
   if (value >= max) {
     return (
-      <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border-2 border-sun/60 bg-[#1d130c]/70 px-2.5 py-0.5 text-xl font-bold leading-none text-cream/85">
-        {label}
-        <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "currentColor" }} />
-        {curMax}
+      <span className="inline-flex max-w-full shrink-0 items-center gap-1.5 truncate rounded-full border-2 border-sun/60 bg-[#1d130c]/70 px-2.5 py-0.5 text-base font-bold leading-none text-cream/85 md:text-xl">
+        <span className="shrink-0">{label}</span>
+        <span aria-hidden className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: "currentColor" }} />
+        <span className="truncate">{compact(value)}</span>
       </span>
     )
   }
@@ -155,9 +155,49 @@ export function HudStrip({
     // flows below the scene (no sticky): the frame above gets all the space
     // we don't use, and the pests' HP bars stay visible
     <div className="mt-auto w-full px-1 pb-1 sm:px-1.5 sm:pb-1.5">
+      {/* mobile-landscape gate (M5): Tailwind variant generation for stacked
+          orientation variants is unreliable under this Turbopack setup, so a
+          scoped <style> with a real media query drives it. Desktop untouched. */}
+      <style>{`@media (max-width: 1023px) and (orientation: landscape) {
+  [data-mobscape='band'] { display: none; }
+  [data-mobscape='strip'] { display: flex; }
+  [data-mobscape='roosterexp'] { display: none; }
+}`}</style>
+      {/* mobile-landscape compact strip (M5/G2): one <=72px row - avatar+lvl,
+          HP/SP/EXP minis, icon pills. The full band below renders only outside it. */}
+      <div data-mobscape="strip" className="hidden items-center gap-2 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-2 py-1 text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur">
+        <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-sun-soft bg-cream">
+          <RoosterMark size={24} />
+          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full border border-bark/40 bg-sun px-1 text-xs font-black leading-tight text-bark">
+            {player.baseLevel}
+          </span>
+          {player.statPoints > 0 ? (
+            <span title={`${player.statPoints.toLocaleString()} stat points`} className="absolute -right-1.5 -top-1 grid min-w-5 place-items-center rounded-full border border-cream bg-red-600 px-0.5 text-xs font-black text-cream">
+              &#10022;
+            </span>
+          ) : null}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <Bar label="HP" value={hp} max={hp} gradient="bg-gradient-to-r from-field-deep to-field" compactNumbers />
+            <Bar label="SP" value={sp} max={sp} gradient="bg-gradient-to-r from-blue-800 to-sky-400" compactNumbers />
+          </div>
+          <Bar label="EXP" value={player.exp} max={baseMax} gradient="bg-gradient-to-r from-sun to-clay" showPercent compactNumbers />
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {typeof rareDropCount === "number" && rareDropCount > 0 ? (
+            <Pill title="Open the Rare Market" href={rareDropCount > 0 && newestDropId ? `/market?dropId=${newestDropId}` : "/market"} active={rareDropCount > 0}>
+              &#10022;{rareDropCount}
+            </Pill>
+          ) : null}
+          {onOpenBag ? <Pill title={`Bag & drops (${bagCount ?? 0} items)`} onClick={onOpenBag}>&#127890;</Pill> : null}
+          {onOpenGuild ? <Pill title="Guild chat & boss" onClick={onOpenGuild}>&#128737;</Pill> : null}
+          {syncSlot}
+        </div>
+      </div>
       {/* a game panel in the canvas' thick-outline style, docked flush under
           the scene rather than a full-width web strip */}
-      <div className="mx-auto flex w-full max-w-none flex-col gap-1 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-2.5 py-1.5 text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur sm:px-4 md:gap-1.5 md:py-2 [@media(max-width:1023px)_and_(orientation:landscape)]:py-1">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-1 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-2.5 py-1.5 max-lg:landscape:hidden text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur sm:px-4 md:gap-1.5 md:py-2">
         {/* Row A — trainer card + the HP/SP/EXP trio */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
@@ -185,17 +225,19 @@ export function HudStrip({
               </p>
             </div>
           </div>
-          <div className="col-span-2 flex min-w-0 flex-col gap-1.5 md:flex-row md:flex-wrap md:items-center md:gap-3">
+          <div className="col-span-2 grid min-w-0 grid-cols-2 gap-1.5 md:flex md:flex-wrap md:items-center md:gap-3">
             <Bar label="HP" value={hp} max={hp} gradient="bg-gradient-to-r from-field-deep to-field" compactNumbers />
             <Bar label="SP" value={sp} max={sp} gradient="bg-gradient-to-r from-blue-800 to-sky-400" compactNumbers />
-            <Bar
-              label="EXP"
-              value={player.exp}
-              max={baseMax}
-              gradient="bg-gradient-to-r from-sun to-clay"
-              showPercent
-              compactNumbers
-            />
+            <div className="col-span-2 md:contents">
+              <Bar
+                label="EXP"
+                value={player.exp}
+                max={baseMax}
+                gradient="bg-gradient-to-r from-sun to-clay"
+                showPercent
+                compactNumbers
+              />
+            </div>
           </div>
         </div>
 
@@ -215,7 +257,7 @@ export function HudStrip({
               </p>
             </div>
           </div>
-          <div className="min-w-0 [@media(max-width:1023px)_and_(orientation:landscape)]:hidden">
+          <div className="min-w-0" data-mobscape="roosterexp">
             <Bar
               label="EXP"
               value={player.rooster.exp}
