@@ -108,6 +108,7 @@ export interface CombatAggregates {
   ticks: number
   expGained: number // base exp applied (post-multiplier)
   roosterExpGained: number
+  coinsGained: number // เบี้ย credited this window (scene animates from this)
   kills: number
   byMonster: Record<string, number>
   deaths: number
@@ -125,12 +126,20 @@ function emptyAgg(ticks: number): CombatAggregates {
     ticks,
     expGained: 0,
     roosterExpGained: 0,
+    coinsGained: 0,
     kills: 0,
     byMonster: {},
     deaths: 0,
     drops: [],
     inventory: {},
   }
+}
+
+/** เบี้ย for one kill: base 3–8 cycling on killCount, ×15% per level above 1, bosses ×5. */
+function coinsForKill(killCount: number, baseLevel: number, isMvp: boolean): number {
+  const base = 3 + (killCount % 6) // 3–8
+  const levelScale = 1 + Math.max(0, baseLevel - 1) * 0.15
+  return Math.max(1, Math.round(base * levelScale * (isMvp ? 5 : 1)))
 }
 
 function weightedPick(spawns: MonsterSpawn[], rng: Rng): MonsterDef {
@@ -215,6 +224,12 @@ export function simulateLive(
     applyExp(p, gain)
     agg.expGained += gain
     agg.roosterExpGained += Math.round(gain * ROOSTER_EXP_SHARE)
+    // เบี้ย per credited kill: 3–8 (deterministic from killCount — no rng draw, so the
+    // drop/exp streams stay byte-identical) × level scaling; an MVP boss pays ~5× (GDD §13.1)
+    const coinGain = coinsForKill(p.killCount, p.baseLevel, m.isMvp === true)
+    p.coins = (p.coins ?? 0) + coinGain
+    agg.coinsGained += coinGain
+
     const loot = rollDrops(m, rng, opts.dropOpts)
     agg.drops.push(...loot.mintable)
     mergeInventory(p.inventory, loot.inventory)
@@ -406,16 +421,30 @@ export function settleOffline(
   agg.expGained = baseExp
   agg.roosterExpGained = Math.round(baseExp * ROOSTER_EXP_SHARE)
 
+  // เบี้ย offline: same per-kill formula (from the CURRENT level), at the 70% efficiency
+  let coins = 0
   for (let i = 1; i <= kills; i++) {
     const isMvp = map.mvp !== undefined && i % opts.mvpEveryKills === 0
     const m = isMvp ? map.mvp! : weightedPick(map.monsters, rng)
+    coins += coinsForKill(i, p.baseLevel, isMvp)
     agg.byMonster[m.id] = (agg.byMonster[m.id] ?? 0) + 1
+    // เบี้ย per credited kill: 3–8 (deterministic from killCount — no rng draw, so the
+    // drop/exp streams stay byte-identical) × level scaling; an MVP boss pays ~5× (GDD §13.1)
+    const coinGain = coinsForKill(p.killCount, p.baseLevel, m.isMvp === true)
+    p.coins = (p.coins ?? 0) + coinGain
+    agg.coinsGained += coinGain
+
     const loot = rollDrops(m, rng, opts.dropOpts)
     agg.drops.push(...loot.mintable)
     mergeInventory(p.inventory, loot.inventory)
     mergeInventory(agg.inventory, loot.inventory)
   }
   p.killCount += kills
+  coins = Math.round(coins * OFFLINE_EFFICIENCY)
+  if (coins > 0) {
+    p.coins = (p.coins ?? 0) + coins
+    agg.coinsGained += coins
+  }
 
   return { player: p, aggregates: agg }
 }

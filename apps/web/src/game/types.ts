@@ -121,6 +121,7 @@ export interface Player {
   rooster: Rooster
   mapId: string
   inventory: Record<number, number> // itemId -> count (non-mintable items)
+  coins?: number // เบี้ย soft currency (GDD §13.1); undefined = 0 (additive field)
   killCount: number // total kills; drives MVP spawn cadence
   sessionCounter: number // increments per sync; seeds the deterministic rng
   dropCounter: number // increments per mintable drop; part of dropId
