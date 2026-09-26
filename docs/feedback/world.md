@@ -6,7 +6,8 @@ Mandatory feedback for the World "Best Use of IDKit" prize. Written as it happen
 
 - **IDKit work started:** 2026-09-26T07:37:08Z
 - **First successful verify round-trip:** 2026-09-26T08:39:27Z, **62 minutes** after we started
-  (wall clock, including about 35 minutes waiting for Portal credentials). Flow: our `/market` UI,
+  (wall clock). Portal credentials and the staging window only existed from about 08:19Z,
+  so the first verify came about 20 minutes after credentials, and the integration was already built. Flow: our `/market` UI,
   then the IDKit widget (staging), then the World ID simulator, then `POST /api/worldid/verify`,
   then the Portal v4 verify, then `HumanRegistry.markVerified` on Sepolia:
   [`0xa081ee7f…858ff`](https://sepolia.etherscan.io/tx/0xa081ee7fd146ed9437061e71af91a39348a1f1c18ff28ee4985588388f0858ff)
@@ -160,7 +161,7 @@ What we do beyond the official example (which forwards the widget result verbati
 
 ## Feedback for World
 
-- **Minutes to first successful verify:** 62 wall-clock minutes from the first IDKit line to a live verify, including about 35 minutes waiting for Portal credentials. About 27 minutes of actual integration.
+- **Minutes to first successful verify:** 62 wall-clock minutes from the first IDKit line (07:37Z) to a live verify (08:39Z). About 20 of those came after the Portal credentials and staging window existed (about 08:19Z); before that the integration was built against the typings and unit tests.
 - **Blockers:** the staging window and token (#2307, not in the docs); the simulator ignored `connect_url` in our runs (we pasted the code instead); the simulator's single global identity.
 - **What was missing:** the docs don't cover the staging-verification window and token (#2307). A testing page is also missing (404). And the docs never say that `signal_hash` in the verify body is caller-controlled. The examples forward the client payload verbatim, which never checks the signal.
 - **What worked well:** the `.d.ts` files in `@worldcoin/idkit` are excellent and read like documentation. `signRequest` is pure JS (no WASM on the server). The widget runs `handleVerify` automatically and fails cleanly when it throws. Thai (`language: "th"`) is built in.
