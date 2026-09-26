@@ -699,21 +699,17 @@ export class IdleScene extends Phaser.Scene {
       this.roosterAura.setAlpha(rt === 2 ? 0.95 : rt === 1 ? 0.75 : 0.45).setScale(rt === 2 ? 1.2 : rt === 1 ? 1.05 : 0.9)
       if (rt >= 1) {
         // sickle tail plume behind the body (teal/silver at tier 1, four-colour at tier 2)
-        const plume = this.add.image(-0.26 * H, -0.42 * H, rt === 2 ? FX.plume2 : FX.plume1).setOrigin(0.92, 0.94).setScale(rt === 2 ? 0.85 : 0.7)
+        // rooted further back so the feathers emerge from behind the tail, never across the body outline
+        const plume = this.add.image(-0.32 * H, -0.4 * H, rt === 2 ? FX.plume2 : FX.plume1).setOrigin(0.92, 0.94).setScale(rt === 2 ? 0.75 : 0.62).setAlpha(0.95)
         this.roosterBody.add(plume)
         this.roosterBody.sendToBack(plume)
         keep(plume)
         if (!this.reduced) this.tweens.add({ targets: plume, angle: { from: -4, to: 4 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-        // gold comb on the head, with a glow
-        // the SVG's head top sits at about -0.83H (the raster has headroom)
-        const glow = this.add.image(0.19 * H, -0.85 * H, FX.glow).setTint(rt === 2 ? 0xffd24a : 0xdfe6ee).setScale(rt === 2 ? 3 : 2).setAlpha(0.6)
-        const comb = this.add.image(0.19 * H, -0.86 * H, FX.comb).setScale(rt === 2 ? 0.95 : 0.75).setTint(rt === 2 ? 0xffffff : 0xdfe6ee)
-        this.roosterBody.add([glow, comb])
-        keep(glow)
+        // crisp outlined comb (the SVG's head top sits at about -0.83H) and medal — no soft glow over the outline
+        const comb = this.add.image(0.19 * H, -0.86 * H, rt === 2 ? FX.comb : tintedTexture(this, FX.comb, 0xdfe6ee)).setScale(rt === 2 ? 0.95 : 0.75)
+        this.roosterBody.add(comb)
         keep(comb)
-        if (!this.reduced) this.tweens.add({ targets: glow, alpha: 0.3, scale: glow.scale * 1.2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-        // medal on the sash
-        const medal = this.add.image(0.04 * H, -0.2 * H, FX.medal).setScale(rt === 2 ? 0.8 : 0.6).setTint(rt === 2 ? 0xffffff : 0xdfe6ee)
+        const medal = this.add.image(0.04 * H, -0.2 * H, rt === 2 ? FX.medal : tintedTexture(this, FX.medal, 0xdfe6ee)).setScale(rt === 2 ? 0.8 : 0.6)
         this.roosterBody.add(medal)
         keep(medal)
       }
@@ -757,15 +753,7 @@ export class IdleScene extends Phaser.Scene {
         const band = this.add.image(0.0 * H, -0.7 * H, tt === 2 ? FX.hatBand2 : FX.hatBand1).setOrigin(0.5, 0.35).setScale(0.95)
         this.trainerBody.add(band)
         this.trainerPower.push(band)
-        // glowing tool head with a sparkle trail
-        const hoe = this.add
-          .image(0.31 * H, -0.8 * H, FX.glow)
-          .setTint(tt === 2 ? 0xffd24a : 0x7ee0ff)
-          .setScale(tt === 2 ? 2.8 : 2)
-          .setAlpha(tt === 2 ? 0.85 : 0.6)
-        this.trainerBody.add(hoe)
-        this.trainerPower.push(hoe)
-        if (!this.reduced) this.tweens.add({ targets: hoe, alpha: 0.4, scale: hoe.scale * 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        // sparkle trail off the tool head (no soft glow over the outline)
         const trail = this.add
           .particles(L.TRAINER_X + 0.31 * H, L.TRAINER_FEET - 0.8 * H, FX.star, {
             lifespan: 700,

@@ -6,7 +6,7 @@
 // particles, hit-stop at half duration with no jitter.
 
 import Phaser from 'phaser'
-import { FX, RARITY_COLORS } from './art'
+import { FX, RARITY_COLORS, tintedTexture } from './art'
 import { INK, JUICE, LAYOUT as L, TYPE, fmt } from './juice'
 import type { Rarity } from '../types'
 
@@ -15,7 +15,7 @@ export type DamageKind = 'trainer' | 'crit' | 'rooster'
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter
 
 const TEXT_POOL = 16
-const AFTERIMAGES = 3
+const AFTERIMAGES = 2
 
 export class Fx {
   private readonly scene: Phaser.Scene
@@ -422,22 +422,23 @@ export class Fx {
     this.dust.explode(n, x, y)
   }
 
-  /** Three fading copies of a sprite along its dash path. */
+  /** Two crisp afterimages in palette colours (gold, then clay) along the dash path. */
   afterimages(key: string, x0: number, y0: number, x1: number, y1: number, displayH: number, flipX = false): void {
     if (this.reduced) return
-    const alphas = [0.5, 0.35, 0.2]
+    const alphas = [0.55, 0.3]
+    const keys = [tintedTexture(this.scene, key, 0xffd24a), tintedTexture(this.scene, key, 0xe08a4a)]
     for (let i = 0; i < AFTERIMAGES; i++) {
       const g = this.ghosts[this.ghostIdx++ % AFTERIMAGES]
       this.scene.tweens.killTweensOf(g)
       const t = (i + 1) / (AFTERIMAGES + 1)
-      g.setTexture(key)
+      g.setTexture(keys[i])
         .setDisplaySize(displayH, displayH)
         .setPosition(Phaser.Math.Linear(x0, x1, 1 - t), Phaser.Math.Linear(y0, y1, 1 - t))
-        .setTint(0xfff3d6)
+        .clearTint()
         .setAlpha(alphas[i])
         .setFlipX(flipX)
         .setVisible(true)
-      this.scene.tweens.add({ targets: g, alpha: 0, duration: 160, delay: i * 30, onComplete: () => g.setVisible(false) })
+      this.scene.tweens.add({ targets: g, alpha: 0, duration: 140, delay: i * 30, onComplete: () => g.setVisible(false) })
     }
   }
 

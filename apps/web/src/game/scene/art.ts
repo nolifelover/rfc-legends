@@ -793,15 +793,16 @@ export function makeFxTextures(scene: Phaser.Scene): void {
     g.strokePath()
   }
   // sickle tail plumes: root at the bottom-right corner, sweeping up-left
+  // palette colours (no neon): teal, silver / rose, teal, gold, clay
   make(FX.plume1, 220, 260, (g) => {
-    featherArc(g, 200, 240, 200, Phaser.Math.DegToRad(-140), 0x3fb8c9, 16)
+    featherArc(g, 200, 240, 200, Phaser.Math.DegToRad(-140), 0x5aa9a0, 16)
     featherArc(g, 200, 240, 180, Phaser.Math.DegToRad(-118), 0xdfe6ee, 16)
   })
   make(FX.plume2, 320, 340, (g) => {
-    featherArc(g, 300, 320, 300, Phaser.Math.DegToRad(-150), 0xff5fd2, 18)
-    featherArc(g, 300, 320, 290, Phaser.Math.DegToRad(-134), 0x3fb8c9, 18)
-    featherArc(g, 300, 320, 280, Phaser.Math.DegToRad(-118), 0xffd24a, 18)
-    featherArc(g, 300, 320, 240, Phaser.Math.DegToRad(-102), 0xff8a3d, 16)
+    featherArc(g, 300, 320, 300, Phaser.Math.DegToRad(-150), 0xd97aa8, 18)
+    featherArc(g, 300, 320, 290, Phaser.Math.DegToRad(-134), 0x5aa9a0, 18)
+    featherArc(g, 300, 320, 280, Phaser.Math.DegToRad(-118), 0xe8c25a, 18)
+    featherArc(g, 300, 320, 240, Phaser.Math.DegToRad(-102), 0xe08a4a, 16)
   })
   // gold comb: three outlined lobes
   make(FX.comb, 96, 64, (g) => {
