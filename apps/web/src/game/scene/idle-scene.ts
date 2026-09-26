@@ -123,16 +123,17 @@ export class IdleScene extends Phaser.Scene {
 
   // heroes
   private trainer!: Phaser.GameObjects.Container
+  /** inner body: the sprite plus its tier gear, so lunges, swings and flips carry the gear */
+  private trainerBody!: Phaser.GameObjects.Container
   private trainerSprite!: Phaser.GameObjects.Image
-  private trainerS0 = 1
   private trainerPlate!: Nameplate
   private trainerBob: Phaser.Tweens.Tween | null = null
   private trainerChain: Phaser.Tweens.TweenChain | null = null
   private trainerLook = false
   private rooster!: Phaser.GameObjects.Container
+  private roosterBody!: Phaser.GameObjects.Container
   private roosterSprite!: Phaser.GameObjects.Image
   private roosterKey = ROOSTER_KEYS.thepbut
-  private roosterS0 = 1
   private roosterPlate!: Nameplate
   private roosterAura!: Phaser.GameObjects.Image
   private roosterBob: Phaser.Tweens.Tween | null = null
@@ -538,9 +539,10 @@ export class IdleScene extends Phaser.Scene {
   private buildActors(): void {
     // trainer: container at the feet, sprite inside so attack tweens are relative
     this.trainer = this.add.container(L.TRAINER_X, L.TRAINER_FEET).setDepth(24)
+    this.trainerBody = this.add.container(0, 0)
     this.trainerSprite = this.add.image(0, 0, TRAINER_KEY).setOrigin(0.5, 1).setDisplaySize(L.TRAINER_H, L.TRAINER_H)
-    this.trainerS0 = this.trainerSprite.scaleX
-    this.trainer.add(this.trainerSprite)
+    this.trainerBody.add(this.trainerSprite)
+    this.trainer.add(this.trainerBody)
     this.trainerPlate = new Nameplate(this, this.trainerLabel(), { fontFamily: this.font, fontSize: TYPE.plateTrainer })
     this.trainerPlate.place(L.TRAINER_X, L.TRAINER_FEET - L.TRAINER_H - 64)
     this.startTrainerBob()
@@ -565,9 +567,10 @@ export class IdleScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
     })
     this.rooster = this.add.container(L.ROOSTER_X, L.ROOSTER_FEET).setDepth(25)
+    this.roosterBody = this.add.container(0, 0)
     this.roosterSprite = this.add.image(0, 0, this.roosterKey).setOrigin(0.5, 1).setDisplaySize(L.ROOSTER_H, L.ROOSTER_H)
-    this.roosterS0 = this.roosterSprite.scaleX
-    this.rooster.add(this.roosterSprite)
+    this.roosterBody.add(this.roosterSprite)
+    this.rooster.add(this.roosterBody)
     this.tweens.add({ targets: this.rooster, scaleY: 1.03, scaleX: 0.985, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: 300 })
     this.roosterPlate = new Nameplate(this, this.roosterLabel(), {
       fontFamily: this.font,
@@ -591,9 +594,9 @@ export class IdleScene extends Phaser.Scene {
         const busy = this.trainerChain?.isPlaying() || this.nextTrainerAt - this.time.now < 800
         if (!busy && !this.trainerLook) {
           this.trainerLook = true
-          this.trainerSprite.setFlipX(true)
+          this.trainerBody.setScale(-1, 1)
           this.time.delayedCall(600, () => {
-            this.trainerSprite.setFlipX(false)
+            if (!this.trainerChain?.isPlaying()) this.trainerBody.setScale(1, 1)
             this.trainerLook = false
           })
         }
@@ -619,29 +622,52 @@ export class IdleScene extends Phaser.Scene {
       for (const o of this.roosterPower) o.destroy()
       this.roosterPower = []
       const H = L.ROOSTER_H
-      const add = (x: number, y: number, key: string, tint: number, scale: number, alpha: number, pulse = false): void => {
-        // normal blend: additive gold over the green paddy washed out to pale mint
-        const img = this.add.image(x, y, key).setTint(tint).setScale(scale).setAlpha(alpha)
-        this.rooster.add(img)
-        this.roosterPower.push(img)
-        if (pulse && !this.reduced) {
-          this.tweens.add({ targets: img, alpha: alpha * 0.55, scale: scale * 1.15, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-        }
+      const keep = (o: Phaser.GameObjects.GameObject): void => {
+        this.roosterPower.push(o)
       }
       // aura tier: size and strength under the feet
       this.roosterAura.setAlpha(rt === 2 ? 0.95 : rt === 1 ? 0.75 : 0.45).setScale(rt === 2 ? 1.2 : rt === 1 ? 1.05 : 0.9)
       if (rt >= 1) {
-        add(0.12 * H, -0.93 * H, FX.glow, rt === 2 ? 0xffd24a : 0xff8a3d, rt === 2 ? 2.6 : 1.8, 0.7, true) // comb
-        add(-0.3 * H, -0.62 * H, FX.glow, rt === 2 ? 0xffd24a : 0xff8a3d, rt === 2 ? 3 : 2, 0.45, true) // tail
+        // sickle tail plume behind the body (teal/silver at tier 1, four-colour at tier 2)
+        const plume = this.add.image(-0.26 * H, -0.42 * H, rt === 2 ? FX.plume2 : FX.plume1).setOrigin(0.92, 0.94).setScale(rt === 2 ? 0.85 : 0.7)
+        this.roosterBody.add(plume)
+        this.roosterBody.sendToBack(plume)
+        keep(plume)
+        if (!this.reduced) this.tweens.add({ targets: plume, angle: { from: -4, to: 4 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        // gold comb on the head, with a glow
+        // the SVG's head top sits at about -0.83H (the raster has headroom)
+        const glow = this.add.image(0.19 * H, -0.85 * H, FX.glow).setTint(rt === 2 ? 0xffd24a : 0xdfe6ee).setScale(rt === 2 ? 3 : 2).setAlpha(0.6)
+        const comb = this.add.image(0.19 * H, -0.86 * H, FX.comb).setScale(rt === 2 ? 0.95 : 0.75).setTint(rt === 2 ? 0xffffff : 0xdfe6ee)
+        this.roosterBody.add([glow, comb])
+        keep(glow)
+        keep(comb)
+        if (!this.reduced) this.tweens.add({ targets: glow, alpha: 0.3, scale: glow.scale * 1.2, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        // medal on the sash
+        const medal = this.add.image(0.04 * H, -0.2 * H, FX.medal).setScale(rt === 2 ? 0.8 : 0.6).setTint(rt === 2 ? 0xffffff : 0xdfe6ee)
+        this.roosterBody.add(medal)
+        keep(medal)
       }
       if (rt === 2) {
-        add(-0.09 * H, -0.08 * H, FX.star, 0xffd24a, 0.7, 0.95, true) // spurs
-        add(0.1 * H, -0.06 * H, FX.star, 0xffd24a, 0.7, 0.95, true)
-        const ring = this.add.image(0, -4, FX.ring).setTint(0xffd24a).setScale(3.4, 1.1).setAlpha(0.6).setDepth(22)
-        this.roosterPower.push(ring)
+        // bright gold ring and rising sparkles under the feet
+        const ring = this.add.image(0, -4, FX.ring).setTint(0xffd24a).setScale(3.8, 1.2).setAlpha(0.9)
         this.rooster.add(ring)
         this.rooster.sendToBack(ring)
+        keep(ring)
         this.tweens.add({ targets: ring, angle: 360, duration: 6000, repeat: -1 })
+        const rise = this.add
+          .particles(L.ROOSTER_X, L.ROOSTER_FEET - 10, FX.star, {
+            x: { min: -150, max: 150 },
+            lifespan: 1400,
+            speedY: { min: -140, max: -60 },
+            speedX: { min: -10, max: 10 },
+            scale: { start: 0.55, end: 0 },
+            alpha: { start: 1, end: 0 },
+            tint: [0xffd24a, 0xfff3d6],
+            frequency: this.reduced ? 700 : 260,
+            maxAliveParticles: 8,
+          })
+          .setDepth(26)
+        keep(rise)
       }
     }
     if (tt !== this.trainerTier) {
@@ -650,19 +676,38 @@ export class IdleScene extends Phaser.Scene {
       this.trainerPower = []
       const H = L.TRAINER_H
       if (tt >= 1) {
-        const trim = this.add
-          .image(0.02 * H, -0.86 * H, FX.glow)
-          .setTint(tt === 2 ? 0xffd24a : 0xdfe6ee)
-          .setScale(3.2, 0.55)
-          .setAlpha(tt === 2 ? 0.75 : 0.5)
+        // cape (tier 2, crimson with a gold hem) or scarf (tier 1, teal) behind the shoulders
+        const cloth = this.add.image(-0.1 * H, -0.55 * H, tt === 2 ? FX.cape : FX.scarf).setOrigin(0.5, 0.05).setScale(tt === 2 ? 0.8 : 0.7)
+        this.trainerBody.add(cloth)
+        this.trainerBody.sendToBack(cloth)
+        this.trainerPower.push(cloth)
+        if (!this.reduced) this.tweens.add({ targets: cloth, scaleX: cloth.scaleX * 0.9, angle: tt === 2 ? -6 : -3, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        // hat band (silver, then gold with a tassel)
+        // the hat brim sits at about -0.68H on the raster
+        const band = this.add.image(0.0 * H, -0.7 * H, tt === 2 ? FX.hatBand2 : FX.hatBand1).setOrigin(0.5, 0.35).setScale(0.95)
+        this.trainerBody.add(band)
+        this.trainerPower.push(band)
+        // glowing tool head with a sparkle trail
         const hoe = this.add
-          .image(0.3 * H, -0.62 * H, FX.glow)
+          .image(0.31 * H, -0.8 * H, FX.glow)
           .setTint(tt === 2 ? 0xffd24a : 0x7ee0ff)
-          .setScale(tt === 2 ? 2.4 : 1.7)
-          .setAlpha(tt === 2 ? 0.8 : 0.55)
-        this.trainer.add([trim, hoe])
-        this.trainerPower.push(trim, hoe)
-        if (!this.reduced) this.tweens.add({ targets: hoe, alpha: 0.35, scale: hoe.scale * 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+          .setScale(tt === 2 ? 2.8 : 2)
+          .setAlpha(tt === 2 ? 0.85 : 0.6)
+        this.trainerBody.add(hoe)
+        this.trainerPower.push(hoe)
+        if (!this.reduced) this.tweens.add({ targets: hoe, alpha: 0.4, scale: hoe.scale * 1.2, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        const trail = this.add
+          .particles(L.TRAINER_X + 0.31 * H, L.TRAINER_FEET - 0.8 * H, FX.star, {
+            lifespan: 700,
+            speed: { min: 10, max: 40 },
+            scale: { start: 0.4, end: 0 },
+            alpha: { start: 0.9, end: 0 },
+            tint: tt === 2 ? 0xffd24a : 0x7ee0ff,
+            frequency: this.reduced ? 600 : 220,
+            maxAliveParticles: 6,
+          })
+          .setDepth(26)
+        this.trainerPower.push(trail)
       }
     }
   }
@@ -684,20 +729,19 @@ export class IdleScene extends Phaser.Scene {
   private resetRoosterPose(): void {
     this.killTween(this.roosterIdle)
     this.roosterIdle = null
-    this.roosterSprite.setAngle(0).setFlipX(false).setScale(this.roosterS0)
+    this.roosterBody.setAngle(0).setScale(1, 1)
   }
 
   private roosterIdleOnce(): void {
     this.resetRoosterPose()
-    const sp = this.roosterSprite
-    const s0 = this.roosterS0
+    const body = this.roosterBody
     switch (Phaser.Math.Between(0, 3)) {
       case 0: // peck: rotate about the feet, twice
-        this.roosterIdle = this.tweens.add({ targets: sp, angle: 18, duration: 120, yoyo: true, repeat: 1, ease: 'Quad.easeOut' })
+        this.roosterIdle = this.tweens.add({ targets: body, angle: 18, duration: 120, yoyo: true, repeat: 1, ease: 'Quad.easeOut' })
         break
       case 1: // head tilt, hold, back
         this.roosterIdle = this.tweens.chain({
-          targets: sp,
+          targets: body,
           tweens: [
             { angle: -8, duration: 160, ease: 'Sine.easeOut' },
             { angle: -8, duration: 400 },
@@ -706,13 +750,13 @@ export class IdleScene extends Phaser.Scene {
         })
         break
       case 2: // feather ruffle
-        this.roosterIdle = this.tweens.add({ targets: sp, scaleX: s0 * 0.92, duration: 90, yoyo: true, repeat: 2 })
+        this.roosterIdle = this.tweens.add({ targets: body, scaleX: 0.92, duration: 90, yoyo: true, repeat: 2 })
         this.fx.featherPuff(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 2)
         break
-      default: // look back at the trainer
-        sp.setFlipX(true)
+      default: // look back at the trainer (mirror the whole body, gear included)
+        body.setScale(-1, 1)
         this.time.delayedCall(700, () => {
-          if (!this.roosterChain?.isPlaying()) sp.setFlipX(false)
+          if (!this.roosterChain?.isPlaying()) body.setScale(1, 1)
         })
     }
   }
@@ -738,8 +782,7 @@ export class IdleScene extends Phaser.Scene {
   /** Wings flap wide and the rooster crows — trainer level-ups and the cheer tap. */
   private roosterCrow(): void {
     this.resetRoosterPose()
-    const s0 = this.roosterS0
-    this.roosterIdle = this.tweens.add({ targets: this.roosterSprite, scaleX: s0 * 1.14, scaleY: s0 * 0.94, duration: 90, yoyo: true, repeat: 3 })
+    this.roosterIdle = this.tweens.add({ targets: this.roosterBody, scaleX: 1.14, scaleY: 0.94, duration: 90, yoyo: true, repeat: 3 })
     this.fx.speech(L.ROOSTER_X + 120, L.ROOSTER_FEET - L.ROOSTER_H - 10, 'Cock-a-doodle-doo!')
     this.fx.sparkle(L.ROOSTER_X, L.ROOSTER_FEET - L.ROOSTER_H * 0.6, 10)
     this.roosterCheer()
@@ -1106,22 +1149,22 @@ export class IdleScene extends Phaser.Scene {
     this.setFocus(target)
     this.nextTrainerAt = time + this.trainerCd
     const { value, crit } = this.trainerHit()
-    const s0 = this.trainerS0
     const sp = this.trainerSprite
+    const body = this.trainerBody
     this.killTween(this.trainerChain)
-    sp.setPosition(0, 0).setScale(s0).setAngle(0).setFlipX(false)
+    body.setPosition(0, 0).setScale(1, 1).setAngle(0)
     this.trainerLook = false
     // four distinct poses (the sprite pivots at the feet): wind-up leaning back on
     // the stride texture → swing forward → held impact → follow-through → overshoot
     // recovery. The hit lands at the end of the swing.
     this.trainerChain = this.tweens.chain({
-      targets: sp,
+      targets: body,
       tweens: [
         {
           x: -24,
           angle: -14,
-          scaleX: s0 * 1.06,
-          scaleY: s0 * 0.94,
+          scaleX: 1.06,
+          scaleY: 0.94,
           duration: JUICE.WINDUP,
           ease: 'Quad.easeOut',
           onStart: () => sp.setTexture(TRAINER_WALK_KEY),
@@ -1129,8 +1172,8 @@ export class IdleScene extends Phaser.Scene {
         {
           x: JUICE.STRIKE_DX,
           angle: 22,
-          scaleX: s0 * 0.94,
-          scaleY: s0 * 1.06,
+          scaleX: 0.94,
+          scaleY: 1.06,
           duration: JUICE.STRIKE,
           ease: 'Expo.easeIn',
           onStart: () => sp.setTexture(TRAINER_KEY),
@@ -1146,9 +1189,9 @@ export class IdleScene extends Phaser.Scene {
             this.hitPest(target, value, crit ? 'crit' : 'trainer', time)
           },
         },
-        { x: JUICE.STRIKE_DX + 6, angle: 26, scaleX: s0 * 0.94, scaleY: s0 * 1.06, duration: JUICE.HOLD },
-        { x: JUICE.STRIKE_DX - 50, angle: 8, scaleX: s0, scaleY: s0, duration: 130, ease: 'Sine.easeOut' },
-        { x: 0, angle: 0, scaleX: s0, scaleY: s0, duration: JUICE.RECOVER, ease: 'Back.easeOut' },
+        { x: JUICE.STRIKE_DX + 6, angle: 26, scaleX: 0.94, scaleY: 1.06, duration: JUICE.HOLD },
+        { x: JUICE.STRIKE_DX - 50, angle: 8, scaleX: 1, scaleY: 1, duration: 130, ease: 'Sine.easeOut' },
+        { x: 0, angle: 0, scaleX: 1, scaleY: 1, duration: JUICE.RECOVER, ease: 'Back.easeOut' },
       ],
     })
   }
@@ -1167,8 +1210,7 @@ export class IdleScene extends Phaser.Scene {
     }
     this.nextRoosterAt = time + cd
     const { value, crit } = this.roosterHit()
-    const s0 = this.roosterS0
-    const sp = this.roosterSprite
+    const body = this.roosterBody
     const rs = ROW_SCALE[target.row]
     this.resetRoosterPose()
     const dashX = target.container.x - (target.boss ? 300 : 120 + target.h * rs * 0.45)
@@ -1176,12 +1218,12 @@ export class IdleScene extends Phaser.Scene {
     this.killTween(this.roosterChain)
     this.roosterBob?.remove()
     this.roosterBob = null
-    sp.setScale(s0)
+    body.setScale(1, 1)
     this.rooster.setPosition(L.ROOSTER_X, L.ROOSTER_FEET)
     // crouch → dash (afterimages) → peck lands → spring back
     this.roosterChain = this.tweens.chain({
       tweens: [
-        { targets: sp, scaleY: s0 * 0.88, scaleX: s0 * 1.08, duration: JUICE.CROUCH, ease: 'Quad.easeOut' },
+        { targets: body, scaleY: 0.88, scaleX: 1.08, duration: JUICE.CROUCH, ease: 'Quad.easeOut' },
         {
           targets: this.rooster,
           x: dashX,
@@ -1189,7 +1231,7 @@ export class IdleScene extends Phaser.Scene {
           duration: JUICE.DASH,
           ease: 'Expo.easeIn',
           onStart: () => {
-            sp.setScale(s0 * 1.04, s0 * 0.96)
+            body.setScale(1.04, 0.96)
             this.fx.dustKick(L.ROOSTER_X - 20, L.ROOSTER_FEET, 4)
           },
           onComplete: () => {
@@ -1211,7 +1253,7 @@ export class IdleScene extends Phaser.Scene {
           y: L.ROOSTER_FEET,
           duration: JUICE.DASH_BACK,
           ease: 'Back.easeOut',
-          onStart: () => sp.setScale(s0),
+          onStart: () => body.setScale(1, 1),
           onComplete: () => this.startRoosterBob(),
         },
       ],
@@ -1570,7 +1612,7 @@ export class IdleScene extends Phaser.Scene {
       this.fx.dustKick(L.TRAINER_X, L.TRAINER_FEET, 4)
       this.trainerSprite.setTint(0xff6b5b)
       this.time.delayedCall(60, () => this.trainerSprite.clearTint())
-      this.tweens.add({ targets: this.trainerSprite, x: -40, duration: 90, yoyo: true, ease: 'Quad.easeOut' })
+      this.tweens.add({ targets: this.trainerBody, x: -40, duration: 90, yoyo: true, ease: 'Quad.easeOut' })
     })
   }
 
@@ -1610,9 +1652,9 @@ export class IdleScene extends Phaser.Scene {
       ],
       onComplete: () => {
         this.tweens.add({
-          targets: this.trainerSprite,
-          scaleX: this.trainerS0 * 1.1,
-          scaleY: this.trainerS0 * 0.9,
+          targets: this.trainerBody,
+          scaleX: 1.1,
+          scaleY: 0.9,
           duration: 90,
           yoyo: true,
           onComplete: () => this.startTrainerBob(),
@@ -1786,8 +1828,7 @@ export class IdleScene extends Phaser.Scene {
   /** Eyes wide (1.1× for a beat) plus the cheer hops — a rare drop just landed. */
   private roosterWide(): void {
     this.resetRoosterPose()
-    const s0 = this.roosterS0
-    this.roosterIdle = this.tweens.add({ targets: this.roosterSprite, scale: s0 * 1.1, duration: 140, yoyo: true, hold: 600, ease: 'Back.easeOut' })
+    this.roosterIdle = this.tweens.add({ targets: this.roosterBody, scale: 1.1, duration: 140, yoyo: true, hold: 600, ease: 'Back.easeOut' })
     this.roosterCheer()
   }
 

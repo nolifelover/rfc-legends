@@ -20,10 +20,10 @@ export interface LabelStyle {
 /** Frame tier by real level: 0 bronze (<30), 1 silver (30–69), 2 gold (70+). */
 export type Tier = 0 | 1 | 2
 export const tierOf = (level: number): Tier => (level >= 70 ? 2 : level >= 30 ? 1 : 0)
-const TIER_FRAME: Record<Tier, { color: number; width: number }> = {
-  0: { color: 0xb87333, width: 2 },
-  1: { color: 0xd6dde6, width: 3 },
-  2: { color: 0xffd24a, width: 4 },
+const TIER_FRAME: Record<Tier, { color: number; width: number; glyph: string }> = {
+  0: { color: 0xb87333, width: 2, glyph: '' },
+  1: { color: 0xd6dde6, width: 4, glyph: '★ ' },
+  2: { color: 0xffd24a, width: 6, glyph: '♛ ' },
 }
 
 export class Nameplate {
@@ -32,6 +32,7 @@ export class Nameplate {
   private readonly bg: Phaser.GameObjects.Graphics
   private readonly main: Phaser.GameObjects.Text
   private tier: Tier | null = null
+  private mainText = ''
 
   constructor(scene: Phaser.Scene, main: string, style: LabelStyle = {}) {
     this.container = scene.add.container(0, 0).setDepth(style.depth ?? 50)
@@ -50,8 +51,9 @@ export class Nameplate {
   }
 
   setMain(text: string): void {
-    if (this.main.text === text) return
-    this.main.setText(text)
+    if (this.mainText === text) return
+    this.mainText = text
+    this.main.setText((this.tier !== null ? TIER_FRAME[this.tier].glyph : '') + text)
     this.redraw()
   }
 
@@ -63,6 +65,10 @@ export class Nameplate {
   setTier(tier: Tier): void {
     if (this.tier === tier) return
     this.tier = tier
+    const base = this.mainText || this.main.text
+    this.mainText = base
+    this.main.setText(TIER_FRAME[tier].glyph + base)
+    this.main.setColor(tier === 2 ? '#ffe9a8' : this.main.style.color as string)
     this.redraw()
   }
 

@@ -537,6 +537,15 @@ export const FX = {
   kite: 'fx-kite',
   butterfly: 'fx-butterfly',
   chaff: 'fx-chaff',
+  plume1: 'fx-plume-1',
+  plume2: 'fx-plume-2',
+  comb: 'fx-comb',
+  medal: 'fx-medal',
+  hatBand1: 'fx-hat-band-1',
+  hatBand2: 'fx-hat-band-2',
+  scarf: 'fx-scarf',
+  cape: 'fx-cape',
+  bag: 'fx-seed-bag',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -654,6 +663,125 @@ export function makeFxTextures(scene: Phaser.Scene): void {
   make(FX.confetti, 16, 16, (g) => {
     g.fillStyle(0xffffff)
     g.fillRect(2, 2, 12, 12)
+  })
+
+  // --- power-tier gear (drawn over the SVG actors; tier 1 silver/teal, tier 2 gold/iridescent) ---
+  const featherArc = (g: Phaser.GameObjects.Graphics, x0: number, y0: number, len: number, ang: number, color: number, w: number): void => {
+    // a tapered feather: thick outlined stroke then a bright core
+    const x1 = x0 + Math.cos(ang) * len
+    const y1 = y0 + Math.sin(ang) * len
+    const cx = (x0 + x1) / 2 - Math.sin(ang) * len * 0.35
+    const cy = (y0 + y1) / 2 + Math.cos(ang) * len * 0.35
+    const pts = new Phaser.Curves.QuadraticBezier(new Phaser.Math.Vector2(x0, y0), new Phaser.Math.Vector2(cx, cy), new Phaser.Math.Vector2(x1, y1)).getPoints(14)
+    g.lineStyle(w + 6, OUTLINE, 1)
+    g.beginPath()
+    g.moveTo(pts[0].x, pts[0].y)
+    for (const p of pts) g.lineTo(p.x, p.y)
+    g.strokePath()
+    g.lineStyle(w, color, 1)
+    g.beginPath()
+    g.moveTo(pts[0].x, pts[0].y)
+    for (const p of pts) g.lineTo(p.x, p.y)
+    g.strokePath()
+  }
+  // sickle tail plumes: root at the bottom-right corner, sweeping up-left
+  make(FX.plume1, 220, 260, (g) => {
+    featherArc(g, 200, 240, 200, Phaser.Math.DegToRad(-140), 0x3fb8c9, 16)
+    featherArc(g, 200, 240, 180, Phaser.Math.DegToRad(-118), 0xdfe6ee, 16)
+  })
+  make(FX.plume2, 320, 340, (g) => {
+    featherArc(g, 300, 320, 300, Phaser.Math.DegToRad(-150), 0xff5fd2, 18)
+    featherArc(g, 300, 320, 290, Phaser.Math.DegToRad(-134), 0x3fb8c9, 18)
+    featherArc(g, 300, 320, 280, Phaser.Math.DegToRad(-118), 0xffd24a, 18)
+    featherArc(g, 300, 320, 240, Phaser.Math.DegToRad(-102), 0xff8a3d, 16)
+  })
+  // gold comb: three outlined lobes
+  make(FX.comb, 96, 64, (g) => {
+    for (const [x, y, r] of [[22, 34, 18], [48, 22, 22], [76, 34, 18]] as const) {
+      g.fillStyle(0xffd24a)
+      g.fillCircle(x, y, r)
+      g.lineStyle(4, OUTLINE)
+      g.strokeCircle(x, y, r)
+    }
+    g.fillStyle(0xfff3d6, 0.8)
+    g.fillCircle(44, 18, 7)
+  })
+  // sash medal: gold star on a red ribbon
+  make(FX.medal, 64, 80, (g) => {
+    g.fillStyle(0xe2574c)
+    g.fillTriangle(20, 0, 44, 0, 32, 34)
+    g.lineStyle(3, OUTLINE)
+    g.strokeTriangle(20, 0, 44, 0, 32, 34)
+    const pts: Phaser.Geom.Point[] = []
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 26 : 11
+      const a = (Math.PI / 5) * i - Math.PI / 2
+      pts.push(new Phaser.Geom.Point(32 + Math.cos(a) * r, 50 + Math.sin(a) * r))
+    }
+    g.fillStyle(0xffd24a)
+    g.fillPoints(pts, true)
+    g.lineStyle(3, OUTLINE)
+    g.strokePoints(pts, true)
+  })
+  // hat bands: silver (tier 1) and gold with a hanging tassel (tier 2)
+  make(FX.hatBand1, 240, 60, (g) => {
+    g.fillStyle(0xdfe6ee)
+    g.fillRoundedRect(8, 18, 224, 24, 10)
+    g.lineStyle(4, OUTLINE)
+    g.strokeRoundedRect(8, 18, 224, 24, 10)
+  })
+  make(FX.hatBand2, 240, 110, (g) => {
+    g.fillStyle(0xffd24a)
+    g.fillRoundedRect(8, 18, 224, 26, 10)
+    g.lineStyle(4, OUTLINE)
+    g.strokeRoundedRect(8, 18, 224, 26, 10)
+    g.fillStyle(0xe2574c)
+    g.fillCircle(120, 31, 9)
+    // tassel
+    g.lineStyle(6, OUTLINE)
+    g.lineBetween(218, 40, 214, 78)
+    g.lineStyle(3, 0xffd24a)
+    g.lineBetween(218, 40, 214, 78)
+    g.fillStyle(0xe2574c)
+    g.fillEllipse(214, 90, 18, 26)
+    g.lineStyle(3, OUTLINE)
+    g.strokeEllipse(214, 90, 18, 26)
+  })
+  // scarf (tier 1 teal) and cape (tier 2 crimson with gold hem), origin at the shoulders
+  make(FX.scarf, 160, 120, (g) => {
+    g.fillStyle(0x3fb8c9)
+    g.fillRoundedRect(10, 10, 140, 34, 14)
+    g.fillTriangle(30, 40, 70, 40, 44, 110)
+    g.lineStyle(4, OUTLINE)
+    g.strokeRoundedRect(10, 10, 140, 34, 14)
+    g.strokeTriangle(30, 40, 70, 40, 44, 110)
+  })
+  make(FX.cape, 220, 260, (g) => {
+    g.fillStyle(0xc4302b)
+    g.fillTriangle(60, 10, 160, 10, 210, 240)
+    g.fillTriangle(60, 10, 210, 240, 10, 240)
+    g.fillStyle(0xffd24a)
+    g.fillRect(10, 226, 200, 16)
+    g.lineStyle(5, OUTLINE)
+    g.beginPath()
+    g.moveTo(60, 10)
+    g.lineTo(160, 10)
+    g.lineTo(210, 240)
+    g.lineTo(10, 240)
+    g.closePath()
+    g.strokePath()
+  })
+  // thrown seed bag (the trainer's ranged attack)
+  make(FX.bag, 64, 64, (g) => {
+    g.fillStyle(0xd9b45c)
+    g.fillEllipse(32, 38, 44, 40)
+    g.fillStyle(0xb98d3e)
+    g.fillRoundedRect(20, 8, 24, 16, 6)
+    g.lineStyle(4, OUTLINE)
+    g.strokeEllipse(32, 38, 44, 40)
+    g.strokeRoundedRect(20, 8, 24, 16, 6)
+    g.lineStyle(3, 0xe2574c)
+    g.lineBetween(18, 24, 46, 24)
   })
 
   // butterfly: two wings + body (flaps by scaling X), and a rice-chaff flake
