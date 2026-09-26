@@ -17,7 +17,7 @@ Hackathon project: an **idle MMORPG** (Ragnarok-style progression) where a playe
 - `docs/cowork-session/transcript.md` — the full planning conversation (prizes research, farm/RFC research, all design decisions, the user's answers). Read it before making product decisions.
 - `docs/ethglobal-submission-draft.md` — form copy for the ETHGlobal project page, plus current submission status.
 - `docs/ethglobal-tokyo-2026-prizes.md` — prize list and rules.
-- The GDD (`RFC_Legends_GDD_v0.4.docx`, 38 pages) was produced in the cowork session and has **not** been recovered into this repo yet.
+- The GDD (`RFC_Legends_GDD_v0.4.docx`, 38 pages, 22 sections) was produced in the cowork session. The user will add it at `docs/RFC_Legends_GDD_v0.4.docx`. Once it's there, convert it to `docs/RFC_Legends_GDD_v0.4.md` for grep-able reference. Section 22 covers long-term Ragnarok-derived mechanics, and 22.15 covers the Rare Market sink design.
 
 ## Planned architecture (vertical slice for the demo)
 
