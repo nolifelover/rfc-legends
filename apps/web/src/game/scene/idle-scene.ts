@@ -130,6 +130,9 @@ export class IdleScene extends Phaser.Scene {
   private pendingLoot: LootEntry[] = []
   /** units drained from the queue but not yet arrived at the chip */
   private lootFlying = 0
+  /** coins and commons lying where the enemies died, until the next collect sweep */
+  private resting: Array<{ img: Phaser.GameObjects.Image; fly: (delay: number) => void }> = []
+  private nextSweepAt = 0
 
   // heroes
   private trainer!: Phaser.GameObjects.Container
@@ -1440,8 +1443,7 @@ export class IdleScene extends Phaser.Scene {
     const label = entry.n > 1 ? `+${entry.n}` : '+1'
     this.lootFlying += entry.n
     this.fx.lootArc(icon, restX, restY, () => {
-      // the item rests on the ground (longer under a rare beam) so stills catch loot on the floor
-      this.time.delayedCall(tier ? JUICE.LOOT_REST_RARE : JUICE.LOOT_REST, () => {
+      const fly = (delay: number): void => {
         const a = this.harvestChip.anchor
         this.fx.vacuum(icon, a.x, a.y, () => {
           this.lootFlying -= entry.n
@@ -1450,8 +1452,12 @@ export class IdleScene extends Phaser.Scene {
           this.pinChips()
           this.harvestChip.bounce()
           this.fx.tick(this.harvestChip.container.x, this.harvestChip.container.y + 62, label, INK.loot)
-        })
-      })
+        }, delay)
+      }
+      // commons lie where the enemy died until the next collect sweep; rare and
+      // epic hold under their beam, then fly on their own
+      if (tier) this.time.delayedCall(JUICE.LOOT_REST_RARE, () => fly(0))
+      else this.rest(icon, fly)
     })
   }
 
@@ -1469,7 +1475,7 @@ export class IdleScene extends Phaser.Scene {
       const restX = Phaser.Math.Clamp(x + Phaser.Math.Between(-220, 160), 880, 1700)
       const restY = L.LOOT_REST_Y + Phaser.Math.Between(-16, 16)
       this.fx.lootArc(coin, restX, restY, () => {
-        this.time.delayedCall(JUICE.COIN_REST + i * 40, () => {
+        this.rest(coin, (delay) => {
           const a = target.anchor
           this.fx.vacuum(coin, a.x, a.y, () => {
             if (!ticked && this.coinsKnown && coinDelta > 0) {
@@ -1482,10 +1488,25 @@ export class IdleScene extends Phaser.Scene {
             } else if (!this.coinsKnown && i === 0) {
               target.pop()
             }
-          }, i * JUICE.LOOT_STAGGER)
+          }, delay)
         })
       })
     }
+  }
+
+  /** Leave a landed icon on the ground for the next sweep (oldest fly early past REST_CAP). */
+  private rest(img: Phaser.GameObjects.Image, fly: (delay: number) => void): void {
+    this.resting.push({ img, fly })
+    if (this.resting.length > JUICE.REST_CAP) {
+      const oldest = this.resting.splice(0, 8)
+      oldest.forEach((r, i) => r.fly(i * JUICE.LOOT_STAGGER))
+    }
+  }
+
+  /** The collect sweep: everything resting arcs into the chips, staggered. */
+  private sweepLoot(): void {
+    const batch = this.resting.splice(0)
+    batch.forEach((r, i) => r.fly(i * JUICE.LOOT_STAGGER))
   }
 
   private queueLoot(prev: Player, next: Player): void {
@@ -1526,6 +1547,7 @@ export class IdleScene extends Phaser.Scene {
     this.bossActive = true
     this.bossServerDead = false
     this.forceBoss = false
+    this.sweepLoot()
     this.updateBossShadow()
     new Ribbon(this, 'BOSS APPROACHING', this.font).play(700, this.reduced)
     if (!this.reduced) {
@@ -1924,6 +1946,7 @@ export class IdleScene extends Phaser.Scene {
 
   /** The server moved the player to another map: the pack leaves, the backdrop re-tints, new pests walk in. */
   private changeZone(map: MapDef): void {
+    this.sweepLoot()
     // cross-fade: dip to dark, swap the palette underneath, come back up
     this.fx.dim(0.85, 350)
     this.time.delayedCall(380, () => {
@@ -1987,6 +2010,10 @@ export class IdleScene extends Phaser.Scene {
     if (time >= this.nextTrainerAt) this.trainerAttack(time)
     if (time >= this.nextRoosterAt) this.roosterAttack(time)
     if (this.bossActive && time >= this.nextBossAt) this.bossAttack(time)
+    if (time >= this.nextSweepAt) {
+      this.nextSweepAt = time + Phaser.Math.Between(JUICE.SWEEP_MIN, JUICE.SWEEP_MAX)
+      this.sweepLoot()
+    }
   }
 }
 

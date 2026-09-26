@@ -120,6 +120,9 @@ export const JUICE = {
   LOOT_FLY: 500,
   LOOT_STAGGER: 60,
   LOOT_QUEUE_CAP: 30,
+  SWEEP_MIN: 3000, // resting coins and commons fly to the chips on a periodic sweep
+  SWEEP_MAX: 4000,
+  REST_CAP: 28, // more resting loot than this sweeps the oldest at once
   // ceremonies
   JACKPOT_SLOWMO: 0.25,
   JACKPOT_SLOWMO_MS: 1000,
