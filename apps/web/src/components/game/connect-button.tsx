@@ -4,8 +4,9 @@ import { useSyncExternalStore } from "react";
 import {
   ConnectorNotFoundError,
   ProviderNotFoundError,
-  useAccount,
   useConnect,
+  useConnectors,
+  useConnection,
   useDisconnect,
 } from "wagmi";
 
@@ -28,9 +29,10 @@ function truncateAddress(address: string) {
 }
 
 export function ConnectButton({ className = "" }: { className?: string }) {
-  const { address, isConnected } = useAccount();
-  const { connectors, connect, isPending, error } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { address, isConnected } = useConnection();
+  const connectors = useConnectors();
+  const { mutate: connect, isPending, error } = useConnect();
+  const { mutate: disconnect } = useDisconnect();
 
   const hasWallet = useHasInjectedWallet();
   const connector = connectors.find((c) => c.id === "injected");
