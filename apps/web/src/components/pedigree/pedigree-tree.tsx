@@ -90,7 +90,7 @@ export function SireLineBadge({ slug }: { slug: string | null }) {
   if (!line) return null;
   return (
     <span className="inline-flex items-center gap-1 rounded-full border border-clay/30 bg-cream px-2.5 py-0.5 text-xs font-medium text-bark">
-      <span>{line.emoji}</span> {line.roman} <span className="text-bark-soft">{line.thai}</span>
+      {line.roman} <span className="text-bark-soft">{line.thai}</span>
     </span>
   );
 }

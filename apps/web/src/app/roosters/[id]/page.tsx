@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { recoverTypedDataAddress } from "viem";
 import { PedigreeTree, SireLineBadge } from "@/components/pedigree/pedigree-tree";
+import { ProofRow } from "@/components/pedigree/proof-panel";
 import { SireLineArt } from "@/components/game/sire-line-art";
 import { ATTESTATION_TYPE, roosterRwaDomain } from "@/lib/contracts/eip712";
 import {
@@ -108,22 +109,44 @@ export default async function RoosterDetailPage({ params }: Props) {
         <Link href="/roosters" className="text-bark-soft underline">← All roosters</Link>
       </nav>
 
-      {/* onchain proof bar */}
+      {/* HERO: onchain proof panel */}
       {rwaAddress && tokenId !== null ? (
-        <section className="mb-6 rounded-2xl border border-emerald-700/30 bg-emerald-50 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-emerald-900">
-            <span className="font-bold uppercase tracking-wider">Onchain proof</span>
-            <ProofLink href={ETHERSCAN(rwaAddress)}>RoosterRWA {rwaAddress.slice(0, 6)}…{rwaAddress.slice(-4)}</ProofLink>
-            <ProofLink href={`${ETHERSCAN(rwaAddress, "token")}/${tokenId}`}>token #{tokenId.toString()}</ProofLink>
-            {attestationTx ? <ProofLink href={ETHERSCAN(attestationTx.txHash, "tx")}>attestation tx</ProofLink> : null}
-            {attestation ? <ProofLink href={ETHERSCAN(attestation.farmSigner)}>farm signer {attestation.farmSigner.slice(0, 6)}…{attestation.farmSigner.slice(-4)}</ProofLink> : null}
-            {sigRecovers === true ? (
-              <span className="rounded-full bg-emerald-600 px-2 py-0.5 font-bold text-white">✓ signature recovers to farm key</span>
-            ) : sigRecovers === false ? (
-              <span className="rounded-full bg-red-600 px-2 py-0.5 font-bold text-white">✗ signature mismatch</span>
-            ) : null}
-            <ProofLink href={ENS_APP(name)}>{name} on ENS ↗</ProofLink>
+        <section className="mb-6 overflow-hidden rounded-2xl border-2 border-emerald-700/40 bg-emerald-50 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-emerald-700 px-4 py-2">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-white">⛓ Onchain proof</h2>
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+              Sepolia 11155111
+            </span>
           </div>
+          <div className="px-4 py-2">
+            <ProofRow label="Contract" value={rwaAddress} href={ETHERSCAN(rwaAddress)} />
+            <ProofRow label="Token" value={`RoosterRWA #${tokenId.toString()}`} href={`${ETHERSCAN(rwaAddress, "token")}/${tokenId}`} copy={tokenId.toString()} />
+            {attestationTx ? (
+              <ProofRow label="Attestation tx" value={`${attestationTx.txHash.slice(0, 10)}…${attestationTx.txHash.slice(-6)}`} href={ETHERSCAN(attestationTx.txHash, "tx")} />
+            ) : null}
+            {attestation ? (
+              <ProofRow label="Farm signer" value={attestation.farmSigner} href={ETHERSCAN(attestation.farmSigner)} />
+            ) : null}
+            <ProofRow label="ENS name" value={name} href={ENS_APP(name)} />
+          </div>
+          {sigRecovers !== null ? (
+            <div
+              className={`flex flex-wrap items-center gap-2 px-4 py-2.5 text-xs ${sigRecovers ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-900"}`}
+              title={attestation?.farmSigner}
+            >
+              {sigRecovers ? (
+                <>
+                  <span className="text-base font-bold">✓</span>
+                  <span>
+                    attestation signature recovered to <strong className="font-mono">0x7E28…Ac39</strong> — the Ninlanee Farm key
+                  </span>
+                  <span className="ml-auto text-[10px] uppercase tracking-wider opacity-70">verified client-side via EIP-712</span>
+                </>
+              ) : (
+                <span className="font-bold">✗ signature mismatch — do not trust this record</span>
+              )}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
