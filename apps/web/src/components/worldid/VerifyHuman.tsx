@@ -31,7 +31,7 @@ type Phase =
   | { kind: "scanning"; ctx: RpContextResponse }
   | { kind: "verifying"; ctx: RpContextResponse }
   | { kind: "verified"; res: Extract<VerifyResponse, { verified: true }> }
-  | { kind: "rejected"; code: string; reason: string }
+  | { kind: "rejected"; code: string; reason: string; detail?: string }
   | { kind: "cancelled"; why: string }
   | { kind: "error"; message: string };
 
@@ -103,7 +103,12 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
         body && !body.verified
           ? body
           : { verified: false, code: "invalid_request", reason: `Verification failed (HTTP ${res.status}).` };
-      setPhase({ kind: "rejected", code: rejection.current.code, reason: rejection.current.reason });
+      setPhase({
+        kind: "rejected",
+        code: rejection.current.code,
+        reason: rejection.current.reason,
+        detail: rejection.current.detail,
+      });
       setOpen(false);
       // Throwing fails the IDKit flow; handleError then closes it so our reason is what's on screen.
       throw new Error(rejection.current.reason);
@@ -126,10 +131,12 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
     } else if (code === "user_rejected" || code === "cancelled") {
       setPhase({ kind: "cancelled", why: "Verification was closed before it finished. Nothing was recorded." });
     } else if (code === "max_verifications_reached") {
+      // World App refused before our server saw a proof: same refusal, different layer.
       setPhase({
         kind: "rejected",
-        code,
-        reason: "World says this World ID has already been used for this action. One human, one wallet.",
+        code: "nullifier_bound_to_other_wallet",
+        reason: "This World ID is already bound to another wallet. One human, one wallet: a second wallet can't verify with the same World ID.",
+        detail: "Refused by World App: max_verifications_reached",
       });
     } else {
       const known: Record<string, string> = {
@@ -183,8 +190,17 @@ export function VerifyHuman({ address, onVerified, className = "" }: VerifyHuman
       ) : (
         <>
           {phase.kind === "rejected" ? (
-            <Banner tone="bad" title="Rejected" code={phase.code}>
+            <Banner
+              tone="bad"
+              title={
+                phase.code === "nullifier_bound_to_other_wallet"
+                  ? "This World ID is already bound to another wallet"
+                  : "Rejected"
+              }
+              code={phase.code}
+            >
               <p>{phase.reason}</p>
+              {phase.detail ? <p className="mt-1 text-xs opacity-80">{phase.detail}</p> : null}
             </Banner>
           ) : phase.kind === "cancelled" ? (
             <Banner tone="muted" title="Cancelled">
