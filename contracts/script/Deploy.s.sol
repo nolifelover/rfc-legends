@@ -7,6 +7,7 @@ import {HumanRegistry} from "../src/HumanRegistry.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
 import {RareItems} from "../src/RareItems.sol";
 import {RareMarket} from "../src/RareMarket.sol";
+import {RoosterRWA} from "../src/RoosterRWA.sol";
 
 /// @notice Deploys the RFC Legends contracts and writes
 ///         contracts/deployments/<chain>.json (see docs/interfaces.md §4.6).
@@ -20,36 +21,64 @@ contract Deploy is Script {
     address internal constant ANVIL_FARM_SIGNER = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC;
     address internal constant ANVIL_TREASURY = 0x90F79bf6EB2c4f870365E785982E1f101E93b906;
 
+    struct Deployed {
+        address usdc;
+        address registry;
+        address rare;
+        address market;
+        address rooster;
+        address gameSigner;
+        address farmSigner;
+        address treasury;
+        uint256 chainId;
+        uint256 startBlock;
+    }
+
     function run() public {
         uint256 deployerKey = vm.envOr("DEPLOYER_PRIVATE_KEY", uint256(0));
         if (deployerKey == 0) deployerKey = ANVIL_DEPLOYER;
-        address gameSigner = vm.envOr("GAME_SIGNER_ADDRESS", ANVIL_GAME_SIGNER);
-        address farmSigner = vm.envOr("FARM_SIGNER_ADDRESS", ANVIL_FARM_SIGNER);
-        address treasury = vm.envOr("TREASURY_ADDRESS", ANVIL_TREASURY);
+
+        Deployed memory d;
+        d.gameSigner = vm.envOr("GAME_SIGNER_ADDRESS", ANVIL_GAME_SIGNER);
+        d.farmSigner = vm.envOr("FARM_SIGNER_ADDRESS", ANVIL_FARM_SIGNER);
+        d.treasury = vm.envOr("TREASURY_ADDRESS", ANVIL_TREASURY);
         string memory baseURI = vm.envOr("RARE_ITEMS_BASE_URI", string("http://localhost:3000/api/items/"));
 
         vm.startBroadcast(deployerKey);
 
         MockUSDC usdc = new MockUSDC();
-        HumanRegistry registry = new HumanRegistry(gameSigner);
-        RareItems rare = new RareItems(gameSigner, registry, baseURI);
-        RareMarket market = new RareMarket(rare, usdc, registry, treasury);
+        HumanRegistry registry = new HumanRegistry(d.gameSigner);
+        RareItems rare = new RareItems(d.gameSigner, registry, baseURI);
+        RareMarket market = new RareMarket(rare, usdc, registry, d.treasury);
+        // RFC Club holds mint rights; starts as deployer, transfer later.
+        RoosterRWA rooster = new RoosterRWA(d.farmSigner, vm.addr(deployerKey));
 
-        uint256 startBlock = block.number;
+        d.usdc = address(usdc);
+        d.registry = address(registry);
+        d.rare = address(rare);
+        d.market = address(market);
+        d.rooster = address(rooster);
+        d.chainId = block.chainid;
+        d.startBlock = block.number;
 
         vm.stopBroadcast();
 
-        string memory chain = _chainName(block.chainid);
+        _writeJson(d);
+    }
+
+    function _writeJson(Deployed memory d) internal {
+        string memory chain = _chainName(d.chainId);
         string memory json = "{\n";
-        json = string.concat(json, '  "chainId": ', vm.toString(block.chainid), ",\n");
-        json = string.concat(json, _kv("HumanRegistry", vm.toString(address(registry))));
-        json = string.concat(json, _kv("RareItems", vm.toString(address(rare))));
-        json = string.concat(json, _kv("RareMarket", vm.toString(address(market))));
-        json = string.concat(json, _kv("MockUSDC", vm.toString(address(usdc))));
-        json = string.concat(json, _kv("gameSigner", vm.toString(gameSigner)));
-        json = string.concat(json, _kv("farmSigner", vm.toString(farmSigner)));
-        json = string.concat(json, _kv("treasury", vm.toString(treasury)));
-        json = string.concat(json, '  "startBlock": ', vm.toString(startBlock), "\n}");
+        json = string.concat(json, '  "chainId": ', vm.toString(d.chainId), ",\n");
+        json = string.concat(json, _kv("HumanRegistry", vm.toString(d.registry)));
+        json = string.concat(json, _kv("RareItems", vm.toString(d.rare)));
+        json = string.concat(json, _kv("RareMarket", vm.toString(d.market)));
+        json = string.concat(json, _kv("MockUSDC", vm.toString(d.usdc)));
+        json = string.concat(json, _kv("RoosterRWA", vm.toString(d.rooster)));
+        json = string.concat(json, _kv("gameSigner", vm.toString(d.gameSigner)));
+        json = string.concat(json, _kv("farmSigner", vm.toString(d.farmSigner)));
+        json = string.concat(json, _kv("treasury", vm.toString(d.treasury)));
+        json = string.concat(json, '  "startBlock": ', vm.toString(d.startBlock), "\n}");
         vm.writeFile(string.concat("./deployments/", chain, ".json"), json);
         console2.log(string.concat("Wrote deployments/", chain, ".json:"));
         console2.log(json);

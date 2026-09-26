@@ -30,6 +30,7 @@ mkdir -p deployments
   echo '  RareItems: `0x${string}`;'
   echo '  RareMarket: `0x${string}`;'
   echo '  MockUSDC: `0x${string}`;'
+  echo '  RoosterRWA: `0x${string}`;'
   echo '};'
   echo ''
   echo 'export const ADDRESSES: Record<number, ChainAddresses> = {'
@@ -37,7 +38,7 @@ mkdir -p deployments
     name=$(basename "$f" .json)
     id=$(jq -r '.chainId' "$f")
     echo "  $id: {"
-    for k in HumanRegistry RareItems RareMarket MockUSDC; do
+    for k in HumanRegistry RareItems RareMarket MockUSDC RoosterRWA; do
       echo "    $k: \"$(jq -r ".\"$k\"" "$f")\","
     done
     echo "  }, // $name"
