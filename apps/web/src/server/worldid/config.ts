@@ -43,6 +43,6 @@ export function loadWorldIdConfig(env: NodeJS.ProcessEnv = process.env): WorldId
     allowLegacyProofs: env.WORLD_ALLOW_LEGACY_PROOFS?.trim() === "true",
     verifyBaseUrl: (env.WORLD_VERIFY_BASE_URL?.trim() || "https://developer.world.org").replace(/\/+$/, ""),
     stagingToken: env.WORLD_STAGING_VERIFICATION_TOKEN?.trim() || undefined,
-    nonceTtlSeconds: 600,
+    nonceTtlSeconds: 300,
   };
 }
