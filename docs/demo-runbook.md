@@ -109,7 +109,7 @@ Expected on-screen text is quoted exactly as rehearsed.
     Expected: "⛔ Rejected `not_verified_human` Wallet 0xb8eb…529b hasn't verified with World ID. Only verified humans can mint rare drops, so bot farms can't cash out."
     Selling is locked too. As **B** (holds a card, never verified), **Your minted items** shows "Selling is locked for this wallet…". Clicking **Verify with World ID to list** gives "⛔ Rejected `NotVerifiedHuman` … Refused onchain by the contract". That's RareMarket's own revert, simulated before any wallet prompt.
 18. **(b) Same human, second wallet A2:** as A2, click **Verify with World ID**, sign, and scan with the **same phone**.
-    Expected: the red headline "**This World ID is already bound to another wallet**" with `nullifier_bound_to_other_wallet`, then "This World ID is already bound to another wallet (0xa29e…e5e7). One human, one wallet: a second wallet can't verify with the same World ID." A small line underneath names the layer that refused:
+    Expected: the red headline "**This World ID is already bound to another wallet**" with `nullifier_bound_to_other_wallet`, then "Bound to wallet 0xa29e…e5e7. One human, one wallet: a second wallet can't verify with the same World ID." A small line underneath names the layer that refused:
     - "Refused by the RFC Legends server…" (the usual case, since World's Portal currently accepts repeats)
     - "Refused by World ID's Portal: <code>", or "Refused by World App: max_verifications_reached", if World itself blocks the repeat
     The headline is the same in every case.
