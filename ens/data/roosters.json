@@ -1,0 +1,81 @@
+{
+  "_meta": {
+    "note": "SAMPLE DATA for the hackathon demo — ring IDs are placeholders until Ninlanee Farm provides real records. The UI must label these as sample data. Real birds replace this file without any code change.",
+    "sireLines": ["kumarnjeen", "kingkong", "chaokhunthong", "thepbut", "raptor"],
+    "sireLineIndex": { "kumarnjeen": 0, "kingkong": 1, "chaokhunthong": 2, "thepbut": 3, "raptor": 4 }
+  },
+  "roosters": [
+    {
+      "label": "khunphaen",
+      "displayName": "ขุนแผน",
+      "sireLine": "kumarnjeen",
+      "ringId": "NL-S-0001",
+      "hatchedAt": 1711900800,
+      "sireLabel": null,
+      "damLabel": null,
+      "initialWeightGrams": 4100,
+      "initialHealthScore": 95,
+      "note": "สายกุมารจีน สีขนทองแดง"
+    },
+    {
+      "label": "yodmuang",
+      "displayName": "ยอดเมือง",
+      "sireLine": "kingkong",
+      "ringId": "NL-S-0002",
+      "hatchedAt": 1709251200,
+      "sireLabel": null,
+      "damLabel": null,
+      "initialWeightGrams": 4600,
+      "initialHealthScore": 92,
+      "note": "สายคิงคอง โครงใหญ่"
+    },
+    {
+      "label": "sirithong",
+      "displayName": "สิริทอง",
+      "sireLine": "chaokhunthong",
+      "ringId": "NL-S-0003",
+      "hatchedAt": 1717200000,
+      "sireLabel": null,
+      "damLabel": null,
+      "initialWeightGrams": 3900,
+      "initialHealthScore": 97,
+      "note": "สายเจ้าขุนทอง ขนสีทอง"
+    },
+    {
+      "label": "theprawang",
+      "displayName": "เทพระวัง",
+      "sireLine": "thepbut",
+      "ringId": "NL-S-0004",
+      "hatchedAt": 1704326400,
+      "sireLabel": null,
+      "damLabel": null,
+      "initialWeightGrams": 4400,
+      "initialHealthScore": 94,
+      "note": "สายเทพบุตร — พ่อพันธุ์หลักของเดโม"
+    },
+    {
+      "label": "falconthong",
+      "displayName": "ฟอลคอนทอง",
+      "sireLine": "raptor",
+      "ringId": "NL-S-0005",
+      "hatchedAt": 1715875200,
+      "sireLabel": null,
+      "damLabel": null,
+      "initialWeightGrams": 3800,
+      "initialHealthScore": 91,
+      "note": "สายแร๊พเตอร์ ว่องไว"
+    },
+    {
+      "label": "chick01",
+      "displayName": "ลูกไก่ 01",
+      "sireLine": "thepbut",
+      "ringId": "NL-C-0101",
+      "hatchedAt": 1753920000,
+      "sireLabel": "theprawang",
+      "damLabel": null,
+      "initialWeightGrams": 800,
+      "initialHealthScore": 99,
+      "note": "ลูกของเทพระวัง — sire → offspring pedigree link ของเดโม"
+    }
+  ]
+}

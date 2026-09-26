@@ -25,6 +25,15 @@ export function farmWallet(pk?: string) {
   });
 }
 
+/** Arbitrary wallet (e.g. the RoosterRWA owner) against the configured RPC. */
+export function walletFor(pk: string) {
+  return createWalletClient({
+    account: privateKeyToAccount(pk as `0x${string}`),
+    chain: sepolia,
+    transport: http(SEPOLIA_RPC_URL),
+  });
+}
+
 /** Send a tx and wait for the receipt; throws with the revert reason on failure. */
 export async function send(label: string, wallet: typeof ownerWallet, args: Parameters<typeof wallet.writeContract>[0]) {
   const hash = await wallet.writeContract(args);
