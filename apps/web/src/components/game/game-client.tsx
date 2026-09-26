@@ -16,6 +16,8 @@ import { CreateCharacter, type CreateOutcome } from "./create-character";
 import { DropToasts } from "./drop-toasts";
 import { GuildDock } from "./guild-dock";
 import { HudStrip } from "./hud-strip";
+import { NextGoalRibbon } from "./next-goal";
+import { WelcomeBack, type WelcomeBackSummary } from "./welcome-back";
 import { IdleScene } from "./idle-scene";
 import { InventoryDrawer } from "./inventory-drawer";
 import { SceneFrame } from "./scene-frame";
@@ -56,6 +58,7 @@ export function GameClient() {
   const [notice, setNotice] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const [bagOpen, setBagOpen] = useState(false);
   const [guildOpen, setGuildOpen] = useState(false);
+  const [welcomeBack, setWelcomeBack] = useState<WelcomeBackSummary | null>(null);
   const stateKey = ["game-state", address] as const;
 
   // Auto-dismiss notices.
@@ -123,14 +126,34 @@ export function GameClient() {
       return data as unknown as SyncResult;
     },
     onSuccess: (result) => {
+      const prev = stateQuery.data?.player;
       applyPlayer(result.player);
-      const exp = (result.live?.expGained ?? 0) + (result.offline?.expGained ?? 0);
-      const kills = (result.live?.kills ?? 0) + (result.offline?.kills ?? 0);
-      setNotice(
-        exp > 0 || kills > 0
-          ? { kind: "info", text: `Synced — +${exp.toLocaleString()} EXP, ${kills} defeated.` }
-          : { kind: "info", text: "Synced — everything already up to date." },
-      );
+      const live = result.live;
+      const offline = result.offline;
+      const awaySec = (live?.ticks ?? 0) + (offline?.seconds ?? 0);
+      const exp = (live?.expGained ?? 0) + (offline?.expGained ?? 0);
+      const kills = (live?.kills ?? 0) + (offline?.kills ?? 0);
+      if (awaySec >= 60 && (exp > 0 || kills > 0 || (offline?.drops?.length ?? 0) > 0) && prev) {
+        // "While you were away" — real server numbers only (research #10)
+        setWelcomeBack({
+          seconds: awaySec,
+          expGained: exp,
+          roosterExpGained: (live?.roosterExpGained ?? 0) + (offline?.roosterExpGained ?? 0),
+          baseLevelsGained: Math.max(0, result.player.baseLevel - (prev?.baseLevel ?? result.player.baseLevel)),
+          roosterLevelsGained: Math.max(
+            0,
+            result.player.rooster.level - (prev?.rooster.level ?? result.player.rooster.level),
+          ),
+          kills,
+          drops: (offline?.drops?.length ?? 0),
+        });
+      } else {
+        setNotice(
+          exp > 0 || kills > 0
+            ? { kind: "info", text: `Synced — +${exp.toLocaleString()} EXP, ${kills} defeated.` }
+            : { kind: "info", text: "Synced — everything already up to date." },
+        );
+      }
     },
     onError: (err) => setNotice({ kind: "error", text: reasonText(err.message) }),
   });
@@ -233,6 +256,8 @@ export function GameClient() {
         </div>
       </div>
 
+      <NextGoalRibbon player={player} demoMode={state.demoMode} />
+
       <HudStrip
         player={player}
         rareDropCount={rareDropCount}
@@ -254,6 +279,16 @@ export function GameClient() {
         address={player.address as `0x${string}`}
         name={player.name}
       />
+
+      {welcomeBack ? (
+        <WelcomeBack
+          summary={welcomeBack}
+          onCollect={() => {
+            setWelcomeBack(null);
+            void queryClient.invalidateQueries({ queryKey: stateKey });
+          }}
+        />
+      ) : null}
 
       <DropToasts drops={state.drops} />
 
