@@ -7,7 +7,7 @@
 
 import Phaser from 'phaser'
 import { FX, RARITY_COLORS } from './art'
-import { INK, JUICE, TYPE, fmt } from './juice'
+import { INK, JUICE, LAYOUT as L, TYPE, fmt } from './juice'
 import type { Rarity } from '../types'
 
 export type DamageKind = 'trainer' | 'crit' | 'rooster'
@@ -214,12 +214,12 @@ export class Fx {
   }
 
   /**
-   * Damage number above the struck enemy: heavy dark outline, drifts 80–120px up
-   * and fades over 700ms. Hits within 700ms of each other stack in a rising column
-   * of up to five (Idleon's look). White for the trainer, orange-red for the
-   * rooster, gold with a star and 1.5× for crits (1.8 → 1.0 pop plus a 4px shake).
+   * Damage number AT the hit point: 64/56px (crits 1.4× with a ★), x-jittered,
+   * stacked in short lanes when hits land within 700ms, drifting up and fading in
+   * ~600ms. White = trainer, orange = rooster, gold = crit. Never rises into the
+   * top-right chip block.
    */
-  damage(x: number, topY: number, value: number, kind: DamageKind): void {
+  damage(x: number, y: number, value: number, kind: DamageKind): void {
     const crit = kind === 'crit'
     const size = crit ? Math.round(TYPE.dmgTrainer * TYPE.dmgCritMult) : kind === 'trainer' ? TYPE.dmgTrainer : TYPE.dmgRooster
     const color = crit ? INK.crit : kind === 'trainer' ? INK.trainer : INK.rooster
@@ -227,34 +227,33 @@ export class Fx {
     this.dmgStack = now - this.lastDmgAt < JUICE.DMG_STACK_WINDOW ? (this.dmgStack + 1) % JUICE.DMG_STACK_MAX : 0
     this.lastDmgAt = now
     const t = this.acquire()
-    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 16 : 14 })
-    t.setShadow(4, 6, '#000000', 8, true, true) // reads on the boss's grey fur and the pale sky alike
+    t.setStyle({ fontSize: `${size}px`, color, stroke: INK.stroke, strokeThickness: crit ? 10 : 8 })
+    t.setShadow(3, 4, '#000000', 6, true, true)
     t.setText(crit ? `★ ${fmt(value)}` : fmt(value))
-    const sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
-    const sy = topY - JUICE.DMG_ABOVE_HEAD - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
-    t.setPosition(sx, sy).setDepth(52)
     const rise = Phaser.Math.Between(JUICE.DMG_RISE_MIN, JUICE.DMG_RISE_MAX)
+    let sx = x + Phaser.Math.Between(-JUICE.DMG_JITTER_X, JUICE.DMG_JITTER_X)
+    let sy = y - this.dmgStack * Math.round(TYPE.dmgRooster * 0.85)
+    if (sx > L.NO_SPAWN_X - 80 && sy - rise - size < L.NO_SPAWN_Y) {
+      sx = Math.min(sx, L.NO_SPAWN_X - 80)
+      sy = Math.max(sy, L.NO_SPAWN_Y + rise + size)
+    }
+    t.setPosition(sx, sy).setDepth(52)
     if (crit) {
       t.setScale(1.8)
       this.scene.tweens.add({ targets: t, scale: 1, duration: 160, ease: 'Back.easeOut' })
       this.shake(JUICE.SHAKE_CRIT)
       this.stars.setParticleTint(INK.gold)
-      this.stars.explode(this.count(6), x, sy - size * 0.5)
+      this.stars.explode(this.count(6), x, y)
     } else {
       t.setScale(1.25)
       this.scene.tweens.add({ targets: t, scale: 1, duration: 120, ease: 'Back.easeOut' })
     }
-    this.scene.tweens.add({
-      targets: t,
-      y: sy - rise,
-      duration: JUICE.DMG_MS,
-      ease: 'Sine.easeOut',
-    })
+    this.scene.tweens.add({ targets: t, y: sy - rise, duration: JUICE.DMG_MS, ease: 'Sine.easeOut' })
     this.scene.tweens.add({
       targets: t,
       alpha: 0,
-      delay: JUICE.DMG_MS * 0.55,
-      duration: JUICE.DMG_MS * 0.45,
+      delay: JUICE.DMG_MS * 0.5,
+      duration: JUICE.DMG_MS * 0.5,
       ease: 'Sine.easeIn',
       onComplete: () => t.setVisible(false),
     })

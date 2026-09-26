@@ -27,6 +27,9 @@ export const LAYOUT = {
   H: 1080,
   /** In-canvas chips stay inside this inset so a rounded/clipped frame never cuts them. */
   SAFE: 48,
+  /** Top-right chip block: damage numbers never rise into it. */
+  NO_SPAWN_X: 1360,
+  NO_SPAWN_Y: 330,
   /** Top of the paddy water — the horizon line (35%). */
   HORIZON_Y: 378,
   /** Top of the clay lane where everyone stands. */
@@ -101,7 +104,7 @@ export const JUICE = {
   DMG_RISE_MAX: 120,
   DMG_JITTER_X: 30,
   DMG_SPLIT_X: 90, // trainer numbers left of centre, rooster numbers right
-  DMG_MS: 700,
+  DMG_MS: 600,
   DMG_ABOVE_HEAD: 20,
   DMG_STACK_WINDOW: 700, // hits closer than this stack in a column (up to 5)
   DMG_STACK_MAX: 5,
@@ -241,10 +244,10 @@ export const SIRE_TINT: Record<string, number> = {
 
 /** Font sizes on the 1080 frame. */
 export const TYPE = {
-  dmgTrainer: 112,
-  dmgRooster: 96,
-  dmgCritMult: 1.5,
-  exp: 56,
+  dmgTrainer: 64,
+  dmgRooster: 56,
+  dmgCritMult: 1.4,
+  exp: 44,
   lootTick: 30,
   plateTrainer: 30,
   plateRooster: 26,

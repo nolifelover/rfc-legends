@@ -1333,13 +1333,9 @@ export class IdleScene extends Phaser.Scene {
     // the boss only dies when the server says so; cosmetic hits stop at 1 HP
     p.hp = Math.max(p.boss && !this.bossServerDead ? 1 : 0, p.hp - value)
     const lethal = p.hp <= 0
-    // numbers anchor on the struck enemy, offset right so the 480px rooster's head
-    // never sits under them; the boss's crown reaches the boss bar, so its numbers
-    // sit on the forehead
-    const numY = this.topYOf(p) + (p.boss ? 320 : 0)
-    // one column per target (colour tells the source); the stack keeps hits apart
-    const numX = p.container.x + JUICE.DMG_SPLIT_X + 30
-    this.fx.damage(numX, numY, value, kind)
+    // the number spawns at the hit point on the struck side of the body
+    const rsz = p.h * ROW_SCALE[p.row]
+    this.fx.damage(p.container.x - rsz * 0.2, this.topYOf(p) + rsz * (p.boss ? 0.55 : 0.4), value, kind)
     p.bar.setPct(p.hp / p.maxHp)
     if (p.boss) this.bossBar?.setHp(p.hp, p.maxHp)
 
