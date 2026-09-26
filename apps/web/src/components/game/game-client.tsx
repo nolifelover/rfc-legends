@@ -132,16 +132,13 @@ export function GameClient() {
     const awaySec = (live?.ticks ?? 0) + (offline?.seconds ?? 0);
     const exp = (live?.expGained ?? 0) + (offline?.expGained ?? 0);
     const kills = (live?.kills ?? 0) + (offline?.kills ?? 0);
-    if (awaySec >= 60 && (exp > 0 || kills > 0 || (offline?.drops?.length ?? 0) > 0) && prev) {
+    if (awaySec >= 60 && (exp > 0 || kills > 0 || (offline?.drops?.length ?? 0) > 0)) {
       setWelcomeBack({
         seconds: awaySec,
         expGained: exp,
         roosterExpGained: (live?.roosterExpGained ?? 0) + (offline?.roosterExpGained ?? 0),
-        baseLevelsGained: Math.max(0, result.player.baseLevel - (prev?.baseLevel ?? result.player.baseLevel)),
-        roosterLevelsGained: Math.max(
-          0,
-          result.player.rooster.level - (prev?.rooster.level ?? result.player.rooster.level),
-        ),
+        baseLevelsGained: prev ? Math.max(0, result.player.baseLevel - prev.baseLevel) : 0,
+        roosterLevelsGained: prev ? Math.max(0, result.player.rooster.level - prev.rooster.level) : 0,
         kills,
         drops: offline?.drops?.length ?? 0,
       });
