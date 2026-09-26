@@ -7,7 +7,7 @@ import { SireLineArt } from "@/components/game/sire-line-art";
 import { ATTESTATION_TYPE } from "@/lib/contracts/eip712";
 import {
   ENS_APP, ETHERSCAN, ensClient, getAttestation, getAttestationTx, getRoosterByTokenId,
-  getRoosterRecords, listOffspring, nameExists, pedigreeOf, roosterRwaAbi, sireLineInfo, PARENT_NAME,
+  getRoosterRecords, listOffspring, nameExists, pedigreeOf, roosterHref, roosterRwaAbi, sireLineInfo, PARENT_NAME,
 } from "@/lib/ens/resolve";
 import { getAddresses } from "@/lib/contracts/addresses";
 
@@ -69,7 +69,9 @@ export default async function RoosterDetailPage({ params }: Props) {
     );
   }
   const { sire } = pedigreeOf(name);
-  const offspring = await listOffspring(client, name).catch(() => [] as string[]);
+  const offspring = await listOffspring(client, name).catch(() => []);
+  // link parents by name (their tokenIds aren't loaded here); children by tokenId when known
+  const hrefFor = (target: string) => `/roosters/${encodeURIComponent(target)}`;
 
   // dam + attestation + tx proof, all read live from the contracts
   let dam: string | null = null;
@@ -256,7 +258,14 @@ export default async function RoosterDetailPage({ params }: Props) {
             <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-bark">
               🌳 Pedigree <span className="text-xs font-normal text-bark-soft">(resolved live from ENSv2 — the name hierarchy is the family tree)</span>
             </h2>
-            <PedigreeTree name={name} sire={sire} dam={dam} offspring={offspring} parentExists={(n) => nameExists(client, n)} />
+            <PedigreeTree
+              name={name}
+              sire={sire}
+              dam={dam}
+              offspring={offspring.map((o) => ({ name: o.name, href: roosterHref(o) }))}
+              parentExists={(n) => nameExists(client, n)}
+              hrefFor={hrefFor}
+            />
           </section>
         </div>
       </section>

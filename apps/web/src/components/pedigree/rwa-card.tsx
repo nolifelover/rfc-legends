@@ -48,7 +48,7 @@ export function RwaCard({ rooster }: { rooster: RoosterSummary }) {
           {hatched && hatched > 1970 ? <span className="text-bark-soft">hatched {hatched}</span> : null}
           {rooster.offspringNames.length > 0 ? (
             <span className="rounded bg-clay/15 px-1.5 py-0.5 font-medium text-bark">
-              {rooster.offspringNames.length} offspring
+              {rooster.offspringNames.length} offspring ↓
             </span>
           ) : null}
         </div>

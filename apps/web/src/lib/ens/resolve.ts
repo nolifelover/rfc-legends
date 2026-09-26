@@ -142,7 +142,11 @@ export async function labelsInRegistry(client: ReturnType<typeof ensClient>, reg
   return labels;
 }
 
-export type RoosterSummary = RoosterRecords & { offspringNames: string[] };
+export type RoosterSummary = RoosterRecords & {
+  offspringNames: string[];
+  /** link targets for the offspring chips (tokenIds when known) */
+  offspringHrefs: string[];
+};
 
 /**
  * List every rooster under the parent: foundation birds from the parent's
@@ -154,26 +158,59 @@ export async function listRoosters(client: ReturnType<typeof ensClient>): Promis
   if (!parentRegistry) return [];
   const foundationLabels = await labelsInRegistry(client, parentRegistry);
   // parallel across birds — the list must render fast for the live demo
-  const rows = await Promise.all(foundationLabels.map(async (label) => {
+  const foundation = await Promise.all(foundationLabels.map(async (label) => {
     const name = `${label}.${PARENT_NAME}`;
     const [recs, child] = await Promise.all([
       getRoosterRecords(client, name),
       registryForParent(client, name),
     ]);
     if (!recs.ringId && !recs.sireLine) return null; // not a rooster node
-    const offspring = child ? (await labelsInRegistry(client, child)).map((l) => `${l}.${name}`) : [];
-    return { ...recs, offspringNames: offspring } satisfies RoosterSummary;
+    const offspring = child ? await listOffspring(client, name) : [];
+    return {
+      ...recs,
+      offspringNames: offspring.map((o) => o.name),
+      offspringHrefs: offspring.map(roosterHref),
+      offspringRefs: offspring,
+    } satisfies RoosterSummary & { offspringRefs: OffspringRef[] };
   }));
-  return rows.filter((r): r is RoosterSummary => r !== null);
+  const birds = foundation.filter((r): r is RoosterSummary & { offspringRefs: OffspringRef[] } => r !== null);
+  // offspring are roosters too — they render as cards (their own child registries may follow)
+  const offspringRows = await Promise.all(
+    birds.flatMap((b) => b.offspringRefs).map(async (ref) => {
+      const recs = await getRoosterRecords(client, ref.name);
+      if (!recs.ringId && !recs.sireLine) return null;
+      return { ...recs, offspringNames: [] as string[], offspringHrefs: [] as string[] };
+    }),
+  );
+  const strip = ({ offspringRefs: _refs, ...row }: RoosterSummary & { offspringRefs: OffspringRef[] }): RoosterSummary => row;
+  return [
+    ...birds.map(strip),
+    ...offspringRows.filter((r): r is RoosterSummary => r !== null),
+  ];
 }
 
-/** Offspring names of a bird — labels registered in the bird's own child registry. */
-export async function listOffspring(client: ReturnType<typeof ensClient>, name: string): Promise<string[]> {
+export interface OffspringRef {
+  name: string;
+  /** RoosterRWA tokenId from the child's rfc.tokenId record, when present */
+  tokenId: string | null;
+}
+
+/** Offspring of a bird — labels registered in the bird's own child registry. */
+export async function listOffspring(client: ReturnType<typeof ensClient>, name: string): Promise<OffspringRef[]> {
   const child = await registryForParent(client, name);
   if (!child) return [];
   const labels = await labelsInRegistry(client, child);
-  return labels.map((l) => `${l}.${name}`);
+  return Promise.all(
+    labels.map(async (l) => ({
+      name: `${l}.${name}`,
+      tokenId: await client.getEnsText({ name: `${l}.${name}`, key: "rfc.tokenId" }).catch(() => null),
+    })),
+  );
 }
+
+/** Canonical href for a rooster mention: tokenId when known, ENS name otherwise. */
+export const roosterHref = (ref: { name: string; tokenId?: string | null }) =>
+  `/roosters/${ref.tokenId && /^\d+$/.test(ref.tokenId) ? ref.tokenId : encodeURIComponent(ref.name)}`;
 
 /** The chain the reads target — from env, defaulting to Sepolia (never the anvil fallback). */
 export const READ_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 11155111) || 11155111;
