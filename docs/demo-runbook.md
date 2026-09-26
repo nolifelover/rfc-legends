@@ -100,6 +100,7 @@ Expected on-screen text is quoted exactly as rehearsed.
 14. Open **/market** as B and click **+100 test USDC**. Confirm the transaction. Expected: the "Balance" figure goes up by 100.00 USDC.
 15. On A's listing, click **Buy for 10.00 USDC**. Confirm **approve** (USDC), then **buy**.
 16. Expected: the receipt card "SOLD ✓ · SPLIT ONCHAIN MVP Card #3001 × 1 for 10.00 USDC". It shows a 90% / 10% bar, "Seller receives (90%) 9.00 USDC … USDC transfer 9.00 ✓" and "RFC Club treasury (10%) 1.00 USDC to 0x845b…F4B2 … USDC transfer 1.00 ✓". Open **Decoded Sold event**, then click **View on Sepolia Etherscan ↗**.
+    **MultiBaas moment (Curvegrid):** point at **Recent sales · indexed by Curvegrid MultiBaas** in the left column. It first says "Your sale is onchain; waiting for MultiBaas to index it…". Then the sale appears at the top, highlighted green, with seller → buyer, "90% … · 10% …", **Etherscan ↗** and the chip **source: MultiBaas ✓**. In the rehearsal that took **6 seconds** after the receipt. If the chip says "source: RPC fallback", MultiBaas didn't answer: say so, don't claim it.
 
 ### Scene 6: the rejections
 17. **(a) Bot, wallet C:** open `/market` as C, then **Mint as NFT** on **MVP Card #3001**, then sign.
@@ -148,6 +149,8 @@ Rehearsed through the real UI with an injected wallet in headless Chromium, on s
 | (a) C mints MVP Card #3001 | 403 `not_verified_human` | 09:05:26Z |
 | (a) B (unverified) tries to resell | contract `NotVerifiedHuman`, no wallet prompt | 09:05:46Z |
 | (b) A2-staging verifies | 409 `nullifier_bound_to_other_wallet` | 08:40:27Z |
+
+**W10 MultiBaas check (earn.dev):** A listed Monster Card #1001 (#5) at 5 USDC, and B bought it ([`0xc3ce2129…b1b5`](https://sepolia.etherscan.io/tx/0xc3ce212966aee5c628677dfa6ca6e5afa2c0583568c00d11ea2055596a06b1b5)). The Recent sales panel showed it via MultiBaas **6 s** after the receipt.
 
 **W9 run through the game's toast.** Wallet A-staging was first reset as in §6 (character, drops, app-side binding), then played end to end in one headless browser. The whole beat took **2.7 minutes**.
 
