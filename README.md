@@ -17,7 +17,7 @@ RFC Legends is an idle MMORPG where you and a rooster companion level up togethe
 | `RareItems` (ERC-1155 drops) | `0x35f5d11878F820B9fd69712Dea9387a54afD2144` | [link](https://sepolia.etherscan.io/address/0x35f5d11878F820B9fd69712Dea9387a54afD2144) |
 | `RareMarket` (90/10 escrow market) | `0xC05Dd64c0B4e2fd1722E12B40d80044cF7963d3a` | [link](https://sepolia.etherscan.io/address/0xC05Dd64c0B4e2fd1722E12B40d80044cF7963d3a) |
 | `RoosterRWA` (ERC-721 real roosters) | `0x99Cc8889b2a794071e3BC7b7aA4D3007501AB3d7` | [link](https://sepolia.etherscan.io/address/0x99Cc8889b2a794071e3BC7b7aA4D3007501AB3d7) |
-| ENSv2 resolver / subname registry | `0x705c7f9f…` / `0x02a8349c…` | [resolver](https://sepolia.etherscan.io/address/0x705c7f9f59eA8cFd87728BfAddC17121288f55FF) · [registry](https://sepolia.etherscan.io/address/0x02a8349cbFee861260af5c4D1f3464B56Ec8EB70) |
+| ENSv2 resolver / subname registry | `0x705c7f9f59eA8cFd87728BfAddC17121288f55FF` / `0x02a8349cbFee861260af5c4D1f3464B56Ec8EB70` | [resolver](https://sepolia.etherscan.io/address/0x705c7f9f59eA8cFd87728BfAddC17121288f55FF) · [registry](https://sepolia.etherscan.io/address/0x02a8349cbFee861260af5c4D1f3464B56Ec8EB70) · [theprawang subname registry](https://sepolia.etherscan.io/address/0x233133d68c5ad3Ef742846df8D09A788889D68c0) |
 
 Key transactions:
 
@@ -124,7 +124,7 @@ Production deploy (build + pm2, one command): [`scripts/deploy.sh`](scripts/depl
 | Jakkarin Sanguanwong | Other | — |
 | Tanabut Krinoonsingha | Other | — |
 
-**AI tool disclosure:** Claude (Anthropic) was used for the game design document, planning, and code across all lanes, orchestrated with multi-agent workflows including blind critic comparisons against past ETHGlobal winners. All integration feedback notes are human-reviewed.
+**AI tool disclosure:** Claude (multi-agent) was used for planning, the GDD, code, and automated review passes. All integration feedback notes are human-reviewed.
 
 ## Hard rules we build by
 
