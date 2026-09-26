@@ -6,12 +6,13 @@
 // MVP Rat King arrives with a ceremony every 8th kill (25th outside demo mode).
 //
 // Truth rules (nothing on screen invents a server number):
-// - KILL chip: shown ≤ server killCount. A visual kill pops the chip and ticks it
-//   only when the server has already credited a kill; a lagging counter snaps up
-//   on sync. Visual kill pace follows the measured server kill rate.
+// - Every sync turns the server's kill delta and EXP delta into kill credits (one
+//   per server kill, the EXP split evenly across them; a backlog folds into one).
+//   A visual kill that finds a credit ticks the KILL chip, prints that credit's
+//   EXP and drains one loot icon; a visual kill without credit only poofs. So the
+//   KILL chip is ≤ killCount and the EXP pops sum to the real EXP gained.
 // - Harvest chip: Σ non-consumable inventory. Every icon that flies into it is one
 //   unit the server actually granted (inventory diff between syncs).
-// - EXP pops show the real per-kill amount (def.exp × the demo multiplier).
 // - The boss appears when the server is fighting it (killCount % 8 === 7 in demo
 //   mode) and dies when the server's count crosses the boss kill — so the rare-card
 //   toast lands on the boss's death, not on a random pest.
@@ -41,7 +42,6 @@ import { THUNG_NA } from '@/game/data/maps'
 import { getItem } from '@/game/data/items'
 import type { Drop, MonsterDef, Player, Rarity } from '@/game/types'
 import { aspdOf, atkOf, critChance, expToNext, roosterAspd, roosterAtk, roosterCrit } from '@/server/game/stats'
-import { DEMO_EXP_MULT } from '@/server/game/combat'
 
 const EN_NAMES: Record<string, string> = {
   'nu-na': 'Field Rat',
@@ -99,9 +99,10 @@ export class IdleScene extends Phaser.Scene {
   private dropIds = new Set<string>()
   private demoMode = false
 
-  // kill counter credit
+  // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
   private killShown = 0
+  private credits: Array<{ exp: number; kills: number }> = []
   private syncLog: Array<{ t: number; kills: number }> = []
   private forceBoss = false
 
@@ -862,16 +863,18 @@ export class IdleScene extends Phaser.Scene {
     this.fx.poof(x, midY, boss ? 2.2 : 1)
     this.fx.groundRing(x, p.feetY, INK.goldSoft, boss ? 900 : 380)
     this.fx.shake(boss ? JUICE.SHAKE_BOSS_KILL : JUICE.SHAKE_KILL)
-    this.fx.coinSparkle(x, midY, boss ? 8 : 3)
-    this.fx.expPop(x + 120, this.topYOf(p) - 150, p.def.exp * (this.demoMode ? DEMO_EXP_MULT : 1))
-    this.drainLoot(x, midY, p.feetY)
 
-    // kill counter: pop always, tick only with server credit
-    this.killChip.pop()
-    if (this.killShown < this.killServer) {
-      this.killShown += 1
+    // rewards only with a server credit: the KILL tick, the credit's real EXP and
+    // one loot icon. A kill without credit is presentation and stays silent.
+    const credit = this.credits.shift()
+    if (credit) {
+      this.killShown += credit.kills
       this.killChip.setLabel(this.killLabel())
       this.pinChips()
+      this.killChip.pop()
+      this.fx.coinSparkle(x, midY, boss ? 8 : 3)
+      if (credit.exp > 0) this.fx.expPop(x + 120, this.topYOf(p) - 150, credit.exp)
+      this.drainLoot(x, midY, p.feetY)
     }
     this.removePest(p)
     if (boss) {
@@ -1167,6 +1170,40 @@ export class IdleScene extends Phaser.Scene {
 
   // ------------------------------------------------------- server truth sync
 
+  /** Base EXP the server granted between two states (level-ups reset `exp`). */
+  private expGain(prev: Player, next: Player): number {
+    let gain = next.exp - prev.exp
+    for (let lv = prev.baseLevel; lv < next.baseLevel; lv++) gain += expToNext(lv)
+    return Math.max(0, gain)
+  }
+
+  /**
+   * One credit per server kill, EXP split evenly (remainder on the last). A backlog
+   * longer than KILL_SNAP_LAG folds its oldest credits into one, so the KILL chip
+   * catches up on the next visual kill and the pops still sum to the real delta.
+   */
+  private pushCredits(kills: number, exp: number): void {
+    if (kills <= 0) {
+      // EXP without a kill (should not happen) rides along with the next credit
+      if (exp > 0) this.credits.push({ exp, kills: 0 })
+      return
+    }
+    const each = Math.floor(exp / kills)
+    for (let i = 0; i < kills; i++) {
+      this.credits.push({ exp: i === kills - 1 ? exp - each * (kills - 1) : each, kills: 1 })
+    }
+    const pending = this.credits.reduce((n, c) => n + c.kills, 0)
+    if (pending > JUICE.KILL_SNAP_LAG) {
+      let fold = { exp: 0, kills: 0 }
+      while (this.credits.length > 0 && pending - fold.kills > JUICE.KILL_SNAP_LAG) {
+        const c = this.credits.shift()
+        if (!c) break
+        fold = { exp: fold.exp + c.exp, kills: fold.kills + c.kills }
+      }
+      this.credits.unshift(fold)
+    }
+  }
+
   private applyState(player: Player, drops: Drop[], demoMode: boolean): void {
     const prev = this.player
     this.player = player
@@ -1191,14 +1228,14 @@ export class IdleScene extends Phaser.Scene {
       this.lastSparkleAt = this.time.now
     }
 
-    // kill credit
+    // kill credits: the server's kill delta carries its real EXP delta
     const prevKills = this.killServer
     this.killServer = player.killCount
-    if (this.killServer - this.killShown > JUICE.KILL_SNAP_LAG || this.killShown > this.killServer) {
+    this.pushCredits(player.killCount - prevKills, this.expGain(prev, player))
+    if (this.killShown > this.killServer) {
       this.killShown = this.killServer
       this.killChip.setLabel(this.killLabel())
       this.pinChips()
-      this.killChip.pop()
     }
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
 
