@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fbf2df;
+  --foreground: #43301f;
+
+  /* RFC Legends farm palette: rice-field green, sun gold, terracotta */
+  --field: #55803c;
+  --field-deep: #3e6130;
+  --sun: #eda614;
+  --sun-soft: #fbe6b3;
+  --clay: #c05f38;
+  --clay-deep: #9d4728;
+  --cream: #fffdf6;
+  --bark: #4a3220;
+  --bark-soft: #8a6d55;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1a1108;
+    --foreground: #f5ead7;
+
+    --field: #7aa85c;
+    --field-deep: #55803c;
+    --sun: #f5b93a;
+    --sun-soft: #46320f;
+    --clay: #d97f58;
+    --clay-deep: #b45c36;
+    --cream: #251a12;
+    --bark: #f5ead7;
+    --bark-soft: #c9ac8f;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-field: var(--field);
+  --color-field-deep: var(--field-deep);
+  --color-sun: var(--sun);
+  --color-sun-soft: var(--sun-soft);
+  --color-clay: var(--clay);
+  --color-clay-deep: var(--clay-deep);
+  --color-cream: var(--cream);
+  --color-bark: var(--bark);
+  --color-bark-soft: var(--bark-soft);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-noto-thai), "Noto Sans Thai", "Noto Sans",
+    ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--sun-soft);
+  color: var(--bark);
 }
