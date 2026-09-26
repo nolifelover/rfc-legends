@@ -15,14 +15,14 @@ const notoSansThai = Noto_Sans_Thai({
 export const metadata: Metadata = {
   title: "RFC Legends",
   description:
-    "เกม idle MMORPG: เลี้ยงไก่ไทยพันธุ์แท้ ออกผจญภัย เลเวลอัปไปพร้อมไก่คู่หู — สายพันธุ์โปร่งใสบนบล็อกเชน",
+    "Idle MMORPG where your companion rooster is a real bird on a real Thai farm — verifiable pedigree onchain via ENSv2.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   const demo = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
   return (
-    <html lang="th" className={`${notoSansThai.variable} h-full antialiased`}>
+    <html lang="en" className={`${notoSansThai.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
         <Providers>
           <NavBar />

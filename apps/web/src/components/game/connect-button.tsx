@@ -47,7 +47,7 @@ export function ConnectButton({ className = "" }: { className?: string }) {
       <button
         type="button"
         onClick={() => disconnect()}
-        title="คลิกเพื่อยกเลิกการเชื่อมต่อกระเป๋า"
+        title="Click to disconnect your wallet"
         className={`inline-flex items-center gap-2 rounded-full bg-field px-4 py-2 text-sm font-bold text-cream shadow-sm transition hover:bg-field-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-field ${className}`}
       >
         <span aria-hidden className="h-2 w-2 rounded-full bg-sun" />
@@ -64,11 +64,11 @@ export function ConnectButton({ className = "" }: { className?: string }) {
         onClick={() => connector && connect({ connector })}
         className={`inline-flex items-center gap-2 rounded-full border-2 border-clay/40 bg-cream px-4 py-2 text-sm font-bold text-clay-deep transition hover:border-clay hover:bg-sun-soft/60 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay ${className}`}
       >
-        {isPending ? "กำลังเชื่อมต่อ…" : "เชื่อมต่อกระเป๋า"}
+        {isPending ? "Connecting…" : "Connect wallet"}
       </button>
       {walletMissing ? (
         <span className="text-xs text-bark-soft">
-          ติดตั้ง MetaMask หรือเปิดผ่าน wallet ในเบราว์เซอร์
+          Install MetaMask or open in a browser wallet
         </span>
       ) : null}
     </span>

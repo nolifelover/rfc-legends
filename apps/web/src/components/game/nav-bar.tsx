@@ -6,10 +6,10 @@ import { ConnectButton } from "./connect-button";
 import { RoosterMark } from "./rooster-mark";
 
 const NAV_LINKS = [
-  { href: "/", label: "หน้าแรก" },
-  { href: "/game", label: "เกม" },
-  { href: "/roosters", label: "ไก่ของฉัน" },
-  { href: "/market", label: "ตลาด" },
+  { href: "/", label: "Home" },
+  { href: "/game", label: "Game" },
+  { href: "/roosters", label: "My Roosters" },
+  { href: "/market", label: "Market" },
 ];
 
 // Only routes that exist can use <Link>; typedRoutes rejects <Link> to

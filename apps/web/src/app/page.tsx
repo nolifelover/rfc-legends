@@ -1,33 +1,38 @@
-import { ConnectButton } from "@/components/game/connect-button";
-import { RoosterMark } from "@/components/game/rooster-mark";
+import { GamePreview } from "@/components/game/game-preview";
+
+const PROOFS = [
+  { icon: "🐓", label: "Real rooster RWA" },
+  { icon: "🧬", label: "ENSv2 pedigree" },
+  { icon: "💎", label: "Rare drops, 90/10 onchain split, human-verified by World ID" },
+] as const;
 
 const FEATURES = [
   {
     icon: "⚔️",
     tag: "Idle MMORPG",
-    title: "นายไก่ + ไก่คู่หู",
-    body: "สร้างตัวละครนายไก่ ออกผจญภัยเก็บแต้มประสบการณ์และเลเวลอัปแบบ idle — แม้ปิดเกมไว้ ไก่คู่หูก็ยังออกเดินทางให้คุณ",
+    title: "Trainer & companion rooster",
+    body: "Create your trainer character, head out on adventures, and level up idle-style — even while you're away, your companion rooster keeps the journey going.",
   },
   {
     icon: "🐓",
     tag: "RWA + ENSv2",
-    title: "ไก่ตัวจริงจากฟาร์มนิลหนานี",
-    body: "ไก่ไทยพันธุ์แท้ที่ฟาร์มเลี้ยงจริง ถูกบันทึกเป็น RWA Card บนเชน ตรวจสอบสายพันธุ์ยืนยันได้ พร้อมชื่อ ENS แบบลำดับตระกูล พ่อพันธุ์สู่ลูกไก่",
+    title: "Real roosters from Ninlanee Farm",
+    body: "Genuine Thai native breeds, raised at Ninlanee Farm and minted as RWA cards onchain. Each bird carries a verifiable pedigree and a family-tree ENS name, sire to chick.",
   },
   {
     icon: "💎",
     tag: "90/10 on-chain",
-    title: "ของหายากกับ Rare Market",
-    body: "ไอเทมหายากจากดรอปในเกม mint เป็น NFT แล้วซื้อขายใน Rare Market โดยสัญญาแบ่งยอดขาย 90% ผู้ขาย / 10% RFC Club โปร่งใสทุกเทรด",
+    title: "Rare drops & the Rare Market",
+    body: "Legendary loot from the game can be minted as NFTs and traded in the Rare Market — every sale splits 90% seller / 10% RFC Club, enforced by the smart contract.",
   },
 ] as const;
 
 const SIRE_LINES = [
-  "กุมารจีน",
-  "คิงคอง",
-  "เจ้าขุนทอง",
-  "เทพบุตร",
-  "แร๊พเตอร์",
+  { roman: "Kumarnjeen", thai: "กุมารจีน" },
+  { roman: "Kingkong", thai: "คิงคอง" },
+  { roman: "Chaokhunthong", thai: "เจ้าขุนทอง" },
+  { roman: "Thepbut", thai: "เทพบุตร" },
+  { roman: "Raptor", thai: "แร๊พเตอร์" },
 ] as const;
 
 export default function Home() {
@@ -39,20 +44,10 @@ export default function Home() {
           aria-hidden
           className="pointer-events-none absolute -top-32 right-[-8%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,var(--sun-soft),transparent_70%)]"
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-24 left-[-10%] h-72 w-72 rounded-full bg-[radial-gradient(circle,var(--sun-soft),transparent_70%)] opacity-70"
-        />
 
-        <div className="relative mx-auto w-full max-w-6xl px-4 pt-16 pb-10 text-center sm:px-6 sm:pt-24">
-          <div className="mb-8 flex justify-center">
-            <div className="rounded-full bg-cream p-6 shadow-[0_14px_50px_-12px_rgba(157,71,40,0.45)] ring-4 ring-sun/40">
-              <RoosterMark size={96} />
-            </div>
-          </div>
-
+        <div className="relative mx-auto w-full max-w-6xl px-4 pt-14 pb-10 text-center sm:px-6 sm:pt-20">
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-clay/30 bg-sun-soft/50 px-4 py-1.5 text-sm font-medium text-clay-deep">
-            เกม idle MMORPG บนบล็อกเชน
+            Idle MMORPG onchain
           </p>
 
           <h1 className="text-5xl font-bold tracking-tight text-bark sm:text-7xl">
@@ -60,32 +55,33 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-bark-soft sm:text-xl">
-            เกม idle MMORPG: เลี้ยงไก่ไทยพันธุ์แท้ ออกผจญภัย
-            เลเวลอัปไปพร้อมไก่คู่หู
-          </p>
-          <p className="mx-auto mt-3 max-w-xl text-sm font-medium text-field-deep sm:text-base">
-            ไก่ไทยพันธุ์แท้ + สายพันธุ์โปร่งใสบนบล็อกเชน
+            Your idle-RPG rooster is a real bird on a real Thai farm, with its
+            pedigree onchain.
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <a
-              href="/game"
-              className="inline-flex items-center gap-2 rounded-full bg-clay px-9 py-3.5 text-lg font-bold text-cream shadow-lg shadow-clay/30 transition hover:-translate-y-0.5 hover:bg-clay-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
-            >
-              เริ่มเล่น
-              <span aria-hidden>→</span>
-            </a>
-            <ConnectButton className="px-6 py-3 text-base" />
+          <ul className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+            {PROOFS.map((proof) => (
+              <li
+                key={proof.label}
+                className="inline-flex items-center gap-1.5 rounded-full border border-clay/20 bg-cream px-3.5 py-1.5 text-sm font-medium text-bark-soft"
+              >
+                <span aria-hidden>{proof.icon}</span>
+                {proof.label}
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-10">
+            <GamePreview />
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm font-medium text-bark-soft">
-            <a href="/roosters" className="transition hover:text-clay-deep">
-              ดูไก่ RWA <span aria-hidden>›</span>
-            </a>
-            <a href="/market" className="transition hover:text-clay-deep">
-              Rare Market <span aria-hidden>›</span>
-            </a>
-          </div>
+          <a
+            href="/game"
+            className="mt-10 inline-flex items-center gap-2 rounded-full bg-clay px-10 py-4 text-lg font-bold text-cream shadow-lg shadow-clay/30 transition hover:-translate-y-0.5 hover:bg-clay-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay"
+          >
+            Play now
+            <span aria-hidden>→</span>
+          </a>
         </div>
 
         {/* rice-field hills rolling into the feature band */}
@@ -111,10 +107,11 @@ export default function Home() {
       <section className="bg-field pb-20 pt-4">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
           <h2 className="text-center text-2xl font-bold text-cream sm:text-3xl">
-            ผจญภัยไปด้วยกัน ไก่ทุกตัวคือของจริง
+            Adventure together — every rooster is real
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-sm text-cream/80 sm:text-base">
-            เลี้ยง เทรน และสืบทอดสายพันธุ์ — ทุกอย่างตรวจสอบได้บนเชน
+            Raise, train, and carry on the bloodline — everything verifiable
+            onchain.
           </p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
@@ -141,15 +138,18 @@ export default function Home() {
 
           <div className="mt-14 flex flex-col items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-cream/70">
-              สายพันธุ์พ่อพันธุ์ทั้ง 5
+              The five sire lines
             </p>
             <ul className="flex flex-wrap items-center justify-center gap-2.5">
               {SIRE_LINES.map((line) => (
                 <li
-                  key={line}
+                  key={line.roman}
                   className="rounded-full border border-cream/40 px-4 py-1.5 text-sm font-medium text-cream"
                 >
-                  {line}
+                  {line.roman}{" "}
+                  <span lang="th" className="text-cream/80">
+                    {line.thai}
+                  </span>
                 </li>
               ))}
             </ul>
