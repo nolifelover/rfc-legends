@@ -857,6 +857,9 @@ export class IdleScene extends Phaser.Scene {
     }
     this.focus = p
     const s = ROW_SCALE[p.row]
+    // above every lane, so a front-lane body never covers a back-lane target's plate
+    p.bar.container.setDepth(30)
+    p.plate.container.setDepth(30)
     p.bar.place(p.baseX, p.feetY + 12 * s)
     p.plate.place(p.baseX, p.feetY + 20 * s)
   }
