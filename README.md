@@ -14,6 +14,7 @@ Built at **ETHGlobal Tokyo 2026** (25–27 Sep 2026).
 | [`docs/cowork-session/transcript.md`](docs/cowork-session/transcript.md) | Full planning conversation: prize research, Ninlanee Farm / RFC Club research, and game design decisions |
 | [`docs/ethglobal-tokyo-2026-prizes.md`](docs/ethglobal-tokyo-2026-prizes.md) | Prize list and event rules |
 | [`docs/ethglobal-submission-draft.md`](docs/ethglobal-submission-draft.md) | Submission status and form copy |
+| [`docs/RFC_Legends_GDD_v0.4.md`](docs/RFC_Legends_GDD_v0.4.md) | Game Design Document v0.4 (38 pages, 22 sections). Original: [`.docx`](docs/RFC_Legends_GDD_v0.4.docx) |
 
 ## Target prizes
 
