@@ -387,15 +387,17 @@ export class BossPips {
     this.total = total
     this.container = scene.add.container(0, 0).setDepth(54)
     this.g = scene.add.graphics()
+    // 26px with letter spacing: at 20px the FIT-scaled label misread as "MOOB INFO"
     this.label = scene.add
       .text(0, 0, '', {
         fontFamily,
-        fontSize: '20px',
+        fontSize: '26px',
         fontStyle: 'bold',
         color: '#ffe9a8',
         stroke: INK.stroke,
-        strokeThickness: 4,
+        strokeThickness: 5,
       })
+      .setLetterSpacing(1.5)
       .setOrigin(1, 0.5)
     this.container.add([this.g, this.label])
     this.draw()
@@ -445,7 +447,7 @@ export class BossPips {
     const left = this.total - this.filled
     this.label.setText(left <= 1 ? 'BOSS NEXT' : `BOSS IN ${left}`)
     this.label.setColor(left <= 1 ? '#ff8a7a' : '#ffe9a8')
-    this.label.setPosition(-totalW - 12, 0)
+    this.label.setPosition(-totalW - 16, 0)
   }
 
   destroy(): void {
