@@ -71,6 +71,11 @@ export function NavBar() {
         >
           ☰
         </button>
+        {process.env.NEXT_PUBLIC_DEMO_MODE === "true" ? (
+          <span className="pointer-events-auto rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-0.5 text-xs font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur">
+            ⚡ Demo <span lang="th">(อัตราเร่งสำหรับสาธิต)</span>
+          </span>
+        ) : null}
         {/* wallet tucked behind an icon + green dot; the address reveals on
             hover (critic r6 #4) */}
         {isConnected && address ? (
