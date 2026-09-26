@@ -10,7 +10,7 @@ Only edit paths your lane owns. If you need something in another lane's path, me
 
 | Lane | Owner | Paths |
 |---|---|---|
-| Contracts + MultiBaas | eth-dev1 | `contracts/**`, `e2e/**`, `apps/web/src/app/api/items/**`, `apps/web/src/lib/contracts/**` (ABIs, addresses, viem helpers) |
+| Contracts + MultiBaas | eth-dev1 | `contracts/**`, `e2e/**`, `apps/web/src/app/api/items/**`, `apps/web/src/app/api/market/**`, guild (`apps/web/src/app/api/game/guild/**`, `apps/web/src/components/guild/**`, `pocketbase/pb_migrations/*_guild_*.js`), deploy (`scripts/**`), `apps/web/src/lib/contracts/**` (ABIs, addresses, viem helpers) |
 | Game (shell, idle engine, Phaser) | eth-dev2 | `apps/web/src/app/layout.tsx`, `apps/web/src/app/page.tsx`, `apps/web/src/app/(game)/**`, `apps/web/src/app/api/game/**`, `apps/web/src/game/**`, `apps/web/src/server/game/**`, `apps/web/src/components/game/**`, `apps/web/src/components/providers.tsx`, `apps/web/src/lib/wagmi.ts`, `apps/web/public/assets/**`, `apps/web/src/app/globals.css` |
 | RWA + ENSv2 pedigree | eth-dev3 | `ens/**`, `apps/web/src/app/roosters/**`, `apps/web/src/app/api/ens/**`, `apps/web/src/app/api/roosters/**`, `apps/web/src/lib/ens/**`, `apps/web/src/components/pedigree/**` |
 | Drop economy (World ID, voucher, mint, Rare Market UI) | manager's subagent | `apps/web/src/app/api/worldid/**`, `apps/web/src/app/api/voucher/**`, `apps/web/src/server/worldid/**`, `apps/web/src/lib/worldid/**`, `apps/web/src/components/worldid/**`, `apps/web/src/components/market/**`, `apps/web/src/app/market/**` |
