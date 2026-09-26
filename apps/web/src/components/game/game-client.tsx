@@ -23,6 +23,7 @@ import { IdleScene } from "./idle-scene";
 import { InventoryDrawer } from "./inventory-drawer";
 import { SceneFrame } from "./scene-frame";
 import { StatPanel, type AllocateResult } from "./stat-panel";
+import { GameChromeIcon } from "./game-chrome-icon";
 
 interface GameState {
   player: Player | null;
@@ -374,7 +375,7 @@ export function GameClient() {
             title={syncMutation.isPending ? "Syncing…" : "Sync now"}
             className="grid h-10 w-10 place-items-center rounded-full border-2 border-clay/40 bg-cream text-xl font-black text-clay-deep transition hover:border-clay hover:bg-sun-soft/50 disabled:cursor-wait disabled:opacity-60"
           >
-            {syncMutation.isPending ? "…" : "⟳"}
+            {syncMutation.isPending ? "…" : <GameChromeIcon name="sync" className="h-5 w-5" />}
           </button>
         }
         rareDropCount={rareDropCount}
