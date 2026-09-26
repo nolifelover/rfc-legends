@@ -122,8 +122,9 @@ panel.
 >
 > Who can't cash out? The bot — not a verified human. And this second
 > wallet of mine: the same World ID is already bound to my first wallet,
-> so it's refused too — enforced by the HumanRegistry contract, not just
-> our database. Bots can grind all they want — they just can't cash out.
+> so it's refused. One human, one wallet — and that binding is recorded
+> onchain in the HumanRegistry contract. Bots can grind all they want —
+> they just can't cash out.
 
 (~120 words)
 
