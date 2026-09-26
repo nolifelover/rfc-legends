@@ -53,8 +53,8 @@ export default function Home() {
           </p>
 
           <h1 className="mx-auto mt-6 max-w-3xl text-balance text-3xl font-bold leading-tight tracking-tight text-bark sm:text-5xl">
-            Your idle-RPG rooster is a real bird on a real Thai farm, with its
-            pedigree onchain.
+            An idle RPG where every rooster card carries a farm-signed,
+            onchain pedigree.
           </h1>
 
           <ul className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
