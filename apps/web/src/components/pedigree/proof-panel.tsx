@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Clipboard with a graceful legacy fallback; resolves false when unavailable. */
 async function copyText(text: string): Promise<boolean> {
@@ -23,6 +23,67 @@ async function copyText(text: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * In-browser signature proof: recovers the EIP-712 signer from the
+ * attestation's stored values + the signature decoded out of the relayer's
+ * onchain calldata — runs in the visitor's browser, not on our server.
+ */
+export function SignatureVerify({
+  domain,
+  types,
+  primaryType,
+  message,
+  signature,
+  expected,
+  label,
+}: {
+  domain: { name: string; version: string; chainId: string; verifyingContract: string };
+  types: readonly { readonly name: string; readonly type: string }[];
+  primaryType: string;
+  message: Record<string, string>;
+  signature: string;
+  expected: string;
+  label: string;
+}) {
+  const [state, setState] = useState<"checking" | "ok" | "fail">("checking");
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { recoverTypedDataAddress } = await import("viem");
+        const recovered = await recoverTypedDataAddress({
+          domain: { ...domain, chainId: BigInt(domain.chainId), verifyingContract: domain.verifyingContract as `0x${string}` },
+          types: { [primaryType]: types },
+          primaryType,
+          message,
+          signature: signature as `0x${string}`,
+        } as never);
+        if (alive) setState(recovered.toLowerCase() === expected.toLowerCase() ? "ok" : "fail");
+      } catch {
+        if (alive) setState("fail");
+      }
+    })();
+    return () => { alive = false; };
+  }, [domain, types, primaryType, message, signature, expected]);
+
+  if (state === "checking") {
+    return <span className="text-[11px] uppercase tracking-wider opacity-60">verifying signature…</span>;
+  }
+  if (state === "fail") {
+    return <span className="font-bold">✗ signature mismatch — do not trust this record</span>;
+  }
+  const short = `${expected.slice(0, 6)}…${expected.slice(-4)}`;
+  return (
+    <>
+      <span className="text-base font-bold">✓</span>
+      <span>
+        {label} recovered to <strong className="font-mono">{short}</strong> — the Ninlanee Farm key
+      </span>
+      <span className="ml-auto text-[10px] uppercase tracking-wider opacity-70">verified in your browser via EIP-712</span>
+    </>
+  );
 }
 
 /**

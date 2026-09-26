@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { recoverTypedDataAddress } from "viem";
 import { PedigreeTree, SireLineBadge } from "@/components/pedigree/pedigree-tree";
-import { ProofRow } from "@/components/pedigree/proof-panel";
+import { ProofRow, SignatureVerify } from "@/components/pedigree/proof-panel";
 import { SireLineArt } from "@/components/game/sire-line-art";
-import { ATTESTATION_TYPE, roosterRwaDomain } from "@/lib/contracts/eip712";
+import { ATTESTATION_TYPE } from "@/lib/contracts/eip712";
 import {
   ENS_APP, ETHERSCAN, ensClient, getAttestation, getAttestationTx, getRoosterByTokenId,
   getRoosterRecords, listOffspring, nameExists, pedigreeOf, roosterRwaAbi, sireLineInfo, PARENT_NAME,
@@ -59,7 +58,6 @@ export default async function RoosterDetailPage({ params }: Props) {
   let dam: string | null = null;
   let attestation: Awaited<ReturnType<typeof getAttestation>> = null;
   let attestationTx: Awaited<ReturnType<typeof getAttestationTx>> = null;
-  let sigRecovers: boolean | null = null;
   let rwaAddress: string | null = null;
   let tokenId: bigint | null = null;
   try {
@@ -80,22 +78,6 @@ export default async function RoosterDetailPage({ params }: Props) {
         getAttestation(client, rwaAddress as `0x${string}`, tokenId),
         getAttestationTx(client, rwaAddress as `0x${string}`, tokenId),
       ]);
-      if (attestation) {
-        // client-side proof: the stored attestation's EIP-712 signature recovers to the farm key
-        const recovered = attestationTx
-          ? await recoverTypedDataAddress({
-              domain: roosterRwaDomain(11155111, rwaAddress as `0x${string}`),
-              types: { Attestation: ATTESTATION_TYPE },
-              primaryType: "Attestation",
-              message: {
-                tokenId, weightGrams: attestation.weightGrams, healthScore: attestation.healthScore,
-                note: attestation.note, checkedAt: attestation.checkedAt, nonce: attestation.nonce,
-              },
-              signature: attestationTx.signature,
-            } as unknown as Parameters<typeof recoverTypedDataAddress>[0]).catch(() => null)
-          : null;
-        sigRecovers = !!recovered && recovered.toLowerCase() === attestation.farmSigner.toLowerCase();
-      }
     }
   } catch { /* contracts pending — ENS-only mode */ }
 
@@ -129,22 +111,29 @@ export default async function RoosterDetailPage({ params }: Props) {
             ) : null}
             <ProofRow label="ENS name" value={name} href={ENS_APP(name)} />
           </div>
-          {sigRecovers !== null ? (
-            <div
-              className={`flex flex-wrap items-center gap-2 px-4 py-2.5 text-xs ${sigRecovers ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-900"}`}
-              title={attestation?.farmSigner}
-            >
-              {sigRecovers ? (
-                <>
-                  <span className="text-base font-bold">✓</span>
-                  <span>
-                    attestation signature recovered to <strong className="font-mono">0x7E28…Ac39</strong> — the Ninlanee Farm key
-                  </span>
-                  <span className="ml-auto text-[10px] uppercase tracking-wider opacity-70">verified client-side via EIP-712</span>
-                </>
-              ) : (
-                <span className="font-bold">✗ signature mismatch — do not trust this record</span>
-              )}
+          {attestation && attestationTx ? (
+            <div className="flex flex-wrap items-center gap-2 bg-emerald-100 px-4 py-2.5 text-xs text-emerald-900" title={attestation.farmSigner}>
+              <SignatureVerify
+                domain={{
+                  name: "RFCLegendsRoosterRWA",
+                  version: "1",
+                  chainId: "11155111",
+                  verifyingContract: rwaAddress as string,
+                }}
+                types={ATTESTATION_TYPE}
+                primaryType="Attestation"
+                message={{
+                  tokenId: tokenId!.toString(),
+                  weightGrams: String(attestation.weightGrams),
+                  healthScore: String(attestation.healthScore),
+                  note: attestation.note,
+                  checkedAt: attestation.checkedAt.toString(),
+                  nonce: attestation.nonce.toString(),
+                }}
+                signature={attestationTx.signature}
+                expected={attestation.farmSigner}
+                label="attestation signature"
+              />
             </div>
           ) : null}
         </section>
