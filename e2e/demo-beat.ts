@@ -20,7 +20,7 @@
  * deployer) and fresh demo wallets are generated and funded automatically.
  * GAME_SIGNER_PRIVATE_KEY must be the key behind the deployed attestor.
  */
-import { createPublicClient, createWalletClient, http, parseEther, formatEther } from 'viem';
+import { createPublicClient, createWalletClient, http, parseEther, formatEther, keccak256, toHex, parseEventLogs } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { foundry, sepolia } from 'viem/chains';
 import { readFileSync } from 'node:fs';
@@ -128,7 +128,7 @@ async function ensureGas() {
     { name: 'B (buyer)', account: walletB },
     { name: 'C (bot)', account: walletC },
   ];
-  const topUp = isAnvil ? parseEther('1') : parseEther('0.05');
+  const topUp = isAnvil ? parseEther('1') : parseEther('0.01');
   const min = parseEther('0.001');
   const funder = FUNDER_KEY ? privateKeyToAccount(FUNDER_KEY as `0x${string}`) : null;
   const funderClient = funder ? clientFor(funder) : null;
@@ -147,8 +147,10 @@ async function ensureGas() {
   }
 }
 
+// Full-hash derivation: every wallet gets its own nullifier, so the demo is
+// re-runnable with fresh wallets forever (a masked tail would collide).
 const nullifierOf = (addr: `0x${string}`, tag: string) =>
-  BigInt(`0x${Buffer.from(`${addr}:${tag}`).toString('hex')}`) & 0xffffffffffffffffn;
+  BigInt(keccak256(toHex(`${addr}:${tag}`)));
 
 // ---------------------------------------------------------------- the beat
 
@@ -273,7 +275,7 @@ const UNIT_PRICE = 2_000_000n; // 2 USDC
 // --- Step 4: A lists, B buys ------------------------------------------------
 
 console.log('\nRare Market (2.00 USDC, split 90/10 in-contract):');
-const listingId = 1n;
+let listingId = 1n; // real id comes from the Listed event
 {
   const appr = await aClient.writeContract({
     address: RareItems,
@@ -379,6 +381,37 @@ const listingId = 1n;
       '',
     ].join('\n'),
   );
+}
+
+// Conserve the funder: sweep each demo wallet's remaining ETH back.
+if (FUNDER_KEY) {
+  const funderAddr = privateKeyToAccount(FUNDER_KEY as `0x${string}`).address;
+  for (const { name, account } of [
+    { name: 'A (seller)', account: walletA },
+    { name: 'B (buyer)', account: walletB },
+    { name: 'C (bot)', account: walletC },
+  ]) {
+    const bal = await publicClient.getBalance({ address: account.address });
+    if (bal <= 21_000n * 2_000_000_000n) continue; // not worth the gas
+    try {
+      const gas = await publicClient.estimateGas({
+        account: account.address,
+        to: funderAddr,
+        value: bal,
+      } as Parameters<typeof publicClient.estimateGas>[0]);
+      const gasCost = gas * 2_000_000_000n; // ~2 gwei ceiling
+      if (bal <= gasCost) continue;
+      const h = await clientFor(account).sendTransaction({
+        to: funderAddr,
+        value: bal - gasCost,
+        gas,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: h });
+      console.log(`  · swept ${name} -> funder (${(bal - gasCost) / 10n ** 14n / 10000n} ETH)`);
+    } catch {
+      /* sweep is best-effort */
+    }
+  }
 }
 
 console.log('All demo-beat assertions passed.\n');
