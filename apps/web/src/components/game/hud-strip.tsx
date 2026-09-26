@@ -65,16 +65,25 @@ function Bar({
   );
 }
 
+function jobTag(baseLevel: number): string {
+  if (baseLevel >= 60) return "Master Trainer";
+  if (baseLevel >= 30) return "Veteran";
+  if (baseLevel >= 10) return "Adventurer";
+  return "Novice";
+}
+
 export function HudStrip({
   player,
   rareDropCount,
   bagCount,
+  newestDropId,
   onOpenBag,
   onOpenGuild,
 }: {
   player: Player;
   rareDropCount?: number;
   bagCount?: number;
+  newestDropId?: string;
   onOpenBag?: () => void;
   onOpenGuild?: () => void;
 }) {
@@ -91,7 +100,7 @@ export function HudStrip({
         <div className="min-w-0">
           <p className="truncate text-base font-black leading-tight text-bark">{player.name}</p>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold text-bark-soft">
-            <span className="rounded-full bg-sun-soft px-2 py-0.5 font-bold text-bark">Novice</span>
+            <span className="rounded-full bg-sun-soft px-2 py-0.5 font-bold text-bark">{jobTag(player.baseLevel)}</span>
             <span>
               Base Lv <span className="font-black text-clay">{player.baseLevel}</span> · Job Lv{" "}
               <span className="font-black text-clay">{player.jobLevel}</span>
@@ -141,12 +150,12 @@ export function HudStrip({
             <p className="mt-1 flex items-center gap-2 text-xs font-bold text-bark-soft">
               <span title="Monsters defeated">Defeated {player.killCount.toLocaleString()}</span>
               <span aria-hidden>·</span>
-              <span title="Rare drops found">Drops {player.dropCounter.toLocaleString()}</span>
+              <span title="Items in the bag (grows as you defeat monsters)">Bag {(bagCount ?? 0).toLocaleString()}</span>
             </p>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               {typeof rareDropCount === "number" ? (
                 <a
-                  href="/market"
+                  href={rareDropCount && newestDropId ? `/market?dropId=${newestDropId}` : "/market"}
                   title="Open the Rare Market"
                   className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black transition ${
                     rareDropCount > 0

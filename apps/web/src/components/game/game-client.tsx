@@ -136,9 +136,11 @@ export function GameClient() {
   });
 
   // Unminted mintable drops → the HUD pill count (fresh ones also toast).
-  const rareDropCount = (stateQuery.data?.drops ?? []).filter(
+  const unminted = (stateQuery.data?.drops ?? []).filter(
     (d) => d.status === "unminted" && (MINTABLE_RARITIES as readonly string[]).includes(d.rarity),
-  ).length
+  )
+  const rareDropCount = unminted.length
+  const newestDropId = unminted.length > 0 ? unminted[unminted.length - 1].dropId : undefined
 
   // 1. No wallet connected → invite to connect.
   if (!isConnected || !address) {
@@ -229,6 +231,7 @@ export function GameClient() {
       <HudStrip
         player={player}
         rareDropCount={rareDropCount}
+        newestDropId={newestDropId}
         bagCount={Object.values(player.inventory).reduce((a, b) => a + b, 0)}
         onOpenBag={() => setBagOpen(true)}
         onOpenGuild={() => setGuildOpen(true)}
