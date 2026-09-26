@@ -535,6 +535,8 @@ export const FX = {
   feather: 'fx-feather',
   bubble: 'fx-bubble',
   kite: 'fx-kite',
+  butterfly: 'fx-butterfly',
+  chaff: 'fx-chaff',
 } as const
 
 export function makeFxTextures(scene: Phaser.Scene): void {
@@ -652,6 +654,27 @@ export function makeFxTextures(scene: Phaser.Scene): void {
   make(FX.confetti, 16, 16, (g) => {
     g.fillStyle(0xffffff)
     g.fillRect(2, 2, 12, 12)
+  })
+
+  // butterfly: two wings + body (flaps by scaling X), and a rice-chaff flake
+  make(FX.butterfly, 56, 40, (g) => {
+    g.fillStyle(0xffb347)
+    g.fillEllipse(16, 16, 26, 22)
+    g.fillEllipse(40, 16, 26, 22)
+    g.fillStyle(0xffd24a)
+    g.fillEllipse(18, 28, 18, 14)
+    g.fillEllipse(38, 28, 18, 14)
+    g.lineStyle(3, OUTLINE)
+    g.strokeEllipse(16, 16, 26, 22)
+    g.strokeEllipse(40, 16, 26, 22)
+    g.strokeEllipse(18, 28, 18, 14)
+    g.strokeEllipse(38, 28, 18, 14)
+    g.fillStyle(OUTLINE)
+    g.fillEllipse(28, 20, 6, 24)
+  })
+  make(FX.chaff, 14, 8, (g) => {
+    g.fillStyle(0xffffff)
+    g.fillEllipse(7, 4, 14, 6)
   })
 
   // Thai diamond kite (ว่าว) with a bow tail — sky filler, origin at the centre

@@ -225,9 +225,10 @@ export class IdleScene extends Phaser.Scene {
     this.add.image(0, 0, 'art-sky').setOrigin(0, 0).setDepth(0)
 
     const clouds: Array<[string, number, number, number, number, number]> = [
-      [CLOUD_KEYS.stratus, -300, 70, 0.9, 0.8, 120000],
-      [CLOUD_KEYS.puffy, 700, 120, 1.0, 0.9, 88000],
-      [CLOUD_KEYS.tower, 1500, 60, 0.85, 0.75, 100000],
+      [CLOUD_KEYS.stratus, -300, 70, 1.1, 0.8, 120000],
+      [CLOUD_KEYS.puffy, 700, 110, 1.2, 0.9, 88000],
+      [CLOUD_KEYS.tower, 1500, 60, 0.95, 0.75, 100000],
+      [CLOUD_KEYS.puffy, 1100, 40, 0.8, 0.7, 140000],
     ]
     for (const [key, x, y, s, a, dur] of clouds) {
       const cloud = this.add.image(x, y, key).setOrigin(0, 0.5).setDepth(2).setScale(s).setAlpha(a)
@@ -242,7 +243,8 @@ export class IdleScene extends Phaser.Scene {
 
     // hills → paddy → ground, back to front. The camera sits low: sky ≤ 20%,
     // horizon at 35%, and the clay lane owns the bottom 40% of the frame.
-    const hills = this.add.image(0, L.HORIZON_Y - 330, 'art-hills').setOrigin(0, 0).setDepth(4)
+    // hills drawn 1.2x tall so their ridges climb into the sky band
+    const hills = this.add.image(0, L.HORIZON_Y - 400, 'art-hills').setOrigin(0, 0).setDepth(4).setDisplaySize(L.W, 480)
     const paddy = this.add.image(0, L.HORIZON_Y, 'art-paddy').setOrigin(0, 0).setDepth(6)
     // breathing parallax: the far layers drift a few px on an 8s sine
     if (!this.reduced) {
@@ -256,13 +258,17 @@ export class IdleScene extends Phaser.Scene {
       [1400, L.HORIZON_Y + 30, 3, 800],
       [520, L.HORIZON_Y + 80, 2.4, 200],
       [1750, L.HORIZON_Y + 70, 2.2, 600],
+      [1100, L.HORIZON_Y + 24, 2.8, 1000],
+      [80, L.HORIZON_Y + 66, 2, 300],
+      [1600, L.HORIZON_Y + 52, 2.4, 1300],
     ]
     for (const [x, y, s, delay] of shimmers) {
       const sh = this.add.image(x, y, FX.shimmer).setDepth(7).setScale(s, s * 0.9).setAlpha(0)
       this.tweens.add({
         targets: sh,
-        alpha: { from: 0, to: 0.75 },
-        duration: 900,
+        alpha: { from: 0, to: 0.85 },
+        x: x + 50,
+        duration: 1400,
         yoyo: true,
         repeat: -1,
         delay,
@@ -344,6 +350,69 @@ export class IdleScene extends Phaser.Scene {
     this.scheduleFlock()
     this.buildKite()
     this.startDayCycle()
+    this.buildForeground()
+    this.buildButterflies()
+  }
+
+  /** Foreground rice stalks along the bottom edge (in front of the lane, below the plates) and drifting chaff. */
+  private buildForeground(): void {
+    const xs = [30, 120, 210, 330, 470, 620, 790, 980, 1160, 1340, 1500, 1640, 1760, 1860]
+    xs.forEach((x, i) => {
+      const edge = x < 500 || x > 1450
+      const tuft = this.add
+        .image(x + Phaser.Math.Between(-20, 20), L.H + 14, FX.tuft)
+        .setOrigin(0.5, 1)
+        .setDepth(27)
+        .setScale(edge ? Phaser.Math.FloatBetween(2.6, 3.2) : Phaser.Math.FloatBetween(1.8, 2.2))
+        .setAlpha(edge ? 1 : 0.92)
+        .setFlipX(i % 2 === 0)
+      this.tweens.add({
+        targets: tuft,
+        angle: { from: -4, to: 4 },
+        duration: Phaser.Math.Between(2200, 3200),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 1500),
+        ease: 'Sine.easeInOut',
+      })
+    })
+    this.add
+      .particles(0, 0, FX.chaff, {
+        x: { min: -40, max: L.W },
+        y: { min: L.HORIZON_Y, max: L.H },
+        lifespan: 7000,
+        speedX: { min: 24, max: 70 },
+        speedY: { min: 4, max: 26 },
+        scale: { min: 0.6, max: 1.1 },
+        alpha: { start: 0, end: 0.55, ease: 'Sine.easeInOut' },
+        rotate: { min: 0, max: 360 },
+        tint: 0xe9d29a,
+        frequency: this.reduced ? 700 : 320,
+        maxAliveParticles: this.reduced ? 10 : 22,
+      })
+      .setDepth(28)
+  }
+
+  /** Two butterflies wander the paddy band, flapping. */
+  private buildButterflies(): void {
+    for (let i = 0; i < 2; i++) {
+      const b = this.add
+        .image(Phaser.Math.Between(200, 1700), Phaser.Math.Between(L.HORIZON_Y + 60, L.GROUND_Y - 20), FX.butterfly)
+        .setDepth(16)
+        .setScale(1.3)
+      this.tweens.add({ targets: b, scaleX: { from: 1.3, to: 0.35 }, duration: 130, yoyo: true, repeat: -1, delay: i * 60 })
+      const wander = (): void => {
+        this.tweens.add({
+          targets: b,
+          x: Phaser.Math.Clamp(b.x + Phaser.Math.Between(-320, 320), 160, 1760),
+          y: Phaser.Math.Clamp(b.y + Phaser.Math.Between(-90, 90), L.HORIZON_Y + 50, L.GROUND_Y + 40),
+          duration: Phaser.Math.Between(2200, 3800),
+          ease: 'Sine.easeInOut',
+          onComplete: wander,
+        })
+      }
+      wander()
+    }
   }
 
   /** A kite sways in the upper band, its string running down to the horizon. */
@@ -1301,7 +1370,7 @@ export class IdleScene extends Phaser.Scene {
       const key = MONSTER_KEYS['raja-nu-na'] ?? MONSTER_KEYS['nu-na']
       // feet sunk behind the paddy (depth 5 < 6) so the head looms in the sky
       const sh = this.add
-        .image(1560, L.HORIZON_Y + 220, key)
+        .image(1300, L.HORIZON_Y + 220, key)
         .setOrigin(0.5, 1)
         .setDisplaySize(560, 560)
         .setTint(INK.outline)
