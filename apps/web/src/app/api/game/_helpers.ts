@@ -2,7 +2,7 @@
 // GameError carries an ASCII `code`; the UI maps codes to friendly copy.
 
 import { z } from "zod";
-import { GameError } from "@/server/game";
+import { GameError } from "../../../server/game";
 
 export const addressSchema = z
   .string()
@@ -33,6 +33,19 @@ export const allocateBodySchema = z.object({
 });
 
 export const syncBodySchema = z.object({ address: addressSchema });
+
+const gameActionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("mode"), mode: z.enum(["auto", "manual"]) }).strict(),
+  z.object({ type: z.literal("move"), direction: z.union([z.literal(-1), z.literal(0), z.literal(1)]) }).strict(),
+  z.object({ type: z.literal("attack") }).strict(),
+  z.object({ type: z.literal("potion") }).strict(),
+]);
+
+export const gameActionBodySchema = z.object({
+  address: addressSchema,
+  sequence: z.number().int().safe().positive(),
+  action: gameActionSchema,
+});
 
 export function badBody(reason = "INVALID_BODY"): Response {
   return Response.json({ reason }, { status: 400 });

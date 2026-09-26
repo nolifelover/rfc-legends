@@ -126,6 +126,27 @@ export interface OfflineAggregates extends CombatAggregates {
   killRatePerMin: number
 }
 
+export interface ManualAttackFeedback {
+  attempted: boolean
+  reason?: 'COOLDOWN' | 'KNOCKED_OUT' | 'NO_TARGET'
+  damage: number
+  crit: boolean
+  miss: boolean
+  killed: boolean
+  targetId?: string
+}
+
+export interface LiveSimulationInput {
+  /** Preserve the original engine behavior unless explicitly disabled for manual mode. */
+  autoAttack?: boolean
+  /** Resolve one trainer + companion command at the end of this elapsed window. */
+  manualAttack?: boolean
+  /** Legacy auto mode heals itself; manual mode reserves tonics for the explicit item button. */
+  autoHeal?: boolean
+  /** Manual range can pause enemy strikes while the player is outside the encounter. */
+  enemyCanAttack?: boolean
+}
+
 function emptyAgg(ticks: number): CombatAggregates {
   return {
     ticks,
@@ -174,7 +195,8 @@ export function simulateLive(
   ticks: number,
   rng: Rng,
   opts: EngineOpts = NORMAL_OPTS,
-): { player: Player; aggregates: CombatAggregates } {
+  input: LiveSimulationInput = {},
+): { player: Player; aggregates: CombatAggregates; manualAttack?: ManualAttackFeedback } {
   const p: Player = structuredClone(player)
   const map = getMap(p.mapId)
   const agg = emptyAgg(ticks)
@@ -212,6 +234,8 @@ export function simulateLive(
   let nextPlayerAtk = monster !== null ? Math.max(0, resume?.playerAtkIn ?? fullPlayerCd) : fullPlayerCd
   let nextRoosterAtk = monster !== null ? Math.max(0, resume?.roosterAtkIn ?? fullRoosterCd) : fullRoosterCd
   let nextMonsterAtk = monster !== null ? Math.max(0, resume?.monsterAtkIn ?? MONSTER_ATTACK_INTERVAL) : MONSTER_ATTACK_INTERVAL
+  const autoAttack = input.autoAttack !== false
+  let manualFeedback: ManualAttackFeedback | undefined
 
   const pickMonster = (): MonsterDef => {
     // the upcoming kill number decides whether an MVP spawns
@@ -271,6 +295,40 @@ export function simulateLive(
     }
   }
 
+  const trainerStrike = (t: number): { damage: number; crit: boolean; miss: boolean } => {
+    if (!monster) return { damage: 0, crit: false, miss: true }
+    nextPlayerAtk = t + fullPlayerCd
+    const before = monsterHp
+    let crit = false
+    let miss = false
+    if (rng() < critChance(p)) {
+      crit = true
+      monsterHp -= damage(atkOf(p) * CRIT_MULT, monster.stats.def, rng)
+    } else if (rng() < hitChance(hitOf(p), monster.stats.flee)) {
+      monsterHp -= damage(atkOf(p), monster.stats.def, rng)
+    } else {
+      miss = true
+    }
+    return { damage: Math.min(before, Math.max(0, before - monsterHp)), crit, miss }
+  }
+
+  const roosterStrike = (t: number): { damage: number; crit: boolean; miss: boolean } => {
+    if (!monster) return { damage: 0, crit: false, miss: true }
+    nextRoosterAtk = t + fullRoosterCd
+    const before = monsterHp
+    let crit = false
+    let miss = false
+    if (rng() < roosterCrit(p.rooster)) {
+      crit = true
+      monsterHp -= damage(roosterAtk(p.rooster) * CRIT_MULT, monster.stats.def, rng)
+    } else if (rng() < roosterHitChance(p.rooster, monster.stats.flee)) {
+      monsterHp -= damage(roosterAtk(p.rooster), monster.stats.def, rng)
+    } else {
+      miss = true
+    }
+    return { damage: Math.min(before, Math.max(0, before - monsterHp)), crit, miss }
+  }
+
   const steps = Math.max(0, Math.round(ticks / DT))
   let wholeSec = 0
   for (let i = 1; i <= steps; i++) {
@@ -278,7 +336,7 @@ export function simulateLive(
     const sec = Math.floor(t + 1e-9)
     if (sec > wholeSec) {
       wholeSec = sec
-      upkeep()
+      if (input.autoHeal !== false) upkeep()
     }
 
     if (reviveAt >= 0) {
@@ -297,37 +355,29 @@ export function simulateLive(
     if (!monster && t >= spawnAt) {
       monster = pickMonster()
       monsterHp = monster.stats.hp
+      if (!autoAttack) {
+        nextPlayerAtk = t
+        nextRoosterAtk = t
+      }
     }
 
-    if (monster) {
+    if (autoAttack && monster) {
       // trainer attack: crit rolls first (crits ignore flee)
       if (t >= nextPlayerAtk) {
-        nextPlayerAtk = t + 1 / aspdOf(p)
-        const r = rng()
-        if (r < critChance(p)) {
-          monsterHp -= damage(atkOf(p) * CRIT_MULT, monster.stats.def, rng)
-        } else if (rng() < hitChance(hitOf(p), monster.stats.flee)) {
-          monsterHp -= damage(atkOf(p), monster.stats.def, rng)
-        }
+        trainerStrike(t)
         if (monsterHp <= 0) onKill(t, monster)
       }
     }
 
-    if (monster) {
+    if (autoAttack && monster) {
       // rooster attack
       if (t >= nextRoosterAtk) {
-        nextRoosterAtk = t + 1 / roosterAspd(p.rooster)
-        const r = rng()
-        if (r < roosterCrit(p.rooster)) {
-          monsterHp -= damage(roosterAtk(p.rooster) * CRIT_MULT, monster.stats.def, rng)
-        } else if (rng() < roosterHitChance(p.rooster, monster.stats.flee)) {
-          monsterHp -= damage(roosterAtk(p.rooster), monster.stats.def, rng)
-        }
+        roosterStrike(t)
         if (monsterHp <= 0) onKill(t, monster)
       }
     }
 
-    if (monster && t >= nextMonsterAtk) {
+    if (monster && input.enemyCanAttack !== false && t >= nextMonsterAtk) {
       // monster attacks the player (always hits in v1)
       nextMonsterAtk = t + MONSTER_ATTACK_INTERVAL
       hp -= damage(monster.stats.atk, defOf(p), rng)
@@ -335,6 +385,53 @@ export function simulateLive(
         hp = 0
         agg.deaths += 1
         reviveAt = t + DEATH_RESPAWN_SECONDS
+      }
+    }
+  }
+
+  if (input.manualAttack) {
+    const t = ticks
+    if (reviveAt >= 0) {
+      manualFeedback = { attempted: false, reason: 'KNOCKED_OUT', damage: 0, crit: false, miss: false, killed: false }
+    } else {
+      if (!monster && spawnAt <= t) {
+        monster = pickMonster()
+        monsterHp = monster.stats.hp
+        nextPlayerAtk = t
+        nextRoosterAtk = t
+      }
+      if (!monster) {
+        manualFeedback = { attempted: false, reason: 'NO_TARGET', damage: 0, crit: false, miss: false, killed: false }
+      } else {
+        const target = monster
+        const playerReady = t >= nextPlayerAtk
+        const roosterReady = t >= nextRoosterAtk
+        if (!playerReady && !roosterReady) {
+          manualFeedback = {
+            attempted: false,
+            reason: 'COOLDOWN',
+            damage: 0,
+            crit: false,
+            miss: false,
+            killed: false,
+            targetId: target.id,
+          }
+        } else {
+          const strikes: Array<{ damage: number; crit: boolean; miss: boolean }> = []
+          if (playerReady) strikes.push(trainerStrike(t))
+          if (monster && roosterReady) strikes.push(roosterStrike(t))
+          const killed = monsterHp <= 0
+          const dealt = strikes.reduce((sum, strike) => sum + strike.damage, 0)
+          manualFeedback = {
+            attempted: true,
+            damage: dealt,
+            crit: strikes.some((strike) => strike.crit),
+            miss: strikes.length > 0 && strikes.every((strike) => strike.miss),
+            killed,
+            targetId: target.id,
+          }
+          if (killed) onKill(t, target)
+        }
       }
     }
   }
@@ -381,7 +478,7 @@ export function simulateLive(
     p.combat = undefined
   }
 
-  return { player: p, aggregates: agg }
+  return { player: p, aggregates: agg, ...(manualFeedback ? { manualAttack: manualFeedback } : {}) }
 }
 
 /**

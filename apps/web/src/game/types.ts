@@ -108,6 +108,15 @@ export interface CombatState {
   spawnIn?: number
 }
 
+export interface PlayerControlState {
+  mode: 'auto' | 'manual'
+  x: number
+  direction: -1 | 0 | 1
+  moveUntil: number
+  updatedAt: number
+  sequence: number
+}
+
 export interface Player {
   address: string // lowercase hex
   name: string
@@ -126,6 +135,8 @@ export interface Player {
   sessionCounter: number // increments per sync; seeds the deterministic rng
   dropCounter: number // increments per mintable drop; part of dropId
   combat?: CombatState // monster engaged when the last sync window ended
+  /** Optional for backwards compatibility: absent records retain the original auto mode. */
+  control?: PlayerControlState
   lastSyncedAt: number // epoch ms
   createdAt: number // epoch ms
 }
