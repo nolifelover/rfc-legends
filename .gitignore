@@ -23,3 +23,7 @@ apps/web/.data/
 
 # gauntlet bar references (third-party material, not ours)
 docs/bar/
+
+# PocketBase binary and data
+pocketbase/pocketbase
+pocketbase/pb_data/
