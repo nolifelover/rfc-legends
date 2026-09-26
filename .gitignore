@@ -20,3 +20,6 @@ contracts/broadcast/*/31337/
 
 # local game data
 apps/web/.data/
+
+# gauntlet bar references (third-party material, not ours)
+docs/bar/
