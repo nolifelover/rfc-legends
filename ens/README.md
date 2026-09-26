@@ -71,15 +71,15 @@ one bird = one token):
 | 3 | NL-S-0003 | sirithong.rfclegends.eth | [0x4e5ca336…2e5602de](https://sepolia.etherscan.io/tx/0x4e5ca336bdb612fbf772e670c877ec3b24c1ff7081c3de34637cb5bf2e5602de) |
 | 4 | NL-S-0004 | theprawang.rfclegends.eth | [0x9627e4bd…ae9ce88c](https://sepolia.etherscan.io/tx/0x9627e4bdeb0104dc2fc5af92f5f73e1b5eaf9c5101940d4e018c280aae9ce88c) |
 | 5 | NL-S-0005 | falconthong.rfclegends.eth | [0xe9dfa4b6…e3454388](https://sepolia.etherscan.io/tx/0xe9dfa4b6d0b7c12666abb028fb015ee55a7826cafc87cc54154e5950e3454388) |
-| 6 | NL-C-0101 | chick01.theprawang.rfclegends.eth (sire = token 4) | [0x1957cd91…601f9aeea](https://sepolia.etherscan.io/tx/0x1957cd91e64adc39cc245a1d46424ca61fb403767986e19915d3742601f9aeea) |
+| 6 | NL-C-0101 | chick01.theprawang.rfclegends.eth (sire = token 4) | [0x1957cd91…601f9aeeaa](https://sepolia.etherscan.io/tx/0x1957cd91e64adc39cc245a1d46424ca61fb403767986e19915d3742601f9aeea) |
 
 Attestation round-trip (E3) on theprawang (token 4):
 - `submitAttestation`, farm EIP-712 signature, nonce 2:
   [0xd4c79038486075afa7d04176945303e75432733a274d26bd70d61dc600a61ac4](https://sepolia.etherscan.io/tx/0xd4c79038486075afa7d04176945303e75432733a274d26bd70d61dc600a61ac4)
 - farm-key ENS writes on the hardened resolver (weight/health/attestedAt):
   [0xdcd08538…9bc3f87](https://sepolia.etherscan.io/tx/0xdcd08538e7b02d26e383859a95c2ca0c471a3ab80650c0be18f61941c9bc3f87),
-  [0x732e9cfa…a5de3c357](https://sepolia.etherscan.io/tx/0x732e9cfa3501e22f3a976eab4bda3b33a62096f91e94606f4909b7ba5de3c357),
-  [0x817204cd…819c1acd4](https://sepolia.etherscan.io/tx/0x817204cde17e2cefb6696f4f1958518dab9edd3553b9ea69a1f11eb819c1acd4)
+  [0x732e9cfa…a5de3c3577](https://sepolia.etherscan.io/tx/0x732e9cfa3501e22f3a976eab4bda3b33a62096f91e94606f4909b7ba5de3c357),
+  [0x817204cd…819c1acd44](https://sepolia.etherscan.io/tx/0x817204cde17e2cefb6696f4f1958518dab9edd3553b9ea69a1f11eb819c1acd4)
 - contract + ENS agree: 4350 g / health 98 / nonce 2. Forged-signature and
   third-party-write paths both revert (verified in the same run).
 - chick01 (token 6) attested too (850 g / 99, nonce 1):
