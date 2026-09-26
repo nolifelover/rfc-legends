@@ -92,41 +92,37 @@ export async function getSaleHistory(limit = 20): Promise<SaleRecord[] | null> {
   const cfg = mbConfig()
   if (!cfg) return null
 
-  const res = await mbFetch<{ result?: Record<string, unknown>[] }>(
+  // Saved query `rfc-sold` (contracts/scripts/multibaas-setup.mjs) returns
+  // alias-keyed string rows, e.g. { listingId: "2", buyer: "0x…", fee: "200000", … }.
+  const res = await mbFetch<{ result?: { rows?: Record<string, string>[] } }>(
     cfg,
     'GET',
-    `/queries/rfcSold/results?limit=${Math.min(100, Math.max(1, limit))}`,
+    `/queries/rfc-sold/results?limit=${Math.min(100, Math.max(1, limit))}`,
   )
-  const rows = res.result ?? []
-  return rows.map((row) => {
-    const v = (k: string): string => {
-      const hit = Object.entries(row).find(([key]) => key.toLowerCase() === k.toLowerCase())
-      return hit ? String(hit[1]) : '0'
-    }
-    return {
-      listingId: BigInt(v('listingId') || '0'),
-      buyer: (/0x[0-9a-fA-F]{40}/.exec(v('buyer'))?.[0] ?? '0x') as Hex,
-      seller: (/0x[0-9a-fA-F]{40}/.exec(v('seller'))?.[0] ?? '0x') as Hex,
-      itemId: BigInt(v('itemId') || '0'),
-      amount: BigInt(v('amount') || '0'),
-      total: BigInt(v('total') || '0'),
-      sellerProceeds: BigInt(v('sellerProceeds') || '0'),
-      fee: BigInt(v('fee') || '0'),
-      txHash: ((/0x[0-9a-fA-F]{64}/.exec(v('txHash')))?.[0] ?? null) as Hex | null,
-      blockTimestamp: Number(v('blkTimestamp') || '0') || null,
-      raw: row,
-    }
-  })
+  const rows = res.result?.rows ?? []
+  return rows.map((row) => ({
+    listingId: BigInt(row.listingId ?? '0'),
+    buyer: (row.buyer ?? '0x') as Hex,
+    seller: (row.seller ?? '0x') as Hex,
+    itemId: 0n, // not selected in the saved query; available via ?query= raw rows
+    amount: BigInt(row.amount ?? '0'),
+    total: BigInt(row.total ?? '0'),
+    sellerProceeds: BigInt(row.sellerProceeds ?? '0'),
+    fee: BigInt(row.fee ?? '0'),
+    txHash: (row.txHash ?? null) as Hex | null,
+    blockTimestamp: row.triggeredAt ? Date.parse(row.triggeredAt) / 1000 || null : null,
+    raw: row,
+  }))
 }
 
 /** Executes any saved event query by name (used by /api/market/sales?query=). */
 export async function runEventQuery(name: string, limit = 20): Promise<Record<string, unknown>[] | null> {
   const cfg = mbConfig()
   if (!cfg) return null
-  const res = await mbFetch<{ result?: Record<string, unknown>[] }>(
+  const res = await mbFetch<{ result?: { rows?: Record<string, unknown>[] } }>(
     cfg,
     'GET',
     `/queries/${encodeURIComponent(name)}/results?limit=${Math.min(100, Math.max(1, limit))}`,
   )
-  return res.result ?? []
+  return res.result?.rows ?? []
 }

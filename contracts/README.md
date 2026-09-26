@@ -1,6 +1,6 @@
-# RFC Legends — contracts
+# RFC Legends contracts — real roosters as RWAs, a voucher-gated drop economy, and a 90/10 onchain market
 
-**Summary:** RFC Legends is an idle MMORPG in which your adventure companion is a *real* rooster — tokenizing each bird as an RWA makes its identity, pedigree and weekly farm attestations publicly verifiable, so the NFT has provenance a purely virtual pet cannot have, and the in-game rare-item economy it feeds is gated by World ID and settles 90/10 onchain.
+**Summary (one sentence):** RFC Legends turns each real rooster at Ninlanee Farm into a verifiable onchain asset, so rare drops minted from World ID-verified gameplay carry provenance no virtual pet can. *(23 words)*
 
 ## What holding a RoosterRWA token means
 
@@ -43,12 +43,12 @@ Deployer `0x741Ab117d67ecA72a54d3669fb84e399bfE5Ed98`, start block 11784988. All
 
 ## MultiBaas
 
-Status: **prepared, pending account** — reported honestly. The user's MultiBaas deployment is being provisioned; until the keys land, `/api/market/sales` returns `configured: false` and serves the sale history via direct RPC logs (the same `Sold` events, so the market UI works either way).
+Status: **LIVE.** All five contracts are uploaded and linked with event indexing, and the market sale history is served through MultiBaas event queries — `/api/market/sales` currently returns `source: "multibaas"` with the real Sepolia sale (tx [`0xfb5d…60f04`](https://sepolia.etherscan.io/tx/0xfb5dccc04df2c16d291689680a1664d0c1dbb4a819c5c9f4314dd226ba106f04), decoded `Sold` with the exact 1.80/0.20 split). Verify yourself: `curl '.../api/market/sales'` (field `source`), or `?query=rfc-rare-minted` for the other feeds.
 
-- [`scripts/multibaas-setup.mjs`](scripts/multibaas-setup.mjs) — uploads all five ABIs + Sepolia addresses and saves four event queries (`rfcSold`, `rfcRareMinted`, `rfcAttestationRecorded`, `rfcRoosterMinted`) over `Sold`, `RareMinted`, `AttestationRecorded`, `RoosterMinted`. One command once keys exist.
-- [`../apps/web/src/lib/contracts/multibaas.ts`](../apps/web/src/lib/contracts/multibaas.ts) — REST helper (`getSaleHistory` executes the saved `rfcSold` query; `runEventQuery` runs any of the four).
-- [`../apps/web/src/app/api/market/sales/route.ts`](../apps/web/src/app/api/market/sales/route.ts) — the visible integration point: market sale history (the 90/10 feed) through MultiBaas, with RPC fallback and `?raw=1` / `?query=<name>` for judging.
-- Feedback notes (required by the prize): [`../docs/feedback/multibaas.md`](../docs/feedback/multibaas.md).
+- Setup (idempotent, one command): [`scripts/multibaas-setup.mjs`](scripts/multibaas-setup.mjs) — creates the five contracts (label+ABI+bytecode), links each Sepolia address with event indexing, and saves four queries: `rfc-sold` ([`Sold`](src/RareMarket.sol#L74)), `rfc-rare-minted` ([`RareMinted`](src/RareItems.sol#L52)), `rfc-attestation-recorded` + `rfc-rooster-minted` ([`RoosterRWA`](src/RoosterRWA.sol#L96-L101)).
+- REST helper: [`../apps/web/src/lib/contracts/multibaas.ts`](../apps/web/src/lib/contracts/multibaas.ts) — `getSaleHistory()` (line 60) executes the saved `rfc-sold` query over `GET /api/v0/queries/rfc-sold/results`; `runEventQuery()` runs any of the four.
+- Visible integration: [`../apps/web/src/app/api/market/sales/route.ts`](../apps/web/src/app/api/market/sales/route.ts) — the market UI reads the 90/10 feed here, with a direct-RPC fallback for pre-indexing history and `?raw=1` for the unprocessed rows.
+- Full timeline and friction notes (required feedback): [`../docs/feedback/multibaas.md`](../docs/feedback/multibaas.md). The short version: the event-query model is excellent — decoded, alias-named rows straight into the UI — but the endpoint reference renders empty without JavaScript and several schema rules (lowercase labels, required bytecode, `inputIndex` on fields, operator `equal`) only surface as raw SQL errors, so first contact took ~15 minutes instead of ~5.
 
 ## Tests & coverage
 
@@ -104,6 +104,8 @@ Deploy to Sepolia: `cd contracts && forge script script/Deploy.s.sol --rpc-url $
 
 ## Team
 
-| Member | Handle |
-|---|---|
-| _placeholder — handles from the user_ | _e.g. GitHub / X @handle_ |
+| Member | Role | Handle |
+|---|---|---|
+| Jakkarin Sanguanwong | Other | — |
+| Tanabut Krinoonsingha | Other | — |
+| Todsaporn Sangboon | Fullstack development | — |
