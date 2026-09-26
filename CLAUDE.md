@@ -23,7 +23,7 @@ Hackathon project: an **idle MMORPG** (Ragnarok-style progression) where a playe
 
 - **Frontend:** Next.js (PWA) + Phaser for the isometric idle scene.
 - **Idle engine:** Node.js/TypeScript, server-authoritative. Live combat is simulated tick by tick; offline rewards use rate-based settlement (capped at 12h).
-- **Realtime:** Supabase Postgres + Realtime for guild chat and the guild boss.
+- **Data + realtime:** PocketBase (switched from Supabase on 2026-09-26). It stores player state, drops and World ID nullifiers (unique index) and serves guild chat and the guild boss over realtime subscriptions. See `pocketbase/`.
 - **Contracts (Solidity, Sepolia):**
   - ERC-721 real-rooster RWA with signed weekly farm attestations (weight, health)
   - ERC-1155 mintable rare drops

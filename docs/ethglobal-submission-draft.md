@@ -41,7 +41,7 @@ There is no gambling. The game focuses on breeding, collecting and community.
 **How it's made**
 - Frontend: Next.js (PWA) with Phaser for the isometric idle scene.
 - Idle engine: a Node.js/TypeScript server-authoritative engine. Live combat is simulated tick by tick. Offline rewards use rate-based settlement.
-- Realtime: Supabase Postgres and Realtime power the guild chat and guild boss.
+- Data and realtime: PocketBase stores player state, drops and World ID nullifier bindings, and powers guild chat and the guild boss over realtime subscriptions.
 - Smart contracts: Solidity on Ethereum Sepolia.
   - an ERC-721 for real-rooster RWAs, carrying signed farm attestations
   - an ERC-1155 for mintable rare drops

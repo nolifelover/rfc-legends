@@ -16,7 +16,7 @@ Only edit paths your lane owns. If you need something in another lane's path, me
 | Drop economy (World ID, voucher, mint, Rare Market UI) | manager's subagent | `apps/web/src/app/api/worldid/**`, `apps/web/src/app/api/voucher/**`, `apps/web/src/server/worldid/**`, `apps/web/src/lib/worldid/**`, `apps/web/src/components/worldid/**`, `apps/web/src/components/market/**`, `apps/web/src/app/market/**` |
 | Manager | eth-tokyo-8f | `docs/**`, `README.md`, root files, `apps/web/package.json`, `apps/web/package-lock.json`, `.gitignore`, `**/.env.example` |
 
-**Dependencies:** nobody edits `apps/web/package.json` or runs `npm install <pkg>` in `apps/web`. Message the manager with the package name, and the manager installs it. Already installed: `next@16`, `react@19`, `wagmi@3`, `viem@2`, `@tanstack/react-query@5`, `@worldcoin/idkit@4.3.0`, `phaser@3`, `@supabase/supabase-js`, `zod`, `tailwindcss@4`.
+**Dependencies:** nobody edits `apps/web/package.json` or runs `npm install <pkg>` in `apps/web`. Message the manager with the package name, and the manager installs it. Already installed: `next@16`, `react@19`, `wagmi@3`, `viem@2`, `@tanstack/react-query@5`, `@worldcoin/idkit@4.3.0`, `phaser@3`, `pocketbase@0.28` (JS SDK), `zod`, `vitest`, `tailwindcss@4`.
 
 **Next.js 16 has breaking changes.** Read `apps/web/node_modules/next/dist/docs/` before writing routes or config.
 
@@ -128,7 +128,7 @@ eth-dev1 also exports typed ABIs and addresses to `apps/web/src/lib/contracts/` 
 
 Server-authoritative. The server computes state on each request from elapsed time: it simulates live combat with a deterministic seed and settles offline time rate-based, capped at 12h. There's no background worker, so this works on serverless too.
 
-Storage goes behind a `GameStore` interface: a JSON file store in `apps/web/.data/` first, then Supabase if available.
+Storage goes behind a `GameStore` interface. The JSON file store in `apps/web/.data/` is for tests and offline dev. The real store is **PocketBase** (see §5b), because a file store breaks on serverless and on multiple instances.
 
 Other lanes call these functions from `apps/web/src/server/game/index.ts`:
 ```ts
@@ -144,6 +144,15 @@ setDropStatus(address: string, dropId: `0x${string}`, status: Drop['status'], tx
 **Demo mode:** `DEMO_MODE=true` boosts EXP and the MVP drop rate so the video can reach Base Lv 30 and an MVP drop in minutes. The UI must show a visible **"Demo mode: boosted rates"** badge. Never present boosted rates as real.
 
 **HTTP (game UI):** `GET /api/game/state?address=`, `POST /api/game/create`, `POST /api/game/allocate`, `POST /api/game/sync`. eth-dev2 defines the bodies.
+
+## 5b. PocketBase (replaces Supabase, decided 2026-09-26)
+
+- Binary v0.40.4 lives in `pocketbase/` (`./fetch.sh`, `./run.sh`). It serves `http://127.0.0.1:8090`, and the admin UI is at `/_/`.
+- The schema is code: JS migrations in `pocketbase/pb_migrations/`, prefixed by lane.
+  - Game lane (eth-dev2) owns `*_game_*.js` and `*_guild_*.js`: `players`, `drops` and `guild_messages` / `guild_boss`.
+  - World ID lane owns `*_worldid_*.js`: a `worldid_bindings` collection with a **UNIQUE index on nullifier**, plus the RP nonces.
+- Server code connects with the superuser credentials (`POCKETBASE_SUPERUSER_*`) through the `pocketbase` JS SDK, using one shared helper in `apps/web/src/server/pb.ts` (manager-owned).
+- Collections are locked to superuser by default (null API rules). Only `guild_messages` and `guild_boss` are publicly listable and subscribable for realtime. Writes still go through server routes, which attach the verified wallet address.
 
 ## 6. Drop economy (World ID lane)
 
@@ -195,8 +204,10 @@ NEXT_PUBLIC_WORLD_ACTION=
 NEXT_PUBLIC_ENS_PARENT_NAME=
 MULTIBAAS_DEPLOYMENT_URL=
 MULTIBAAS_API_KEY=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+POCKETBASE_URL=http://127.0.0.1:8090
+NEXT_PUBLIC_POCKETBASE_URL=http://127.0.0.1:8090
+POCKETBASE_SUPERUSER_EMAIL=
+POCKETBASE_SUPERUSER_PASSWORD=
 DEMO_MODE=true
 ```
 `ens/.env`
