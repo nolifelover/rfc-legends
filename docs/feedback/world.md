@@ -147,7 +147,7 @@ by `HumanRegistry.nullifierOwner`.
 | Wallet ownership (EIP-191 signature over wallet + nonce + expiry) | `apps/web/src/lib/worldid/ownership.ts`, `apps/web/src/server/worldid/ownership.ts` |
 | `HumanRegistry.markVerified` with GAME_SIGNER | `apps/web/src/server/worldid/registry.ts` |
 | Mint gate (verified human → Base Lv 30 → drop → daily limit) | `apps/web/src/server/worldid/voucher.ts` |
-| Tests (77, incl. a real PocketBase) | `apps/web/src/server/worldid/{verify,voucher,store,deps}.test.ts` |
+| Tests (76: 61 unit + 15 store-contract tests, 8 of them against a real PocketBase started from the repo migrations; run `pocketbase/fetch.sh` first or those 8 are skipped) | `apps/web/src/server/worldid/{verify,voucher,store}.test.ts` |
 
 What we do beyond the official example (which forwards the widget result verbatim):
 
