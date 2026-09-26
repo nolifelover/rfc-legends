@@ -103,13 +103,17 @@ export class IdleScene extends Phaser.Scene {
   // kill credits (server kills not yet shown; EXP is the server's real delta)
   private killServer = 0
   private killShown = 0
-  private credits: Array<{ exp: number; kills: number }> = []
+  private credits: Array<{ exp: number; kills: number; coins: number }> = []
   private syncLog: Array<{ t: number; kills: number }> = []
   private forceBoss = false
 
   // chips
   private killChip!: Chip
   private harvestChip!: Chip
+  /** เบี้ย (coins) — shown only once the server state carries a `coins` field. */
+  private coinChip!: Chip
+  private coinsShown = 0
+  private coinsKnown = false
   private pips!: BossPips
   private harvestShown = 0
   private pendingLoot: LootEntry[] = []
@@ -717,14 +721,34 @@ export class IdleScene extends Phaser.Scene {
     this.killChip.container.setDepth(54)
     this.harvestChip = new Chip(this, this.harvestLabel(), { fontFamily: this.font, accent: 0x9ccc65, iconKey: itemKey(102) })
     this.harvestChip.container.setDepth(54)
+    this.coinChip = new Chip(this, '0', { fontFamily: this.font, accent: 0xf2c14e, iconKey: FX.coin })
+    this.coinChip.container.setDepth(54).setVisible(false)
     this.pips = new BossPips(this, this.bossEvery(), this.font)
+    this.readCoins(this.player)
     this.pinChips()
+  }
+
+  /** Forward hook for ENG2: once `player.coins` exists, the coin chip appears and ticks on real deltas. */
+  private serverCoins(p: Player): number | null {
+    const c = (p as unknown as { coins?: unknown }).coins
+    return typeof c === 'number' && Number.isFinite(c) ? c : null
+  }
+
+  private readCoins(p: Player): void {
+    const c = this.serverCoins(p)
+    if (c === null) return
+    this.coinsKnown = true
+    this.coinsShown = c
+    this.coinChip.setLabel(this.coinsShown.toLocaleString('en-US'))
+    this.coinChip.container.setVisible(true)
   }
 
   private pinChips(): void {
     this.killChip.container.setPosition(L.W - L.SAFE - this.killChip.boxWidth / 2, L.SAFE)
     this.harvestChip.container.setPosition(L.W - L.SAFE - this.harvestChip.boxWidth / 2, L.SAFE + 70)
-    this.pips.place(L.W - L.SAFE, L.SAFE + 132)
+    const coinRow = this.coinsKnown ? 70 : 0
+    this.coinChip.container.setPosition(L.W - L.SAFE - this.coinChip.boxWidth / 2, L.SAFE + 140)
+    this.pips.place(L.W - L.SAFE, L.SAFE + 132 + coinRow)
     this.pips.set(this.killServer % this.bossEvery(), this.bossEvery())
   }
 
@@ -1128,7 +1152,7 @@ export class IdleScene extends Phaser.Scene {
     // numbers anchor on the struck enemy, offset right so the 480px rooster's head
     // never sits under them; the boss's crown reaches the boss bar, so its numbers
     // sit on the forehead
-    const numY = this.topYOf(p) + (p.boss ? 170 : 0)
+    const numY = this.topYOf(p) + (p.boss ? 320 : 0)
     const numX = p.container.x + (kind === 'rooster' ? JUICE.DMG_SPLIT_X + 100 : 60)
     this.fx.damage(numX, numY, value, kind)
     p.bar.setPct(p.hp / p.maxHp)
@@ -1202,7 +1226,7 @@ export class IdleScene extends Phaser.Scene {
       this.killChip.setLabel(this.killLabel())
       this.pinChips()
       this.killChip.pop()
-      this.fx.coinSparkle(x, midY, boss ? 8 : 3)
+      this.burstCoins(x, midY, p.feetY, credit.coins, boss)
       if (credit.exp > 0) this.fx.expPop(x + 120, this.topYOf(p) - 250, credit.exp)
       this.drainLoot(x, midY, p.feetY)
     }
@@ -1235,13 +1259,9 @@ export class IdleScene extends Phaser.Scene {
     const label = entry.n > 1 ? `+${entry.n}` : '+1'
     this.lootFlying += entry.n
     this.fx.lootArc(icon, restX, restY, () => {
-      this.time.delayedCall(JUICE.LOOT_REST, () => {
+      // the item rests on the ground (longer under a rare beam) so stills catch loot on the floor
+      this.time.delayedCall(tier ? JUICE.LOOT_REST_RARE : JUICE.LOOT_REST, () => {
         const a = this.harvestChip.anchor
-        // two coins ride along as sparkle (decorative: the count is items only)
-        for (let i = 0; i < 2; i++) {
-          const coin = this.add.image(icon.x + (i ? 36 : -36), icon.y - 10, FX.coin).setDepth(30).setScale(1.1)
-          this.fx.vacuum(coin, a.x, a.y, () => undefined, 80 + i * 70)
-        }
         this.fx.vacuum(icon, a.x, a.y, () => {
           this.lootFlying -= entry.n
           this.harvestShown += entry.n
@@ -1252,6 +1272,39 @@ export class IdleScene extends Phaser.Scene {
         })
       })
     })
+  }
+
+  /**
+   * 2–5 coins burst from the body, scatter on the ground, then arc into the coin
+   * chip (or the Harvest chip while the server has no coin field). The coin chip
+   * ticks only by the server's credited delta.
+   */
+  private burstCoins(x: number, y: number, feetY: number, coinDelta: number, boss: boolean): void {
+    const n = Phaser.Math.Clamp(coinDelta > 0 ? 2 + Math.round(coinDelta / 3) : Phaser.Math.Between(JUICE.COINS_MIN, JUICE.COINS_MAX), JUICE.COINS_MIN, boss ? 8 : JUICE.COINS_MAX)
+    const target = this.coinsKnown ? this.coinChip : this.harvestChip
+    let ticked = false
+    for (let i = 0; i < n; i++) {
+      const coin = this.add.image(x, y, FX.coin).setDepth(30).setScale(1.15)
+      const restX = Phaser.Math.Clamp(x + Phaser.Math.Between(-220, 160), 880, 1700)
+      const restY = L.LOOT_REST_Y + Phaser.Math.Between(-16, 16)
+      this.fx.lootArc(coin, restX, restY, () => {
+        this.time.delayedCall(JUICE.COIN_REST + i * 40, () => {
+          const a = target.anchor
+          this.fx.vacuum(coin, a.x, a.y, () => {
+            if (!ticked && this.coinsKnown && coinDelta > 0) {
+              ticked = true
+              this.coinsShown += coinDelta
+              this.coinChip.setLabel(this.coinsShown.toLocaleString('en-US'))
+              this.pinChips()
+              this.coinChip.bounce()
+              this.fx.tick(this.coinChip.container.x, this.coinChip.container.y + 62, `+${coinDelta}`, INK.crit)
+            } else if (!this.coinsKnown && i === 0) {
+              target.pop()
+            }
+          }, i * JUICE.LOOT_STAGGER)
+        })
+      })
+    }
   }
 
   private queueLoot(prev: Player, next: Player): void {
@@ -1550,23 +1603,29 @@ export class IdleScene extends Phaser.Scene {
    * longer than KILL_SNAP_LAG folds its oldest credits into one, so the KILL chip
    * catches up on the next visual kill and the pops still sum to the real delta.
    */
-  private pushCredits(kills: number, exp: number): void {
+  private pushCredits(kills: number, exp: number, coins: number): void {
     if (kills <= 0) {
-      // EXP without a kill (should not happen) rides along with the next credit
-      if (exp > 0) this.credits.push({ exp, kills: 0 })
+      // EXP / coins without a kill (should not happen) ride along with the next credit
+      if (exp > 0 || coins > 0) this.credits.push({ exp, kills: 0, coins })
       return
     }
     const each = Math.floor(exp / kills)
+    const eachCoin = Math.floor(coins / kills)
     for (let i = 0; i < kills; i++) {
-      this.credits.push({ exp: i === kills - 1 ? exp - each * (kills - 1) : each, kills: 1 })
+      const last = i === kills - 1
+      this.credits.push({
+        exp: last ? exp - each * (kills - 1) : each,
+        kills: 1,
+        coins: last ? coins - eachCoin * (kills - 1) : eachCoin,
+      })
     }
     const pending = this.credits.reduce((n, c) => n + c.kills, 0)
     if (pending > JUICE.KILL_SNAP_LAG) {
-      let fold = { exp: 0, kills: 0 }
+      let fold = { exp: 0, kills: 0, coins: 0 }
       while (this.credits.length > 0 && pending - fold.kills > JUICE.KILL_SNAP_LAG) {
         const c = this.credits.shift()
         if (!c) break
-        fold = { exp: fold.exp + c.exp, kills: fold.kills + c.kills }
+        fold = { exp: fold.exp + c.exp, kills: fold.kills + c.kills, coins: fold.coins + c.coins }
       }
       this.credits.unshift(fold)
     }
@@ -1599,7 +1658,11 @@ export class IdleScene extends Phaser.Scene {
     // kill credits: the server's kill delta carries its real EXP delta
     const prevKills = this.killServer
     this.killServer = player.killCount
-    this.pushCredits(player.killCount - prevKills, this.expGain(prev, player))
+    const prevCoins = this.serverCoins(prev)
+    const nextCoins = this.serverCoins(player)
+    const coinGain = prevCoins !== null && nextCoins !== null ? Math.max(0, nextCoins - prevCoins) : 0
+    if (nextCoins !== null && !this.coinsKnown) this.readCoins(player)
+    this.pushCredits(player.killCount - prevKills, this.expGain(prev, player), coinGain)
     if (this.killShown > this.killServer) {
       this.killShown = this.killServer
       this.killChip.setLabel(this.killLabel())

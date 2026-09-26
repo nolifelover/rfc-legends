@@ -108,7 +108,11 @@ export const JUICE = {
   LOOT_ARC_MIN: 150,
   LOOT_ARC_MAX: 250,
   LOOT_ARC_MS: 480,
-  LOOT_REST: 380,
+  LOOT_REST: 1200, // common loot rests on the ground (stills should catch it)
+  LOOT_REST_RARE: 2000, // rare / epic hold under their beam
+  COIN_REST: 520,
+  COINS_MIN: 2,
+  COINS_MAX: 5,
   LOOT_FLY: 500,
   LOOT_STAGGER: 60,
   LOOT_QUEUE_CAP: 30,
