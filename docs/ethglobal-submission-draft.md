@@ -39,6 +39,14 @@ Rare drops are the heart of the economy. Legendary items and monster cards mint 
 
 No gambling, no betting, no real-world fight results. Everything is cartoon-art breeding, collecting and community.
 
+**How it's made** (paste-ready for the showcase form)
+
+The game is a Next.js 16 + React 19 app with a Phaser 3 canvas for the idle farm scene. A server-authoritative TypeScript engine simulates combat tick by tick and settles offline progress rate-based, so nothing about your progression is trusted to the client. State, guild chat and the guild boss live in PocketBase behind our API; wagmi and viem talk to five Solidity 0.828 contracts on Sepolia (a test-USDC, a World ID registry, an ERC-1155 for rare drops, a 90/10 marketplace, and an ERC-721 for the real roosters), all verified on Etherscan and covered by 105 Foundry tests at 100% line coverage.
+
+Three sponsor pieces do the heavy lifting. World ID gates the economy: the IDKit widget proves personhood, our server verifies the proof against World's API with the wallet as the signal (apps/web/src/server/worldid/verify.ts), then records the nullifier onchain in HumanRegistry — a second wallet replaying the same nullifier is rejected by the contract itself. ENSv2 carries the pedigree: every rooster's name is a subname of its sire under rfclegends.eth, with a permissioned resolver where only the farm's key can write weight/health records (ens/src/ensv2.ts, ens/scripts/attest.ts), and the rooster pages resolve those records live. Curvegrid MultiBaas indexes the contracts' events and powers the market's sale history through saved event queries (contracts/scripts/multibaas-setup.mjs, apps/web/src/lib/contracts/multibaas.ts) — the 90/10 split of every sale is readable straight from indexed Sold events.
+
+Demo mode honesty: the live site runs with boosted EXP and drop rates so the full loop — leveling to 30, earning an MVP card, World ID verification, minting, listing, selling with the onchain 90/10 split — can be shown in minutes. The badge is always visible in the UI and the boosted rates are never presented as real. Everything onchain (contracts, verifications, sales, attestations) is real Sepolia activity; the birds shown are sample roosters with placeholder ring IDs until Ninlanee Farm's real records land.
+
 **Tech stack** (for the form's list)
 
 Solidity, Foundry, OpenZeppelin, Etherscan/Sourcify, TypeScript, Next.js 16, React 19, wagmi, viem, Phaser 3, PocketBase, PM2, ENSv2, World ID (IDKit), Curvegrid MultiBaas, Node.js.
