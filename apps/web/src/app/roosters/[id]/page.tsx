@@ -51,11 +51,11 @@ export default async function RoosterDetailPage({ params }: Props) {
       : getAddresses(11155111).RoosterRWA;
     if (recs.tokenId && /^\d+$/.test(recs.tokenId)) {
       const damId = await client.readContract({
-        address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "roosters", args: [BigInt(recs.tokenId)],
+        address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "getRooster", args: [BigInt(recs.tokenId)],
       }).then((r) => r.damTokenId).catch(() => 0n);
       if (damId && damId > 0n) {
         dam = (await client.readContract({
-          address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "roosters", args: [damId],
+          address: rwaAddr as `0x${string}`, abi: roosterRwaAbi, functionName: "getRooster", args: [damId],
         }).then((r) => r.ensName).catch(() => null)) ?? null;
       }
     }
