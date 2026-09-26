@@ -26,13 +26,16 @@ export const LEGENDARY_POOL: readonly number[] = [2001, 2002, 2003]
  * reliable MVP jackpot, so tiers need different magnitudes (see DEMO_OPTS in combat.ts).
  */
 export interface DropOpts {
+  /** stacks the COMMON material chance (base 25%); demo doubles it so ~1 in 2 kills
+   *  shows a visible farm-loot gain — mintable tiers are NOT affected by this knob */
+  common: number
   rare: number
   epic: number
   legendary: number
   monsterCard: number
   mvpCard: number // only rolls on MVP-boss kills (base 0.005%)
 }
-export const NORMAL_DROP_OPTS: DropOpts = { rare: 1, epic: 1, legendary: 1, monsterCard: 1, mvpCard: 1 }
+export const NORMAL_DROP_OPTS: DropOpts = { common: 1, rare: 1, epic: 1, legendary: 1, monsterCard: 1, mvpCard: 1 }
 
 export interface RolledDrop {
   itemId: number
@@ -60,8 +63,8 @@ export function rollDrops(monster: MonsterDef, rng: Rng, opts: DropOpts = NORMAL
     out.inventory[id] = (out.inventory[id] ?? 0) + 1
   }
 
-  // 1. common material (~25%, never boosted)
-  if (monster.materialItemId !== undefined && rng() < COMMON_MATERIAL_CHANCE) {
+  // 1. common material (base ~25%; demo doubles it so most kills show a visible gain)
+  if (monster.materialItemId !== undefined && rng() < Math.min(COMMON_MATERIAL_CHANCE * opts.common, 1)) {
     add(monster.materialItemId)
   }
 

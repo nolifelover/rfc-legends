@@ -63,6 +63,10 @@ export const KILL_RATE_MAX = 8
 //   monsterCard 0.05%  ×50    → 2.5%/kill
 //   mvpCard     0.005% ×11000 → 55% per MVP-boss kill (boss every 8th kill in demo → first
 //                               jackpot well inside the first minute of boss kills)
+// Visible-loot feel (game critic r3): demo doubles the common material chance so ~1 in 2
+// kills shows a stack gain (coins every kill + an item half the time). Mintable rates are
+// untouched — the runbook's timing/pity guarantees depend on them exactly as they are.
+export const DEMO_DROP_COMMON_MULT = 2
 export const DEMO_EXP_MULT = 800
 export const DEMO_DROP_RARE_MULT = 5
 export const DEMO_DROP_EPIC_MULT = 5
@@ -94,6 +98,7 @@ export const NORMAL_OPTS: EngineOpts = {
 export const DEMO_OPTS: EngineOpts = {
   expMult: DEMO_EXP_MULT,
   dropOpts: {
+    common: DEMO_DROP_COMMON_MULT,
     rare: DEMO_DROP_RARE_MULT,
     epic: DEMO_DROP_EPIC_MULT,
     legendary: DEMO_DROP_LEGENDARY_MULT,
