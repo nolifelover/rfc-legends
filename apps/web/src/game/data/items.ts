@@ -176,6 +176,42 @@ export const ITEMS: ItemDef[] = [
 
   // --- 3xxx MVP Cards (mintable) ---
   {
+    id: 1004,
+    name: 'การ์ดตัวเงินตัวทอง',
+    rarity: 'monster_card',
+    slot: 'armor',
+    image: '/assets/items/1004.svg',
+    emoji: '🐌',
+    desc: 'การ์ดตัวเงินตัวทองเปลือกมันวาว เสียบที่เกราะแล้ว DEF +8 ว่ายน้ำเร็วขึ้น',
+  },
+  {
+    id: 1005,
+    name: 'การ์ดนกกระยาง',
+    rarity: 'monster_card',
+    slot: 'weapon',
+    image: '/assets/items/1005.svg',
+    emoji: '🦆',
+    desc: 'การ์ดนกกระยางปีกเร็ว เสียบที่อาวุธแล้วโจมตีไวขึ้นเหมือนจับปลาในบึง',
+  },
+  {
+    id: 1006,
+    name: 'การ์ดปลาช่อนยักษ์',
+    rarity: 'monster_card',
+    slot: 'weapon',
+    image: '/assets/items/1006.svg',
+    emoji: '🐟',
+    desc: 'การ์ดปลาช่อนยักษ์ฟันคม เสียบที่อาวุธแล้วดาเมจน้ำลึก +15%',
+  },
+  {
+    id: 3002,
+    name: 'การ์ดจระเข้เฒ่าบึง',
+    rarity: 'mvp_card',
+    slot: 'accessory',
+    image: '/assets/items/3002.svg',
+    emoji: '🐊',
+    desc: 'การ์ดจระเข้เฒ่าผู้ครองบึงบัว บึกบึนที่สุดแห่งหนองน้ำ',
+  },
+  {
     id: 3001,
     name: 'การ์ดราชาหนูนา',
     rarity: 'mvp_card',

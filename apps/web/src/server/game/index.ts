@@ -1,7 +1,7 @@
 // Public game-engine API — the only module other lanes import (interfaces.md §5).
 // Server-authoritative: each sync recomputes state from elapsed time; no background worker.
 
-import { DEFAULT_MAP_ID } from '../../game/data/maps'
+import { DEFAULT_MAP_ID, getMap } from '../../game/data/maps'
 import type { Drop, DropStatus, Player, Rarity, SireLine, StatKey } from '../../game/types'
 import {
   DEMO_OPTS,
@@ -230,7 +230,7 @@ export async function syncPlayer(address: string, nowMs: number = Date.now()): P
 
     const elapsedMs = nowMs - player.lastSyncedAt
     if (elapsedMs < 1000) {
-      return { player, live: null, offline: null, demoMode }
+      return { player, live: null, offline: null, demoMode, zoneId: player.mapId, zoneName: getMap(player.mapId).name }
     }
 
     player.sessionCounter += 1
@@ -276,6 +276,6 @@ export async function syncPlayer(address: string, nowMs: number = Date.now()): P
     // to the next poll, so frequent pollers (two tabs) don't shave progress every cycle
     player.lastSyncedAt += elapsedSec * 1000
     await store.savePlayer(player)
-    return { player, live, offline, demoMode }
+    return { player, live, offline, demoMode, zoneId: player.mapId, zoneName: getMap(player.mapId).name }
   })
 }

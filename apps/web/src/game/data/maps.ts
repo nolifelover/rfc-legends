@@ -59,9 +59,42 @@ export const THUNG_NA: MapDef = {
   mvp: mvp('raja-nu-na', 'ราชาหนูนา', '👑', 12, 3001, 103),
 }
 
+// บึงบัวหลวง (GDD §5.2, น้ำ) — unlocks at Base Lv 30, the same beat as rare drops.
+// Pest LEVELS drive HP/DEF/FLEE/EXP (so the screen shows Lv 24–32 enemies and exp keeps
+// flowing), but their ATK follows a gentler curve (~the zone-1 MVP's punch): a Lv-30 hero
+// must farm the pond at a healthy pace, not death-loop against lv-scaled damage.
+const pondPest = (id: string, name: string, emoji: string, level: number, cardId: number, materialItemId: number): MonsterDef => {
+  const m = monster(id, name, emoji, level, cardId, materialItemId)
+  return { ...m, stats: { ...m.stats, atk: MONSTER_ATK(Math.round(level / 2)) } }
+}
+const tukTong = pondPest('tuk-tong', 'ตัวเงินตัวทอง', '🐌', 24, 1004, 104)
+const nokKrachang = pondPest('nok-krachang', 'นกกระยาง', '🦆', 28, 1005, 102)
+const plaChonYak = pondPest('pla-chon-yak', 'ปลาช่อนยักษ์', '🐟', 32, 1006, 103)
+
+export const BUENG_BUA: MapDef = {
+  id: 'bueng-bua',
+  name: 'บึงบัวหลวง',
+  lvRange: [25, 40],
+  element: 'water',
+  monsters: [
+    { monster: tukTong, weight: 40 },
+    { monster: nokKrachang, weight: 35 },
+    { monster: plaChonYak, weight: 25 },
+  ] satisfies MonsterSpawn[],
+  // same idea for the pond MVP: boss HP/exp of its level, ATK of a Lv-18 boss
+  mvp: (() => {
+    const m = mvp('jorakhe-thao-bueng', 'จระเข้เฒ่าบึง', '🐊', 36, 3002, 104)
+    return { ...m, stats: { ...m.stats, atk: MONSTER_ATK(18) } }
+  })(),
+}
+
 export const MAPS: Record<string, MapDef> = {
   [THUNG_NA.id]: THUNG_NA,
+  [BUENG_BUA.id]: BUENG_BUA,
 }
+
+/** Base Lv that auto-advances the player from ทุ่งนาบ้านเกิด to บึงบัวหลวง (GDD §5.2 band). */
+export const ZONE_ADVANCE_LEVEL = 30
 
 export const DEFAULT_MAP_ID = THUNG_NA.id
 

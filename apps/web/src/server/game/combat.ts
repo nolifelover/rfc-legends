@@ -5,7 +5,7 @@
 // (player FLEE is not yet a defensive stat), the rooster cannot be targeted, and death has
 // no penalty (cartoon rule) — respawn full after 5s.
 
-import { getMap } from '../../game/data/maps'
+import { getMap, THUNG_NA, BUENG_BUA, ZONE_ADVANCE_LEVEL } from '../../game/data/maps'
 import type { MonsterDef, MonsterSpawn, Player } from '../../game/types'
 import { NORMAL_DROP_OPTS, mergeInventory, rollDrops } from './drops'
 import type { DropOpts, RolledDrop } from './drops'
@@ -369,6 +369,15 @@ export function simulateLive(
       ...(reviveAt >= 0 ? { reviveIn: rem(reviveAt) } : {}),
     }
   } else {
+    p.combat = undefined
+  }
+
+  // Auto-advance to บึงบัวหลวง at the rare-drop beat (Base Lv 30). At WINDOW END, so the
+  // crossing kill still resolves inside ทุ่งนาบ้านเกิด — the demo pity card (and every
+  // runbook guarantee about zone 1) fires exactly as before. The in-progress fight is
+  // dropped; the new zone starts the next window fresh.
+  if (p.baseLevel >= ZONE_ADVANCE_LEVEL && p.mapId === THUNG_NA.id) {
+    p.mapId = BUENG_BUA.id
     p.combat = undefined
   }
 
