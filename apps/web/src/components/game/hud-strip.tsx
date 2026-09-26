@@ -65,7 +65,19 @@ function Bar({
   );
 }
 
-export function HudStrip({ player, rareDropCount }: { player: Player; rareDropCount?: number }) {
+export function HudStrip({
+  player,
+  rareDropCount,
+  bagCount,
+  onOpenBag,
+  onOpenGuild,
+}: {
+  player: Player;
+  rareDropCount?: number;
+  bagCount?: number;
+  onOpenBag?: () => void;
+  onOpenGuild?: () => void;
+}) {
   const info = sireLineInfo(player.sireLine);
   const hp = maxHp(player);
   const sp = maxSp(player);
@@ -131,19 +143,43 @@ export function HudStrip({ player, rareDropCount }: { player: Player; rareDropCo
               <span aria-hidden>·</span>
               <span title="Rare drops found">Drops {player.dropCounter.toLocaleString()}</span>
             </p>
-            {typeof rareDropCount === "number" ? (
-              <a
-                href="/market"
-                title="Open the Rare Market"
-                className={`mt-1.5 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black transition ${
-                  rareDropCount > 0
-                    ? "border-clay/50 bg-sun-soft/80 text-clay-deep hover:bg-sun-soft"
-                    : "border-bark/20 bg-cream/60 text-bark-soft"
-                }`}
-              >
-                ✨ Rare drops ({rareDropCount})
-              </a>
-            ) : null}
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              {typeof rareDropCount === "number" ? (
+                <a
+                  href="/market"
+                  title="Open the Rare Market"
+                  className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-black transition ${
+                    rareDropCount > 0
+                      ? "border-clay/50 bg-sun-soft/80 text-clay-deep hover:bg-sun-soft"
+                      : "border-bark/20 bg-cream/60 text-bark-soft"
+                  }`}
+                >
+                  ✨ Rare drops ({rareDropCount})
+                </a>
+              ) : null}
+              {onOpenBag ? (
+                <button
+                  type="button"
+                  onClick={onOpenBag}
+                  aria-label={`Open bag and drops (${bagCount ?? 0} items)`}
+                  title="Bag & drops"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-bark/20 bg-cream/60 px-2.5 py-0.5 text-[11px] font-black text-bark-soft transition hover:border-bark/40 hover:text-bark"
+                >
+                  🎒 {bagCount ?? 0}
+                </button>
+              ) : null}
+              {onOpenGuild ? (
+                <button
+                  type="button"
+                  onClick={onOpenGuild}
+                  aria-label="Open guild panel"
+                  title="Guild chat & boss"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-bark/20 bg-cream/60 px-2.5 py-0.5 text-[11px] font-black text-bark-soft transition hover:border-bark/40 hover:text-bark"
+                >
+                  🛡 Guild
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

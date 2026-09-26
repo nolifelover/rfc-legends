@@ -14,8 +14,10 @@ import { reasonText } from "./api-messages";
 import { ConnectButton } from "./connect-button";
 import { CreateCharacter, type CreateOutcome } from "./create-character";
 import { DropToasts } from "./drop-toasts";
+import { GuildDock } from "./guild-dock";
 import { HudStrip } from "./hud-strip";
 import { IdleScene } from "./idle-scene";
+import { InventoryDrawer } from "./inventory-drawer";
 import { SceneFrame } from "./scene-frame";
 import { StatPanel, type AllocateResult } from "./stat-panel";
 
@@ -52,6 +54,8 @@ export function GameClient() {
   const { address, isConnected } = useConnection();
   const queryClient = useQueryClient();
   const [notice, setNotice] = useState<{ kind: "info" | "error"; text: string } | null>(null);
+  const [bagOpen, setBagOpen] = useState(false);
+  const [guildOpen, setGuildOpen] = useState(false);
   const stateKey = ["game-state", address] as const;
 
   // Auto-dismiss notices.
@@ -222,7 +226,26 @@ export function GameClient() {
         </div>
       </div>
 
-      <HudStrip player={player} rareDropCount={rareDropCount} />
+      <HudStrip
+        player={player}
+        rareDropCount={rareDropCount}
+        bagCount={Object.values(player.inventory).reduce((a, b) => a + b, 0)}
+        onOpenBag={() => setBagOpen(true)}
+        onOpenGuild={() => setGuildOpen(true)}
+      />
+
+      <InventoryDrawer
+        open={bagOpen}
+        onClose={() => setBagOpen(false)}
+        player={player}
+        drops={state.drops}
+      />
+      <GuildDock
+        open={guildOpen}
+        onClose={() => setGuildOpen(false)}
+        address={player.address as `0x${string}`}
+        name={player.name}
+      />
 
       <DropToasts drops={state.drops} />
 
