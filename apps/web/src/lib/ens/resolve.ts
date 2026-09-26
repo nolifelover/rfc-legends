@@ -175,15 +175,20 @@ export async function listOffspring(client: ReturnType<typeof ensClient>, name: 
   return labels.map((l) => `${l}.${name}`);
 }
 
+/** The chain the reads target — from env, defaulting to Sepolia (never the anvil fallback). */
+export const READ_CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 11155111) || 11155111;
+
 /** Find a rooster by numeric RoosterRWA tokenId (contract-first, then ENS records). */
 export async function getRoosterByTokenId(
   client: ReturnType<typeof ensClient>, rwa: Hex, tokenId: bigint,
 ): Promise<{ ensName: string } | null> {
   try {
     const r = await client.readContract({ address: rwa, abi: roosterRwaAbi, functionName: "getRooster", args: [tokenId] });
-    const ensName = r.ensName;
-    return ensName ? { ensName } : null;
-  } catch { return null; }
+    return r.ensName ? { ensName: r.ensName } : null;
+  } catch (e) {
+    console.error(`[ens] getRooster(${tokenId}) failed on ${rwa} (chain ${client.chain?.id}):`, e);
+    return null;
+  }
 }
 
 /** Latest onchain attestation for a token (weight/health/date/signer), contract-side. */
@@ -197,7 +202,10 @@ export async function getAttestation(
     ]);
     if (a.checkedAt === BigInt(0)) return null;
     return { weightGrams: a.weightGrams, healthScore: a.healthScore, note: a.note, checkedAt: a.checkedAt, farmSigner, nonce: a.nonce };
-  } catch { return null; }
+  } catch (e) {
+    console.error(`[ens] getAttestation failed on ${rwa} (chain ${client.chain?.id}):`, e);
+    return null;
+  }
 }
 
 /**
