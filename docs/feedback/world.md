@@ -18,7 +18,12 @@ Mandatory feedback for the World "Best Use of IDKit" prize. Written as it happen
    header. docs.world.org still says "set `environment: "staging"` and use the
    simulator". We only found this by reading the portal's merged PRs. The fix is
    right (it closes a real sybil hole), but the docs need a line about it.
-2. **07:50Z — No testing page.** `docs.world.org/world-id/idkit/testing` is a 404.
+2. **08:10Z — Widget smoke test passed, but no live verify yet.** In a headless
+   browser, with placeholder env and a mock wallet, `IDKitRequestWidget` opened
+   the bridge: QR code shown, staging "Use the simulator" callout shown, and
+   closing it gave our "cancelled" state. We can't do a real verify until we
+   have `app_id`/`rp_id`/signing key from the Developer Portal.
+3. **07:50Z — No testing page.** `docs.world.org/world-id/idkit/testing` is a 404.
    Simulator guidance is scattered across the integrate page and `SKILL.md`.
 
 ## W1 research: IDKit 4.x (primary sources)
