@@ -214,6 +214,9 @@ export interface SyncResult {
   live: CombatAggregates | null
   offline: OfflineAggregates | null
   demoMode: boolean
+  /** current zone for the scene/UI (ENG3): id + display name */
+  zoneId: string
+  zoneName: string
 }
 
 /**

@@ -15,9 +15,9 @@ export async function GET(req: Request) {
     if (!existing) {
       return Response.json({ player: null, drops: [], demoMode });
     }
-    const { player } = await syncPlayer(address);
+    const { player, zoneId, zoneName } = await syncPlayer(address);
     const drops = (await listDrops(address)).slice().sort((a, b) => b.droppedAt - a.droppedAt);
-    return Response.json({ player, drops, demoMode });
+    return Response.json({ player, drops, demoMode, zoneId, zoneName });
   } catch (err) {
     return gameErrorResponse(err);
   }
