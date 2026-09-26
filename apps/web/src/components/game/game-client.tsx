@@ -230,8 +230,19 @@ export function GameClient() {
   // 4. Player exists → the game screen. The canvas claims the viewport;
   // stat allocation and sync collapse into a single slim control row.
   const player = state.player;
+  // paddy-night backdrop: the letterbox around the 16:9 stage reads as
+  // part of the game, not a web page (critic r6 #1)
   return (
-    <div className="flex flex-1 flex-col">
+    <div
+      className="flex min-h-[100dvh] flex-1 flex-col"
+      style={{
+        background: `
+          radial-gradient(120% 90% at 50% 108%, rgba(85,128,60,0.28) 0%, rgba(85,128,60,0) 46%),
+          radial-gradient(140% 110% at 50% -30%, rgba(237,166,20,0.10) 0%, rgba(237,166,20,0) 40%),
+          repeating-linear-gradient(135deg, rgba(255,253,246,0.022) 0 2px, rgba(0,0,0,0) 2px 26px),
+          linear-gradient(180deg, #241708 0%, #2b1b12 58%, #1d130c 100%)`.trim(),
+      }}
+    >
       <div className="mx-auto flex w-full max-w-none flex-1 flex-col gap-1 px-1.5 py-1 sm:px-2 sm:py-1.5">
         <div className="relative flex min-h-0 flex-1 justify-center">
           {/* height = whatever the nav/banner/HUD leave free; the aspect-video
