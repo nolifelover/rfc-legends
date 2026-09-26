@@ -79,6 +79,11 @@ const A_KEY = env('A_KEY') ?? randomKey();
 const B_KEY = env('B_KEY') ?? randomKey();
 const C_KEY = env('C_KEY') ?? randomKey();
 const FUNDER_KEY = env('FUNDER_KEY') ?? env('DEPLOYER_PRIVATE_KEY') ?? (isAnvil ? ANVIL.funder : undefined);
+// HARD RULE: the game signer pays for live on-camera World ID verifies
+// (HumanRegistry.markVerified). It must NEVER be spent as a test funder.
+if (FUNDER_KEY && GAME_KEY && FUNDER_KEY.toLowerCase() === GAME_KEY.toLowerCase()) {
+  throw new Error('FUNDER_KEY must not be the game signer key — fund test wallets from the deployer only');
+}
 
 const gameSigner = privateKeyToAccount(GAME_KEY as `0x${string}`);
 const walletA = privateKeyToAccount(A_KEY as `0x${string}`);
