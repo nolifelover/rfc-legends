@@ -60,7 +60,7 @@ export const LAYOUT = {
   ROOSTER_FEET: 886,
   ROOSTER_H: 480,
   /** Where loot icons come to rest before flying to the Harvest chip. */
-  LOOT_REST_Y: 905,
+  LOOT_REST_Y: 878,
   /** Display heights per pest id (front row). */
   PEST_H: { 'nu-na': 260, 'takka-taen-yak': 290, 'pu-na': 230, 'raja-nu-na': 660 } as Record<string, number>,
 } as const

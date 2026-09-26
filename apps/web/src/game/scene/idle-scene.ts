@@ -438,12 +438,13 @@ export class IdleScene extends Phaser.Scene {
   private buildForeground(): void {
     const xs = [30, 120, 210, 330, 470, 620, 790, 980, 1160, 1340, 1500, 1640, 1760, 1860]
     xs.forEach((x, i) => {
+      // low in the middle so resting loot (LOOT_REST_Y) stays above the reed line
       const edge = x < 500 || x > 1450
       const tuft = this.add
-        .image(x + Phaser.Math.Between(-20, 20), L.H + 14, FX.tuft)
+        .image(x + Phaser.Math.Between(-20, 20), L.H + 30, FX.tuft)
         .setOrigin(0.5, 1)
         .setDepth(27)
-        .setScale(edge ? Phaser.Math.FloatBetween(2.6, 3.2) : Phaser.Math.FloatBetween(1.8, 2.2))
+        .setScale(edge ? Phaser.Math.FloatBetween(2.0, 2.4) : Phaser.Math.FloatBetween(1.1, 1.3))
         .setAlpha(edge ? 1 : 0.92)
         .setFlipX(i % 2 === 0)
       this.tweens.add({
@@ -1486,8 +1487,8 @@ export class IdleScene extends Phaser.Scene {
       this.fx.pillar(x, feetY, RARITY_COLORS[rarity], 1080, 1100)
       this.fx.groundRing(x, feetY, RARITY_COLORS[rarity], 640, 480)
     }
-    const icon = this.add.image(x, y, itemKey(entry.id)).setDisplaySize(entry.n > 1 ? 80 : 64, entry.n > 1 ? 80 : 64).setDepth(30)
-    const restX = Phaser.Math.Clamp(x - Phaser.Math.Between(JUICE.LOOT_ARC_MIN, JUICE.LOOT_ARC_MAX), 900, 1600)
+    const icon = this.add.image(x, y, itemKey(entry.id)).setDisplaySize(entry.n > 1 ? 112 : 96, entry.n > 1 ? 112 : 96).setDepth(30)
+    const restX = Phaser.Math.Clamp(x - Phaser.Math.Between(JUICE.LOOT_ARC_MIN, JUICE.LOOT_ARC_MAX), 900, 1520)
     const restY = L.LOOT_REST_Y + Phaser.Math.Between(-10, 10)
     const label = entry.n > 1 ? `+${entry.n}` : '+1'
     this.lootFlying += entry.n
@@ -1521,8 +1522,8 @@ export class IdleScene extends Phaser.Scene {
     const target = this.coinsKnown ? this.coinChip : this.harvestChip
     let ticked = false
     for (let i = 0; i < n; i++) {
-      const coin = this.add.image(x, y, FX.coin).setDepth(30).setScale(1.15)
-      const restX = Phaser.Math.Clamp(x + Phaser.Math.Between(-220, 160), 880, 1700)
+      const coin = this.add.image(x, y, FX.coin).setDepth(30).setScale(1.6)
+      const restX = Phaser.Math.Clamp(x + Phaser.Math.Between(-240, 120), 900, 1520)
       const restY = L.LOOT_REST_Y + Phaser.Math.Between(-16, 16)
       this.fx.lootArc(coin, restX, restY, () => {
         this.rest(coin, (delay) => {
@@ -1547,7 +1548,15 @@ export class IdleScene extends Phaser.Scene {
 
   /** Leave a landed icon on the ground for the next sweep (oldest fly early past REST_CAP). */
   private rest(img: Phaser.GameObjects.Image, fly: (delay: number) => void): void {
-    this.resting.push({ img, fly })
+    // soft gold glow under the resting piece; gone when it flies
+    const glow = this.add.image(img.x, img.y + 6, FX.glow).setTint(INK.gold).setAlpha(0.5).setScale(1.5, 1.1).setDepth(29)
+    this.tweens.add({ targets: glow, alpha: 0.25, scale: 1.8, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    const flyAndClear = (delay: number): void => {
+      this.tweens.killTweensOf(glow)
+      glow.destroy()
+      fly(delay)
+    }
+    this.resting.push({ img, fly: flyAndClear })
     if (this.resting.length > JUICE.REST_CAP) {
       const oldest = this.resting.splice(0, 8)
       oldest.forEach((r, i) => r.fly(i * JUICE.LOOT_STAGGER))
