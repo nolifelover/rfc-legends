@@ -40,8 +40,20 @@ function Bar({
     ? `${compact(value)}/${compact(max)}`
     : `${value.toLocaleString()}/${max.toLocaleString()}`;
 
+  // Full bars collapse to a slim "label ● n/n" pip: they cannot move, so
+  // they stop taking the widest slots (critic r5 #1); damage re-expands them.
+  if (value >= max) {
+    return (
+      <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border-2 border-bark/25 bg-cream/70 px-2.5 py-0.5 text-xl font-bold leading-none text-bark">
+        {label}
+        <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "currentColor" }} />
+        {curMax}
+      </span>
+    )
+  }
+
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 flex-1 items-center gap-2">
       <span className="w-11 shrink-0 text-xl font-black leading-none tracking-wide text-bark">{label}</span>
       <div
         className="relative h-7 min-w-0 flex-1 overflow-hidden rounded-full border-2 border-bark/30 bg-bark/50"
@@ -159,7 +171,7 @@ export function HudStrip({
               </p>
             </div>
           </div>
-          <div className="col-span-2 grid min-w-0 grid-cols-1 gap-1.5 md:col-span-2 md:grid-cols-3 md:gap-3">
+          <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 md:col-span-2 md:gap-3">
             <Bar label="HP" value={hp} max={hp} gradient="bg-gradient-to-r from-field-deep to-field" compactNumbers />
             <Bar label="SP" value={sp} max={sp} gradient="bg-gradient-to-r from-blue-800 to-sky-400" compactNumbers />
             <Bar
