@@ -911,8 +911,7 @@ export class IdleScene extends Phaser.Scene {
       this.playLevelUp(29, 30, 1) // preview the Lv 30 "Rare drops unlocked" ceremony
     })
     kb.on('keydown-J', () => {
-      this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(1001), 'monster_card')
-      this.roosterWide()
+      this.playDropMoment(1001, 'monster_card')
     })
     kb.on('keydown-K', () => {
       const t = this.leaderIn([2, 1, 0])
@@ -1819,9 +1818,30 @@ export class IdleScene extends Phaser.Scene {
       // several drops can confirm in one poll — one ceremony per 8s
       if (this.time.now - this.lastJackpotAt < JUICE.JACKPOT_THROTTLE) continue
       this.lastJackpotAt = this.time.now
-      this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(drop.itemId), drop.rarity)
-      this.roosterWide()
+      this.playDropMoment(drop.itemId, drop.rarity)
     }
+  }
+
+  /**
+   * Drop moment: the card pops out of the enemy that dropped it under a beam in
+   * its rarity colour, holds, then flies to the bottom-right edge (where the HUD's
+   * Rare drops button sits) with a tick. Legendary and above also get a full-width
+   * in-canvas banner; the React toast stays small and docked.
+   */
+  private playDropMoment(itemId: number, rarity: Rarity): void {
+    const color = RARITY_COLORS[rarity] ?? INK.gold
+    const edge = { x: L.W - 200, y: L.H - 40 }
+    this.fx.jackpot(this.lastKillX, this.lastKillY, itemKey(itemId), rarity, {
+      x: edge.x,
+      y: edge.y,
+      onArrive: () => {
+        this.fx.tick(edge.x, edge.y - 40, '+1 rare drop', INK.crit, 34)
+        this.fx.sparkle(edge.x, edge.y - 10, 8, color)
+      },
+    })
+    const label = rarity === 'mvp_card' ? 'MVP CARD DROP!' : rarity === 'monster_card' ? 'MONSTER CARD DROP!' : 'LEGENDARY DROP!'
+    new Ribbon(this, label, this.font, 250, color).play(1300, this.reduced)
+    this.roosterWide()
   }
 
   /** Eyes wide (1.1× for a beat) plus the cheer hops — a rare drop just landed. */

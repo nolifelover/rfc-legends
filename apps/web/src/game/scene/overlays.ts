@@ -467,11 +467,11 @@ export class Ribbon {
   readonly container: Phaser.GameObjects.Container
   private readonly scene: Phaser.Scene
 
-  constructor(scene: Phaser.Scene, text: string, fontFamily: string, y = 250) {
+  constructor(scene: Phaser.Scene, text: string, fontFamily: string, y = 250, color: number = INK.warn) {
     this.scene = scene
     this.container = scene.add.container(-1200, y).setDepth(66)
     const g = scene.add.graphics()
-    g.fillStyle(INK.warn, 0.94)
+    g.fillStyle(color, 0.94)
     g.fillRect(-560, -44, 1120, 88)
     g.fillStyle(0xffe9a8, 0.9)
     g.fillRect(-560, -44, 1120, 5)

@@ -677,7 +677,7 @@ export class Fx {
    * rarity colour, a ground ring and the item rising in a glow. No card flip, no
    * pack — the React toast carries the words.
    */
-  jackpot(x: number, feetY: number, itemKey: string, rarity: Rarity): void {
+  jackpot(x: number, feetY: number, itemKey: string, rarity: Rarity, flyTo?: { x: number; y: number; onArrive: () => void }): void {
     const color: number = RARITY_COLORS[rarity] ?? INK.gold
     this.slowMo(JUICE.JACKPOT_SLOWMO, JUICE.JACKPOT_SLOWMO_MS)
     this.dim(0.5, 200)
@@ -692,16 +692,21 @@ export class Fx {
     icon.setScale(0)
     this.scene.tweens.add({ targets: glow, alpha: 0.8, scale: 6, duration: 420, ease: 'Cubic.easeOut' })
     this.scene.tweens.add({ targets: glow, angle: 360, duration: 4000, repeat: -1 })
+    // pops out of the enemy, holds a beat under the beam, then flies to the HUD's
+    // Rare drops button (screen edge) — or fades if no target was given
     this.scene.tweens.chain({
       targets: icon,
       tweens: [
         { scale: s, y: feetY - 360, duration: 480, ease: 'Back.easeOut' },
         { y: feetY - 380, duration: 900, ease: 'Sine.easeInOut' },
-        { scale: s * 0.3, y: feetY - 520, alpha: 0, duration: 420, ease: 'Cubic.easeIn' },
       ],
       onComplete: () => {
-        icon.destroy()
         glow.destroy()
+        if (flyTo) {
+          this.vacuum(icon, flyTo.x, flyTo.y, flyTo.onArrive)
+        } else {
+          this.scene.tweens.add({ targets: icon, scale: s * 0.3, y: feetY - 520, alpha: 0, duration: 420, ease: 'Cubic.easeIn', onComplete: () => icon.destroy() })
+        }
       },
     })
     this.scene.tweens.add({ targets: glow, alpha: 0, delay: 1400, duration: 420 })
