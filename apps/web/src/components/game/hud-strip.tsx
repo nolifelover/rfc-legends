@@ -54,7 +54,7 @@ function Bar({
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <span className="w-11 shrink-0 text-xl font-black leading-none tracking-wide text-cream">{label}</span>
+      <span className="w-9 shrink-0 text-lg font-black leading-none tracking-wide text-cream md:w-11 md:text-xl">{label}</span>
       <div
         className="relative h-7 min-w-0 flex-1 overflow-hidden rounded-full border-2 border-bark/30 bg-bark/50"
         role="meter"
@@ -67,8 +67,12 @@ function Bar({
           className={`h-full rounded-full ${gradient} transition-[width] duration-500`}
           style={{ width: `${pct}%` }}
         />
-        <span className="absolute inset-y-0 left-2.5 flex items-center text-xl font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)]">
+        <span className="absolute inset-y-0 left-2.5 hidden items-center text-xl font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] md:flex">
           {curMax}
+        </span>
+        {/* mobile: compact current value only, never collides with the % */}
+        <span className="absolute inset-y-0 left-2.5 flex items-center text-base font-bold leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)] md:hidden">
+          {compact(value)}
         </span>
         {showPercent ? (
           <span className="absolute inset-y-0 right-2.5 flex items-center text-xl font-black leading-none text-white [text-shadow:0_1px_0_rgba(0,0,0,0.9),0_0_4px_rgba(0,0,0,0.85)]">
@@ -100,7 +104,7 @@ function Pill({
   title: string;
   active?: boolean;
 }) {
-  const cls = `inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 py-0.5 text-xl font-black leading-tight transition ${
+  const cls = `inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 py-1.5 text-lg font-black leading-tight transition md:py-0.5 md:text-xl ${
     active
       ? "border-sun bg-sun/25 text-sun-soft hover:bg-sun/35"
       : "border-sun/50 bg-[#1d130c]/70 text-cream/85 hover:border-sun hover:text-cream"
@@ -153,7 +157,7 @@ export function HudStrip({
     <div className="mt-auto w-full px-1 pb-1 sm:px-1.5 sm:pb-1.5">
       {/* a game panel in the canvas' thick-outline style, docked flush under
           the scene rather than a full-width web strip */}
-      <div className="mx-auto flex w-full max-w-none flex-col gap-1.5 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-3 py-2 text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur sm:px-4">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-1 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-2.5 py-1.5 text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur sm:px-4 md:gap-1.5 md:py-2 [@media(max-width:1023px)_and_(orientation:landscape)]:py-1">
         {/* Row A — trainer card + the HP/SP/EXP trio */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
@@ -172,8 +176,8 @@ export function HudStrip({
               ) : null}
             </span>
             <div className="min-w-0 leading-tight">
-              <p className="truncate text-xl font-black text-cream">{player.name}</p>
-              <p className="flex items-center gap-1.5 truncate text-xl font-semibold text-cream/75">
+              <p className="truncate text-lg font-black text-cream md:text-xl">{player.name}</p>
+              <p className="flex items-center gap-1.5 truncate text-base font-semibold text-cream/75 md:text-xl">
                 <span className="rounded-full bg-sun px-2 font-black text-[#2b1b12]">{jobTag(player.baseLevel)}</span>
                 <span className="truncate" lang="th">
                   {map.name}
@@ -181,7 +185,7 @@ export function HudStrip({
               </p>
             </div>
           </div>
-          <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-2 md:col-span-2 md:gap-3">
+          <div className="col-span-2 flex min-w-0 flex-col gap-1.5 md:flex-row md:flex-wrap md:items-center md:gap-3">
             <Bar label="HP" value={hp} max={hp} gradient="bg-gradient-to-r from-field-deep to-field" compactNumbers />
             <Bar label="SP" value={sp} max={sp} gradient="bg-gradient-to-r from-blue-800 to-sky-400" compactNumbers />
             <Bar
@@ -200,18 +204,18 @@ export function HudStrip({
           <div className="flex min-w-0 items-center gap-3">
             <SireLineArt line={player.sireLine} size={44} className="shrink-0 rounded-xl ring-2 ring-sun-soft" />
             <div className="min-w-0 leading-tight">
-              <p className="truncate text-xl font-black text-cream">
+              <p className="truncate text-lg font-black text-cream md:text-xl">
                 {player.rooster.name}{" "}
                 <span className="font-semibold text-cream/70" lang="th">
                   · {info.thai}
                 </span>
               </p>
-              <p className="truncate text-xl text-cream/60">
+              <p className="truncate text-base text-cream/60 md:text-xl">
                 Rooster Lv <span className="font-black text-cream/85">{player.rooster.level}</span>
               </p>
             </div>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 [@media(max-width:1023px)_and_(orientation:landscape)]:hidden">
             <Bar
               label="EXP"
               value={player.rooster.exp}
@@ -224,7 +228,7 @@ export function HudStrip({
           <div className="col-span-3 flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1.5 md:col-span-1 md:justify-self-end">
             {/* kills & harvest totals live on the canvas chips — the HUD does
                 not repeat them (dedupe); the bag opens without a number badge */}
-            {goal ? <span className="text-xl font-bold text-cream/70">{goal}</span> : null}
+            {goal ? <span className="line-clamp-1 text-base font-bold text-cream/70 md:text-xl">{goal}</span> : null}
             {statCta}
             {typeof rareDropCount === "number" && rareDropCount > 0 ? (
               <Pill
