@@ -67,7 +67,7 @@ export function DropToasts({ drops }: { drops: Drop[] }) {
     <>
       {jackpot ? <JackpotMoment drop={jackpot} /> : null}
       <div
-        className="pointer-events-none fixed bottom-24 right-4 z-50 flex w-80 flex-col-reverse gap-2"
+        className="pointer-events-none fixed right-4 top-16 z-50 flex w-80 flex-col gap-2"
         role="status"
         aria-live="polite"
       >
