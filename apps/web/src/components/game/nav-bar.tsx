@@ -57,7 +57,7 @@ export function NavBar() {
       <header className="pointer-events-none fixed left-3 top-2 z-40 flex items-center gap-2">
         <Link
           href="/"
-          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-clay/25 bg-cream/90 px-2.5 py-1 backdrop-blur transition hover:border-clay"
+          className="pointer-events-auto flex items-center gap-1.5 rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-1 shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
           aria-label="RFC Legends home"
         >
           <RoosterMark size={22} />
@@ -67,7 +67,7 @@ export function NavBar() {
           onClick={() => setMenuOpen((v) => !v)}
           aria-expanded={menuOpen}
           aria-label="Site menu"
-          className="pointer-events-auto rounded-full border border-clay/25 bg-cream/90 px-3 py-1 text-sm font-black text-bark backdrop-blur transition hover:border-clay"
+          className="pointer-events-auto rounded-full border-2 border-sun/80 bg-bark/95 px-3.5 py-1 text-lg font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur transition hover:border-sun"
         >
           ☰
         </button>
@@ -79,7 +79,7 @@ export function NavBar() {
           </span>
         ) : null}
         {menuOpen ? (
-          <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-clay/25 bg-cream/95 px-2 py-1 shadow-lg backdrop-blur">
+          <div className="pointer-events-auto flex items-center gap-1 rounded-full border-2 border-sun/80 bg-bark/95 px-2 py-1 shadow-[0_3px_0_rgba(0,0,0,0.45)] backdrop-blur">
             {NAV_LINKS.map((link) => (
               <NavLink
                 key={link.href}

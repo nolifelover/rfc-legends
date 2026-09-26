@@ -44,7 +44,7 @@ function Bar({
   // they stop taking the widest slots (critic r5 #1); damage re-expands them.
   if (value >= max) {
     return (
-      <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border-2 border-bark/25 bg-cream/70 px-2.5 py-0.5 text-xl font-bold leading-none text-bark">
+      <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border-2 border-sun/60 bg-[#1d130c]/70 px-2.5 py-0.5 text-xl font-bold leading-none text-cream/85">
         {label}
         <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "currentColor" }} />
         {curMax}
@@ -54,7 +54,7 @@ function Bar({
 
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <span className="w-11 shrink-0 text-xl font-black leading-none tracking-wide text-bark">{label}</span>
+      <span className="w-11 shrink-0 text-xl font-black leading-none tracking-wide text-cream">{label}</span>
       <div
         className="relative h-7 min-w-0 flex-1 overflow-hidden rounded-full border-2 border-bark/30 bg-bark/50"
         role="meter"
@@ -102,8 +102,8 @@ function Pill({
 }) {
   const cls = `inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border-2 px-3 py-0.5 text-xl font-black leading-tight transition ${
     active
-      ? "border-clay/50 bg-sun-soft/80 text-clay-deep hover:bg-sun-soft"
-      : "border-bark/20 bg-cream/60 text-bark-soft hover:border-bark/40 hover:text-bark"
+      ? "border-sun bg-sun/25 text-sun-soft hover:bg-sun/35"
+      : "border-sun/50 bg-[#1d130c]/70 text-cream/85 hover:border-sun hover:text-cream"
   }`
   if (href) {
     return (
@@ -153,7 +153,7 @@ export function HudStrip({
     <div className="mt-auto w-full px-1 pb-1 sm:px-1.5 sm:pb-1.5">
       {/* a game panel in the canvas' thick-outline style, docked flush under
           the scene rather than a full-width web strip */}
-      <div className="mx-auto flex w-full max-w-none flex-col gap-1.5 rounded-2xl border-4 border-bark/30 bg-cream/95 px-3 py-2 shadow-[0_10px_36px_-12px_rgba(43,27,18,0.55)] backdrop-blur sm:px-4">
+      <div className="mx-auto flex w-full max-w-none flex-col gap-1.5 rounded-2xl border-4 border-sun/70 bg-[#2b1b12]/95 px-3 py-2 text-cream shadow-[0_10px_36px_-10px_rgba(0,0,0,0.7)] backdrop-blur sm:px-4">
         {/* Row A — trainer card + the HP/SP/EXP trio */}
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1 md:grid-cols-[auto_minmax(0,1.05fr)_minmax(0,1fr)]">
           <div className="flex min-w-0 items-center gap-3 md:col-span-1">
@@ -164,9 +164,9 @@ export function HudStrip({
               </span>
             </span>
             <div className="min-w-0 leading-tight">
-              <p className="truncate text-xl font-black text-bark">{player.name}</p>
-              <p className="flex items-center gap-1.5 truncate text-xl font-semibold text-bark-soft">
-                <span className="rounded-full bg-sun-soft px-2 font-bold text-bark">{jobTag(player.baseLevel)}</span>
+              <p className="truncate text-xl font-black text-cream">{player.name}</p>
+              <p className="flex items-center gap-1.5 truncate text-xl font-semibold text-cream/75">
+                <span className="rounded-full bg-sun px-2 font-black text-[#2b1b12]">{jobTag(player.baseLevel)}</span>
                 <span className="truncate" lang="th">
                   {map.name}
                 </span>
@@ -192,14 +192,14 @@ export function HudStrip({
           <div className="flex min-w-0 items-center gap-3">
             <SireLineArt line={player.sireLine} size={44} className="shrink-0 rounded-xl ring-2 ring-sun-soft" />
             <div className="min-w-0 leading-tight">
-              <p className="truncate text-xl font-black text-bark">
+              <p className="truncate text-xl font-black text-cream">
                 {player.rooster.name}{" "}
-                <span className="font-semibold text-bark-soft" lang="th">
+                <span className="font-semibold text-cream/70" lang="th">
                   · {info.thai}
                 </span>
               </p>
-              <p className="truncate text-xl text-bark/70">
-                Rooster Lv <span className="font-black text-bark-soft">{player.rooster.level}</span>
+              <p className="truncate text-xl text-cream/60">
+                Rooster Lv <span className="font-black text-cream/85">{player.rooster.level}</span>
               </p>
             </div>
           </div>
@@ -216,7 +216,7 @@ export function HudStrip({
           <div className="col-span-3 flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1.5 md:col-span-1 md:justify-self-end">
             {/* kills & harvest totals live on the canvas chips — the HUD does
                 not repeat them (dedupe); the bag opens without a number badge */}
-            {goal ? <span className="text-xl font-bold text-bark-soft">{goal}</span> : null}
+            {goal ? <span className="text-xl font-bold text-cream/70">{goal}</span> : null}
             {statCta}
             {typeof rareDropCount === "number" && rareDropCount > 0 ? (
               <Pill

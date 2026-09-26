@@ -12,7 +12,7 @@ export function DemoBanner({ demo }: { demo: boolean }) {
   if (pathname?.startsWith("/game")) {
     return (
       <p className="pointer-events-none fixed right-3 top-2 z-30">
-        <span className="rounded-full border border-sun/60 bg-sun/20 px-2.5 py-0.5 text-[11px] font-bold text-bark backdrop-blur">
+        <span className="rounded-full border-2 border-sun/80 bg-bark/95 px-2.5 py-0.5 text-xs font-black text-cream shadow-[0_2px_0_rgba(0,0,0,0.45)] backdrop-blur">
           ⚡ Demo <span lang="th">(อัตราเร่งสำหรับสาธิต)</span>
         </span>
       </p>
