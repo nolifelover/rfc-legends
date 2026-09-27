@@ -7,9 +7,10 @@ Project page: https://ethglobal.com/events/tokyo2026/project
 - [x] Project created: name "RFC Legends", category Gaming, emoji 🐓
 - [x] Public repo: https://github.com/nolifelover/rfc-legends (linked via GitHub Permissions)
 - [x] Live demo (primary): https://rfclegends.rfcclub.app — production build, demo-mode badge visible. Mirror: https://rfc-legends.earn.dev.rawinlab.com
-- [ ] Demo video: record 2–4 min, ≥720p, clear voice — script follows the e2e demo beat
-- [ ] Images / screenshots
-- [ ] Final submit — only after the video link is in
+- [x] Video uploaded: `docs/pitch/rfc-legends-submission.mp4`. It's the narrated presentation (3:56, 1920×1080, English voice, not sped up); the user chose it.
+- [x] Images: logo, cover (game-midfight) and 6 screenshots from `docs/assets/submission/`
+- [x] All form steps filled and saved (2026-09-26 ~21:50 UTC, via the eth-chrome session): details, images, tech stack + AI disclosure, prizes (World / ENS / Curvegrid with feedback + ratings 6/7/7), video, team.
+- [ ] Final submit: **the user presses "Submit project" personally** (attestation checkbox on the Final page). You can still edit after submitting, up to the deadline.
 
 Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC). Do not claim anything not in the repo.
 
@@ -17,7 +18,7 @@ Deadline: **Sun 27 Sep 2026 09:00 JST** (Sat 24:00 UTC). Do not claim anything n
 
 **Live on Sepolia:** all 5 contracts (verified on Etherscan+Sourcify), World ID verify → `HumanRegistry.markVerified` (0xa081…58ff), voucher mint → `RareItems`, list/buy → 90/10 `Sold` (0xcd9b…6356, 0xfb5d…06f04, both MultiBaas-indexed), ENSv2 `rfclegends.eth` + permissioned resolver + sire subname, item metadata routes, guild chat + guild boss (PocketBase realtime), idle game with demo mode, market sale feed through MultiBaas.
 
-**Pending (do NOT claim until landed):** demo video link. Everything else listed as live has been verified on Sepolia.
+**Pending:** the user's final Submit click. Everything else listed as live has been verified on Sepolia.
 
 ---
 

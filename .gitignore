@@ -27,3 +27,12 @@ docs/bar/
 # PocketBase binary and data
 pocketbase/pocketbase
 pocketbase/pb_data/
+
+# local secrets (API keys) — never commit
+.secret*
+
+# local reference images and screenshots — not part of the submission
+ref/
+Screenshot*.png
+screenshot/
+.secret.local

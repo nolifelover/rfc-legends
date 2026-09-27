@@ -1,0 +1,551 @@
+<title>RFC Legends Pitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=Chakra+Petch:wght@500;600&family=Sarabun:wght@400;500;600&display=swap">
+<style>
+/* Black lacquer + gold leaf (ลายรดน้ำ). One deliberate dark world. */
+:root {
+  color-scheme: dark;
+  --lacquer: #14100c;
+  --panel: #1e1711;
+  --panel-2: #271e16;
+  --ink: #f3e7cf;
+  --muted: #bda98a;
+  --faint: #7d6c55;
+  --gold: #d9a441;
+  --gold-soft: rgba(217, 164, 65, 0.35);
+  --red: #b4432f;
+  --world: #f3e7cf;
+  --ens: #6b9cf3;
+  --curve: #3cc2b0;
+  --display: "Bai Jamjuree", "Sarabun", system-ui, sans-serif;
+  --body: "Sarabun", "Segoe UI", system-ui, sans-serif;
+  --utility: "Chakra Petch", ui-monospace, "SFMono-Regular", monospace;
+}
+html, body { height: 100%; }
+body {
+  background: #0c0907;
+  color: var(--ink);
+  font-family: var(--body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding-inline: 16px;
+  padding-block: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.viewport { position: relative; width: 100%; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.stage-wrap { position: relative; }
+.stage {
+  position: absolute; top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  transform-origin: 0 0;
+  background: var(--lacquer);
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+}
+.slide {
+  position: absolute; inset: 0;
+  padding: 120px 128px 150px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 40px;
+  opacity: 0; visibility: hidden;
+  transition: opacity 420ms ease, visibility 0s linear 420ms;
+}
+.slide.is-active { opacity: 1; visibility: visible; transition: opacity 420ms ease; }
+/* Gold-leaf cabinet frame */
+.stage::before {
+  content: ""; position: absolute; inset: 40px; border: 2px solid var(--gold-soft);
+  pointer-events: none; z-index: 5;
+}
+.stage::after {
+  content: ""; position: absolute; inset: 52px; border: 1px solid rgba(217,164,65,0.14);
+  pointer-events: none; z-index: 5;
+}
+.corner { position: absolute; width: 46px; height: 46px; z-index: 6; pointer-events: none; }
+.corner svg { width: 100%; height: 100%; }
+.corner.tl { left: 26px; top: 26px; }
+.corner.tr { right: 26px; top: 26px; transform: scaleX(-1); }
+.corner.bl { left: 26px; bottom: 26px; transform: scaleY(-1); }
+.corner.br { right: 26px; bottom: 26px; transform: scale(-1,-1); }
+
+/* chrome */
+.tag {
+  position: absolute; left: 128px; top: 76px;
+  font-family: var(--utility); font-size: 24px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold); display: flex; gap: 18px; align-items: center; z-index: 7;
+}
+.tag .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); }
+.tag.world .dot { background: var(--world); } .tag.world { color: var(--world); }
+.tag.ens .dot { background: var(--ens); } .tag.ens { color: var(--ens); }
+.tag.curve .dot { background: var(--curve); } .tag.curve { color: var(--curve); }
+.rail {
+  position: absolute; left: 128px; right: 128px; bottom: 74px; z-index: 7;
+  display: flex; align-items: center; gap: 28px;
+  font-family: var(--utility); font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint);
+}
+.rail .sec { display: flex; align-items: center; gap: 10px; }
+.rail .sec i { display: block; width: 44px; height: 3px; background: #3a2d20; }
+.rail .sec.on { color: var(--gold); }
+.rail .sec.on i { background: var(--gold); }
+.rail .num { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+h1 { font-size: 132px; line-height: 0.98; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 76px; line-height: 1.05; font-weight: 700; }
+h3 { font-size: 36px; line-height: 1.15; font-weight: 600; }
+p { margin: 0; }
+.lede { font-size: 40px; line-height: 1.35; color: var(--ink); max-width: 1180px; }
+.body { font-size: 30px; line-height: 1.45; color: var(--muted); }
+.gold { color: var(--gold); }
+.ptr { font-family: var(--utility); font-size: 22px; color: var(--faint); letter-spacing: 0.02em; line-height: 1.5; }
+.ptr b { color: var(--muted); font-weight: 500; }
+.row { display: flex; gap: 40px; }
+.col { display: flex; flex-direction: column; gap: 24px; }
+.frame { border: 2px solid var(--gold-soft); padding: 10px; background: var(--panel); }
+.frame img { display: block; width: 100%; height: 100%; object-fit: contain; background: #0f0c09; }
+.chip {
+  font-family: var(--utility); font-size: 22px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 6px 14px; border: 1.5px solid currentColor; display: inline-block; white-space: nowrap;
+}
+.chip.live { color: #8fd18b; } .chip.soon { color: var(--gold); } .chip.dev { color: #d99a8a; }
+.card {
+  background: var(--panel); border-top: 3px solid var(--gold);
+  padding: 32px 30px; display: flex; flex-direction: column; gap: 16px;
+}
+.card h3 { font-size: 34px; }
+.card p { font-size: 26px; line-height: 1.4; color: var(--muted); }
+.small { font-size: 24px; color: var(--faint); }
+
+/* cover */
+.cover { flex-direction: row; align-items: center; gap: 72px; }
+.cover .left { flex: 1.05; display: flex; flex-direction: column; gap: 36px; }
+.cover .right { flex: 1; height: 560px; }
+.cover .logo { width: 108px; height: 108px; }
+.cover .tagline { font-size: 38px; line-height: 1.35; color: var(--muted); max-width: 820px; }
+.sponsors { display: flex; gap: 16px; flex-wrap: wrap; }
+.sponsors .chip.w { color: var(--world); } .sponsors .chip.e { color: var(--ens); } .sponsors .chip.c { color: var(--curve); }
+
+/* origin */
+.origin { justify-content: center; }
+.origin h2 { font-size: 104px; max-width: 1400px; }
+.quote {
+  border-left: 6px solid var(--red); padding: 8px 0 8px 40px;
+  font-family: var(--display); font-weight: 500; font-size: 50px; line-height: 1.25; max-width: 1400px;
+}
+.quote .sub { display: block; margin-top: 18px; font-family: var(--body); font-size: 30px; color: var(--muted); font-weight: 400; }
+
+/* ecosystem */
+.eco { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; }
+.eco .card { min-height: 360px; }
+.note { font-size: 26px; color: var(--muted); border-top: 1px solid #3a2d20; padding-top: 22px; }
+
+/* legends */
+.split { display: grid; grid-template-columns: 1fr 1fr 0.95fr; gap: 36px; align-items: start; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.list li { font-size: 30px; line-height: 1.3; padding-left: 30px; position: relative; }
+.list li::before { content: ""; position: absolute; left: 0; top: 14px; width: 12px; height: 12px; background: var(--gold); transform: rotate(45deg); }
+.list.next li::before { background: transparent; border: 2px solid var(--gold); }
+.colhead { display: flex; align-items: center; gap: 16px; }
+
+/* image slides */
+.imgrow { display: grid; grid-template-columns: 0.8fr 1.5fr; gap: 56px; align-items: center; flex: 1; min-height: 0; }
+.imgrow .frame { height: 620px; }
+.steps { list-style: none; counter-reset: s; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.steps li { counter-increment: s; font-size: 29px; line-height: 1.3; display: flex; gap: 18px; align-items: baseline; }
+.steps li::before { content: counter(s, decimal-leading-zero); font-family: var(--utility); color: var(--gold); font-size: 24px; min-width: 40px; }
+.steps li.no::before { color: var(--red); }
+
+/* world */
+.chain { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+.chain .card { border-top-color: var(--world); position: relative; }
+.chain .card + .card { border-left: 1px solid #3a2d20; }
+.chain .card .k { font-family: var(--utility); color: var(--world); font-size: 22px; letter-spacing: 0.12em; }
+.gates { display: grid; grid-template-columns: 1.2fr 1fr; gap: 36px; }
+.box { background: var(--panel-2); padding: 28px 30px; display: flex; flex-direction: column; gap: 12px; }
+.box h3 { font-size: 30px; }
+.box p, .box li { font-size: 26px; line-height: 1.4; color: var(--muted); }
+.box ul { margin: 0; padding-left: 28px; display: flex; flex-direction: column; gap: 6px; }
+.big { font-family: var(--display); font-weight: 700; font-size: 220px; line-height: 0.9; color: var(--world); }
+.big small { font-size: 72px; font-weight: 600; color: var(--muted); margin-left: 12px; }
+
+/* ens */
+.tree { display: flex; flex-direction: column; gap: 0; }
+.node { font-family: var(--utility); font-size: 30px; padding: 16px 22px; background: var(--panel); border-left: 4px solid var(--ens); display: flex; justify-content: space-between; gap: 20px; }
+.node span { font-family: var(--body); font-size: 22px; color: var(--muted); }
+.node.l2 { margin-left: 64px; } .node.l3 { margin-left: 128px; }
+.link { height: 18px; margin-left: 28px; border-left: 2px dashed var(--ens); }
+.link.l2 { margin-left: 92px; }
+table { border-collapse: collapse; width: 100%; font-size: 26px; }
+th, td { text-align: left; padding: 14px 18px; border-bottom: 1px solid #3a2d20; }
+th { font-family: var(--utility); font-weight: 500; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td.y { color: #8fd18b; } td.n { color: #d99a8a; }
+.txgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+.txgrid span { white-space: nowrap; }
+
+/* numbers */
+.nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+.num-card { background: var(--panel); padding: 32px; display: flex; flex-direction: column; gap: 8px; border-top: 3px solid var(--gold); }
+.num-card .v { font-family: var(--display); font-weight: 700; font-size: 104px; line-height: 1; color: var(--gold); font-variant-numeric: tabular-nums; }
+.num-card .l { font-size: 28px; color: var(--muted); }
+
+/* thanks */
+.thanks { justify-content: center; gap: 48px; }
+.thanks h1 { font-size: 180px; }
+.links { display: grid; grid-template-columns: auto 1fr; gap: 18px 40px; font-size: 40px; align-items: baseline; }
+.links .k { font-family: var(--utility); font-size: 26px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+
+/* controls */
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
+  font-family: var(--utility); font-size: 15px; color: var(--muted);
+}
+.controls button {
+  font: inherit; color: var(--ink); background: #1e1711; border: 1px solid #4a3a28;
+  padding: 8px 14px; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.controls button:hover { border-color: var(--gold); }
+.controls button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.controls button[aria-pressed="true"] { background: var(--gold); color: #1a130c; border-color: var(--gold); }
+.controls .count { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+.caption {
+  max-width: 1100px; width: 100%; min-height: 3.2em; text-align: center;
+  font-size: 16px; line-height: 1.5; color: var(--ink);
+}
+.caption[hidden] { display: none; }
+body.render { padding: 0; gap: 0; background: var(--lacquer); }
+body.render .controls, body.render .caption { display: none; }
+@media (prefers-reduced-motion: reduce) { .slide, .slide.is-active { transition: none; } }
+</style>
+
+<div class="viewport" id="viewport">
+  <div class="stage-wrap" id="stageWrap">
+    <div class="stage" id="stage" aria-live="polite">
+      <div class="corner tl" aria-hidden="true"><svg viewBox="0 0 46 46"><path d="M2 44V14C2 7 7 2 14 2h30" fill="none" stroke="#d9a441" stroke-width="2"/><path d="M10 44V20c0-6 4-10 10-10h24" fill="none" stroke="#d9a441" stroke-opacity="0.45" stroke-width="1.5"/><circle cx="14" cy="14" r="4" fill="#d9a441"/></svg></div>
+      <div class="corner tr" aria-hidden="true"><svg viewBox="0 0 46 46"><path d="M2 44V14C2 7 7 2 14 2h30" fill="none" stroke="#d9a441" stroke-width="2"/><path d="M10 44V20c0-6 4-10 10-10h24" fill="none" stroke="#d9a441" stroke-opacity="0.45" stroke-width="1.5"/><circle cx="14" cy="14" r="4" fill="#d9a441"/></svg></div>
+      <div class="corner bl" aria-hidden="true"><svg viewBox="0 0 46 46"><path d="M2 44V14C2 7 7 2 14 2h30" fill="none" stroke="#d9a441" stroke-width="2"/><path d="M10 44V20c0-6 4-10 10-10h24" fill="none" stroke="#d9a441" stroke-opacity="0.45" stroke-width="1.5"/><circle cx="14" cy="14" r="4" fill="#d9a441"/></svg></div>
+      <div class="corner br" aria-hidden="true"><svg viewBox="0 0 46 46"><path d="M2 44V14C2 7 7 2 14 2h30" fill="none" stroke="#d9a441" stroke-width="2"/><path d="M10 44V20c0-6 4-10 10-10h24" fill="none" stroke="#d9a441" stroke-opacity="0.45" stroke-width="1.5"/><circle cx="14" cy="14" r="4" fill="#d9a441"/></svg></div>
+
+      <!-- 01 cover -->
+      <section class="slide cover" data-sec="rfc" data-id="s01-cover">
+        <div class="left">
+          <img class="logo" src="img/logo.png" alt="RFC Legends rooster logo">
+          <h1>RFC Legends</h1>
+          <p class="tagline">Idle rooster RPG with farm-signed records: onchain health attestations and ENS bloodlines.</p>
+          <div class="sponsors"><span class="chip w">World · IDKit</span><span class="chip e">ENS · ENSv2</span><span class="chip c">Curvegrid · RWA</span></div>
+          <p class="small">ETHGlobal Tokyo 2026 · Ethereum Sepolia · Todsaporn Sangboon (@nolifelover), Jakkarin Sanguanwong, Tanabut Krinoonsingha</p>
+        </div>
+        <div class="right frame"><img src="img/game-midfight.webp" alt="RFC Legends gameplay: trainer and rooster companion in the rice-field scene with the HUD"></div>
+      </section>
+
+      <!-- 02 origin -->
+      <section class="slide origin" data-sec="rfc" data-id="s02-origin">
+        <h2>It started at <span class="gold">Ninlanee Farm</span></h2>
+        <p class="lede">Ninlanee Farm raises Thai fighting roosters. RFC wants to take Thai cockfighting to one global standard.</p>
+        <p class="quote">New universal rules that make it an international sport.<span class="sub">The way ONE Championship took Muay Thai to the world.</span></p>
+      </section>
+
+      <!-- 03 ecosystem -->
+      <section class="slide" data-sec="rfc" data-id="s03-ecosystem">
+        <h2>The RFC ecosystem</h2>
+        <div class="eco">
+          <div class="card"><span class="chip live">Live</span><h3>Ninlanee Farm</h3><p>Where RFC began. The birds, their bloodlines and their care.</p></div>
+          <div class="card"><span class="chip live">Live</span><h3>RFC Club</h3><p>The community app for members and breeders.</p></div>
+          <div class="card"><span class="chip live">Live</span><h3>RFC TV</h3><p>RFC TV and our multimedia channels.</p></div>
+          <div class="card"><span class="chip soon">Launching soon</span><h3>RFC NFT</h3><p>An RWA that maps each farm rooster to the blockchain, for selling roosters digitally.</p></div>
+          <div class="card"><span class="chip dev">In development</span><h3>AI scoring</h3><p>RFC technology to judge results to one fair standard.</p></div>
+        </div>
+        <p class="note">These RFC products are context. Everything onchain in this demo was written during ETHGlobal Tokyo 2026.</p>
+      </section>
+
+      <!-- 04 legends -->
+      <section class="slide" data-sec="game" data-id="s04-legends">
+        <h2>RFC Legends: where holders play together</h2>
+        <div class="split">
+          <div class="col">
+            <div class="colhead"><span class="chip live">Live in this build</span></div>
+            <ul class="list">
+              <li>Idle RPG with a rooster companion, leveling even offline</li>
+              <li>Rare drops from bosses</li>
+              <li>Rare Market with a 90/10 split in-contract</li>
+              <li>Guild chat and a shared guild boss</li>
+              <li>World ID gate and ENSv2 pedigree</li>
+            </ul>
+          </div>
+          <div class="col">
+            <div class="colhead"><span class="chip soon">Coming next</span></div>
+            <ul class="list next">
+              <li>RFC NFT holder privileges</li>
+              <li>Breeding new bloodlines</li>
+              <li>Dressing up roosters and trainers</li>
+            </ul>
+            <p class="small">No betting in the game. Real-world results never change cards or prices.</p>
+          </div>
+          <div class="frame" style="height:420px"><img src="img/game-drop-toast.webp" alt="Rare drop toasts in the game: Legendary and Monster Card"></div>
+        </div>
+      </section>
+
+      <!-- 05 architecture -->
+      <section class="slide" data-sec="game" data-id="s05-architecture">
+        <h2>How it works</h2>
+        <div class="imgrow">
+          <div class="col">
+            <p class="body"><b class="gold">Server-authoritative engine.</b> Every combat tick and offline reward is settled on the server.</p>
+            <p class="body"><b class="gold">PocketBase.</b> Player state, guild chat and the guild boss, in realtime.</p>
+            <p class="body"><b class="gold">5 Sepolia contracts.</b> MockUSDC, HumanRegistry, RareItems, RareMarket, RoosterRWA.</p>
+            <p class="body"><b class="gold">World ID · ENSv2 · MultiBaas.</b> Proof of human, pedigree, indexing.</p>
+          </div>
+          <div class="frame"><img src="img/architecture.webp" alt="System architecture: player, Next.js server, PocketBase, Sepolia contracts, World ID, MultiBaas, Ninlanee Farm"></div>
+        </div>
+      </section>
+
+      <!-- 06 demo -->
+      <section class="slide" data-sec="game" data-id="s06-demo">
+        <h2>From boss drop to sale</h2>
+        <div class="imgrow">
+          <ol class="steps">
+            <li>MVP boss drops a rare card</li>
+            <li>World ID verify, mirrored onchain</li>
+            <li>Server-signed EIP-712 voucher mints ERC-1155</li>
+            <li>Listed in the Rare Market</li>
+            <li>Buyer pays: 90% seller, 10% treasury</li>
+            <li class="no">Unverified bot: refused</li>
+            <li class="no">Second wallet, same human: refused</li>
+          </ol>
+          <div class="frame"><img src="img/rare-drop-flow.webp" alt="Rare drop flow: Base Lv 30 gate, World ID, HumanRegistry, EIP-712 voucher, mint, list, buy with 90/10 split"></div>
+        </div>
+        <p class="ptr"><b>RareItems.sol#L84</b> mintWithVoucher · <b>RareMarket.sol#L113</b> buy · <b>RareMarket.sol#L119-L120</b> 90/10 math</p>
+      </section>
+
+      <!-- 07 world built -->
+      <section class="slide" data-sec="world" data-id="s07-world">
+        <h2>World: IDKit gates the economy</h2>
+        <div class="chain">
+          <div class="card"><span class="k">IDKIT WIDGET</span><h3>Proof of personhood</h3><p class="ptr">WorldIdWidget.tsx#L18<br>VerifyHuman.tsx#L47</p></div>
+          <div class="card"><span class="k">SERVER VERIFY</span><h3>Signal pinned to the wallet, one-time nonce</h3><p class="ptr">server/worldid/verify.ts#L67</p></div>
+          <div class="card"><span class="k">ONE HUMAN</span><h3>Nullifier bound to one wallet</h3><p class="ptr">server/worldid/verify.ts#L113<br>HumanRegistry.sol#L48</p></div>
+          <div class="card"><span class="k">ONCHAIN</span><h3>HumanRegistry.markVerified</h3><p class="ptr">HumanRegistry.sol#L47</p></div>
+        </div>
+        <div class="gates">
+          <div class="box"><h3>Checked before value moves</h3><ul><li>RareItems.mintWithVoucher reverts for unverified wallets</li><li>RareMarket listing checks HumanRegistry</li><li>Mint vouchers need Base Lv 30 (voucher.ts#L88)</li></ul></div>
+          <div class="box"><h3>Refused live in the demo</h3><ul><li>Unverified bot wallet</li><li>Second wallet of the same human</li><li>Player below Lv 30</li></ul></div>
+        </div>
+      </section>
+
+      <!-- 08 world feedback -->
+      <section class="slide" data-sec="world" data-id="s08-world-feedback">
+        <h2>World: our integration feedback</h2>
+        <div class="row" style="align-items:center; gap:72px">
+          <div class="col" style="gap:8px">
+            <div class="big">62<small>min</small></div>
+            <p class="body">From the first IDKit line (07:37Z) to a live verify (08:39Z)</p>
+          </div>
+          <div class="col" style="flex:1">
+            <div class="box"><h3>Blockers</h3><ul><li>Staging needs a 24h window and an x-staging-verification-token header (portal #2307, not in docs)</li><li>The simulator ignored connect_url</li><li>One global simulator identity</li></ul></div>
+            <div class="box"><h3>Top request</h3><p>Portal-side rejection of nullifier reuse per action, plus a Portal-checked expected_signal_hash.</p></div>
+          </div>
+        </div>
+        <p class="ptr"><b>docs/feedback/world.md</b></p>
+      </section>
+
+      <!-- 09 ens -->
+      <section class="slide" data-sec="ens" data-id="s09-ens">
+        <h2>ENS: the name is the pedigree</h2>
+        <div class="row" style="gap:56px">
+          <div class="col" style="flex:1.05">
+            <div class="tree">
+              <div class="node">rfclegends.eth <span>parent · UserRegistry</span></div>
+              <div class="link"></div>
+              <div class="node l2">theprawang.rfclegends.eth <span>sire</span></div>
+              <div class="link l2"></div>
+              <div class="node l3">chick01.theprawang… <span>offspring</span></div>
+            </div>
+            <p class="ptr"><b>ens/src/ensv2.ts</b> #L51 registries · #L131 registration<br><b>ens/scripts/harden-resolver.ts</b> #L58 hardened resolver roles<br><b>lib/ens/resolve.ts</b> #L79 records · #L253 attestation proof</p>
+          </div>
+          <div class="col" style="flex:1">
+            <table>
+              <tr><th>Who writes</th><th>rfc.weight</th><th>rfc.sireLine</th></tr>
+              <tr><td>Farm key</td><td class="y">allowed</td><td class="n">reverts</td></tr>
+              <tr><td>Namespace owner</td><td class="n">reverts</td><td class="y">allowed</td></tr>
+              <tr><td>Anyone else</td><td class="n">reverts</td><td class="n">reverts</td></tr>
+            </table>
+            <div class="txgrid ptr">
+              <span>register <b>0x3254a505…bbb14</b></span>
+              <span>hardened resolver <b>0xdc48502b…275f9</b></span>
+              <span>chick01 mint <b>0x1957cd91…9aeea</b></span>
+              <span>farm attestation <b>0xd4c79038…61ac4</b></span>
+            </div>
+            <div class="frame" style="height:300px"><img src="img/rooster-provenance.webp" alt="Rooster provenance: farm and issuer register a unique-ring token; ENSv2 names link sire and offspring; farm-signed health records mirror to ENS"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10 curvegrid -->
+      <section class="slide" data-sec="curve" data-id="s10-curvegrid">
+        <h2>Curvegrid: a farm-signed RWA, fully indexed</h2>
+        <div class="imgrow" style="grid-template-columns: 1fr 1.15fr">
+          <div class="col" style="gap:18px">
+            <div class="box"><h3>Two-party mint</h3><p>The issuer submits, the farm EIP-712 co-signs leg-ring ID, bloodline and hatch date. One leg-ring ID, one token. <span class="ptr">RoosterRWA.sol#L127</span></p></div>
+            <div class="box"><h3>Farm-signed health attestations</h3><p>Weight and health, relayable onchain by anyone. <span class="ptr">RoosterRWA.sol#L206</span></p></div>
+            <div class="box"><h3>MultiBaas</h3><p>All 5 contracts linked with event indexing, 4 saved queries. Sale history comes from rfc-sold. <span class="ptr">multibaas.ts#L91</span></p></div>
+          </div>
+          <div class="frame" style="height:620px"><img src="img/market-recent-sales.webp" alt="Rare Market recent sales panel with the 90/10 split and the source: MultiBaas chip"></div>
+        </div>
+      </section>
+
+      <!-- 11 built -->
+      <section class="slide" data-sec="proof" data-id="s11-built">
+        <h2>Written during ETHGlobal Tokyo</h2>
+        <div class="row" style="gap:48px; align-items:stretch">
+          <div class="col" style="flex:1">
+            <div class="nums" style="grid-template-columns:1fr">
+              <div class="num-card"><span class="v">5/5</span><span class="l">contracts verified on Etherscan and Sourcify</span></div>
+              <div class="num-card"><span class="v">105</span><span class="l">Foundry tests, all green</span></div>
+              <div class="num-card"><span class="v">100%</span><span class="l">line coverage in contracts/src</span></div>
+            </div>
+          </div>
+          <div class="col" style="flex:1.35">
+            <div class="frame" style="height:560px"><img src="img/sold-receipt-etherscan.webp" alt="Sepolia Etherscan receipt: 3 USDC sale split 2.7 to the seller and 0.3 to the treasury"></div>
+            <p class="ptr">A 3.00 USDC sale on Sepolia: <b>2.70</b> to the seller, <b>0.30</b> to the treasury, in one transaction</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 12 thanks -->
+      <section class="slide thanks" data-sec="proof" data-id="s12-thanks">
+        <h1>Thank you</h1>
+        <div class="links">
+          <span class="k">Play</span><span>rfclegends.rfcclub.app</span>
+          <span class="k">Code</span><span>github.com/nolifelover/rfc-legends</span>
+          <span class="k">For</span><span><span style="color:var(--world)">World</span> · <span style="color:var(--ens)">ENS</span> · <span style="color:var(--curve)">Curvegrid</span></span>
+        </div>
+      </section>
+
+      <div class="tag" id="tag"><span class="dot"></span><span id="tagText"></span></div>
+      <div class="rail" id="rail"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls" id="controls">
+  <button id="prev" type="button" aria-label="Previous slide">◀ Prev</button>
+  <span class="count" id="count">1 / 12</span>
+  <button id="next" type="button" aria-label="Next slide">Next ▶</button>
+  <button id="play" type="button" aria-pressed="false">▶ Play narration</button>
+  <button id="cc" type="button" aria-pressed="true">Captions</button>
+  <button id="lang" type="button" aria-label="Switch narration language">Voice: EN</button>
+</div>
+<p class="caption" id="caption"></p>
+
+<script>
+(function () {
+  const SECTIONS = { rfc: "RFC", game: "RFC Legends", world: "World", ens: "ENS", curve: "Curvegrid", proof: "Proof" };
+  const TAGS = {
+    rfc: ["", "RFC · Where it comes from"], game: ["", "RFC Legends · The game"],
+    world: ["world", "World · Best Use of IDKit"], ens: ["ens", "ENS · Best Use of ENSv2"],
+    curve: ["curve", "Curvegrid · Best RWA Tokenization"], proof: ["", "Built at ETHGlobal Tokyo 2026"]
+  };
+  const NARRATION_BY_LANG = { en: [{"id": "s01-cover", "text": "Welcome to RFC Legends, built at ETHGlobal Tokyo twenty twenty-six: an idle rooster adventure whose birds carry farm-signed records onchain. Here's where it comes from, how it works, and what we built for World, ENS and Curvegrid."}, {"id": "s02-origin", "text": "RFC began at Ninlanee Farm in Thailand, which raises Thai fighting roosters. The dream: new universal rules that turn Thai cockfighting into an international sport, the way ONE Championship did for Muay Thai."}, {"id": "s03-ecosystem", "text": "From the farm grew the RFC Club app, RFC TV and our media channels. Coming soon is RFC NFT, a real-world asset that maps each farm rooster onchain for digital sales. And RFC's AI scoring aims to judge results to one fair standard."}, {"id": "s04-legends", "text": "RFC Legends is the game for RFC NFT holders. Live today: an idle adventure with your rooster, rare drops, guild chat, a shared guild boss, and a market to trade drops. Next come holder privileges, breeding, and dressing up your rooster and trainer."}, {"id": "s05-architecture", "text": "A server-authoritative TypeScript engine runs every combat tick and settles offline rewards, with PocketBase holding player state, guild chat and the guild boss. Five contracts on Sepolia hold rare items and rooster records, while World ID, ENS version two and MultiBaas handle proof of human, pedigree and indexing."}, {"id": "s06-demo", "text": "In the demo loop, a boss drops a rare card, the player proves they're human with World ID, and a server-signed EIP-712 voucher mints it as an ERC-1155 item. A buyer pays in the Rare Market, and the contract splits ninety-ten between seller and treasury in one transaction. Then we show two refusals, an unverified bot and a second wallet of the same human."}, {"id": "s07-world", "text": "For World, IDKit gates the whole economy. Our server verifies each proof with the signal pinned to the player's wallet and a one-time nonce, so it can't be replayed. The nullifier is bound to one wallet and mirrored onchain in HumanRegistry, which the mint and the market both check before any value moves."}, {"id": "s08-world-feedback", "text": "Our first IDKit line to a live verify took sixty-two minutes. The blockers: an undocumented staging token, a simulator that ignored our connect link, and a single simulator identity worldwide. Our top request: let the Portal reject a reused nullifier per action, and check the signal a proof was made for."}, {"id": "s09-ens", "text": "For ENS, the name is the pedigree. Offspring are subnames inside their sire's own registry, so chick zero one dot theprawang is its sire's child onchain. A permissioned resolver lets only the farm's key write health records, while the namespace owner handles bloodline fields. Our rooster pages resolve it all live."}, {"id": "s10-curvegrid", "text": "For Curvegrid, every rooster token needs two parties: the issuer submits the mint, and the farm co-signs the leg-ring ID, bloodline and hatch date. The farm also signs health attestations anyone can relay onchain. All five contracts are indexed in MultiBaas, and the ninety-ten sale history comes from a saved Sold-event query."}, {"id": "s11-built", "text": "Everything onchain was written during ETHGlobal Tokyo: five contracts verified on Etherscan and Sourcify, a hundred and five Foundry tests at one hundred percent line coverage, and a live Sepolia demo. World ID work started at seven thirty-seven UTC on day one, and MultiBaas indexing was wired up during the event."}, {"id": "s12-thanks", "text": "That's RFC Legends. Play it now at rfclegends dot rfcclub dot app, and find every contract, pointer and transaction in our GitHub repo. Thank you World, ENS and Curvegrid, and thanks for watching!"}], th: [{"id": "s01-cover", "text": "สวัสดีค่ะทุกคน ยินดีต้อนรับสู่ RFC Legends ค่ะ เราสร้างเกมนี้ขึ้นที่งาน ETHGlobal Tokyo 2026 เป็นเกมผจญภัยแบบ idle ที่มีไก่เป็นคู่หู และไก่ที่อยู่เบื้องหลังเกมมีบันทึกที่ฟาร์มลงนามไว้บนบล็อกเชน วันนี้จะเล่าให้ฟังว่าเกมนี้มาจากไหน ทำงานอย่างไร และเราสร้างอะไรให้กับ World, ENS และ Curvegrid บ้างค่ะ"}, {"id": "s02-origin", "text": "RFC เริ่มต้นจากนิลณีฟาร์มในประเทศไทย ฟาร์มที่เลี้ยงไก่ชนไทย ความฝันของเราคือยกระดับมาตรฐานไก่ชนไทยให้ไปทั่วโลก ด้วยกฎกติกาสากลแบบใหม่ ที่เปลี่ยนให้เป็นกีฬาระดับนานาชาติ เหมือนที่ ONE Championship ทำให้กับมวยไทยค่ะ"}, {"id": "s03-ecosystem", "text": "จากฟาร์ม RFC เติบโตเป็นระบบนิเวศ ทั้งแอป RFC Club, RFC TV และช่องมัลติมีเดียต่าง ๆ ตอนนี้เรากำลังพัฒนา RFC NFT ซึ่งเป็นสินทรัพย์จริงที่เชื่อมไก่แต่ละตัวในฟาร์มเข้ากับบล็อกเชน และกำลังจะเปิดตัวเร็ว ๆ นี้ สำหรับการซื้อขายไก่ผ่านระบบดิจิทัล นอกจากนี้ AI scoring ของ RFC ยังมุ่งตัดสินผลให้เป็นมาตรฐานเดียวที่ยุติธรรมค่ะ"}, {"id": "s04-legends", "text": "RFC Legends คือเกมสำหรับผู้ถือ RFC NFT เป็นพื้นที่ให้เล่น สร้างคอมมูนิตี้ และเชื่อมต่อกัน สิ่งที่เห็นวันนี้ใช้งานได้จริงแล้ว ทั้งการผจญภัยแบบ idle กับไก่คู่หู ไอเทมหายากที่ดรอปจากบอส แชทกิลด์และบอสกิลด์ที่ตีร่วมกัน และตลาดที่ผู้เล่นซื้อขายไอเทมกันได้ ส่วนขั้นต่อไปคือสิทธิพิเศษสำหรับผู้ถือ NFT การผสมพันธุ์เพื่อสร้างสายพันธุ์ใหม่ และการแต่งตัวไก่กับตัวละครของคุณค่ะ"}, {"id": "s05-architecture", "text": "มาดูกันว่าระบบทำงานอย่างไร เอนจินเกมที่เขียนด้วย TypeScript ฝั่งเซิร์ฟเวอร์คำนวณการต่อสู้ทุกจังหวะและรางวัลช่วงออฟไลน์ โดยมี PocketBase เก็บข้อมูลผู้เล่น แชทกิลด์ และบอสกิลด์ ไอเทมหายากและบันทึกของไก่อยู่ในสัญญาอัจฉริยะห้าตัวบน Sepolia ส่วน World ID, ENS เวอร์ชันสอง และ Curvegrid MultiBaas ดูแลการยืนยันความเป็นมนุษย์ สายพันธุ์ และการทำดัชนีข้อมูลค่ะ"}, {"id": "s06-demo", "text": "นี่คือลูปในเดโมของเรา บอสดรอปการ์ดหายาก ผู้เล่นยืนยันว่าเป็นมนุษย์ด้วย World ID แล้วเซิร์ฟเวอร์ลงนาม voucher แบบ EIP-712 การ์ดจึงถูก mint เป็นไอเทม ERC-1155 จากนั้นนำไปลงขายใน Rare Market ผู้ซื้อจ่ายเงิน และสัญญาแบ่งเงินเก้าสิบต่อสิบระหว่างผู้ขายกับคลังในธุรกรรมเดียว แล้วก็ถึงคิวการปฏิเสธ ทั้งบอทที่ยังไม่ยืนยันตัวตน และกระเป๋าใบที่สองของคนคนเดียวกันค่ะ"}, {"id": "s07-world", "text": "สำหรับ World นั้น ไอดีคิทเป็นด่านของเศรษฐกิจทั้งหมดในเกม วิดเจ็ตพิสูจน์ความเป็นมนุษย์ เซิร์ฟเวอร์ของเราตรวจสอบหลักฐานโดยผูก signal กับกระเป๋าของผู้เล่นและใช้ nonce ครั้งเดียว จึงนำไปใช้ซ้ำไม่ได้ nullifier ถูกผูกกับกระเป๋าเพียงใบเดียว และบันทึกบนเชนใน HumanRegistry ซึ่งทั้งการ mint และตลาดจะตรวจก่อนที่เงินจะเคลื่อนค่ะ"}, {"id": "s08-world-feedback", "text": "จากบรรทัดแรกของไอดีคิท จนยืนยันตัวตนได้จริงใช้เวลาหกสิบสองนาที ปัญหาที่เจอคือ staging token ที่ไม่มีในเอกสาร simulator ที่ไม่สนใจลิงก์เชื่อมต่อของเรา และ simulator ที่มีตัวตนเดียวทั้งโลก คำขอหลักของเราถึง World คือให้ Portal ปฏิเสธ nullifier ที่ใช้ซ้ำในแต่ละ action และตรวจ signal ที่หลักฐานนั้นสร้างขึ้นมาค่ะ"}, {"id": "s09-ens", "text": "สำหรับ ENS ชื่อก็คือสายพันธุ์ ลูกไก่อยู่เป็น subname ภายใน registry ของพ่อพันธุ์ ดังนั้น chick zero one จุด theprawang จึงเป็นลูกของพ่อพันธุ์จริง ๆ บนเชน resolver แบบกำหนดสิทธิ์จะกำหนดว่าใครเขียนอะไรได้ มีแค่กุญแจของฟาร์มที่เขียนบันทึกสุขภาพได้ ส่วนเจ้าของ namespace ดูแลข้อมูลสายพันธุ์ และหน้าไก่ของเราอ่านข้อมูลทั้งหมดนี้แบบสดค่ะ"}, {"id": "s10-curvegrid", "text": "สำหรับ Curvegrid โทเคนไก่ทุกตัวต้องมีสองฝ่าย ผู้ออกเป็นคนส่ง mint และฟาร์มร่วมลงนามเลขห่วงขา สายพันธุ์ และวันฟักไข่ ไม่มีใครสร้างไก่ขึ้นมาเองคนเดียวได้ ฟาร์มลงนามบันทึกสุขภาพที่ใครก็ส่งขึ้นเชนได้ สัญญาทั้งห้าตัวถูกทำดัชนีใน MultiBaas และประวัติการขายแบบเก้าสิบต่อสิบของตลาดก็มาจาก saved query ของ event Sold โดยตรงค่ะ"}, {"id": "s11-built", "text": "ทุกอย่างบนเชนในงานนี้เขียนขึ้นระหว่าง ETHGlobal Tokyo ทั้งสัญญาห้าตัวที่ยืนยันบน Etherscan และ Sourcify เทสต์ Foundry หนึ่งร้อยห้าชุดที่ครอบคลุมโค้ดร้อยเปอร์เซ็นต์ และเดโมที่ทำงานจริงบน Sepolia งาน World ID เริ่มตอนเจ็ดโมงสามสิบเจ็ดนาทีตามเวลา UTC ของวันแรก และ MultiBaas ก็ถูกเชื่อมต่อสด ๆ ระหว่างงานค่ะ"}, {"id": "s12-thanks", "text": "นี่คือ RFC Legends ค่ะ เล่นได้เลยตอนนี้ที่ rfclegends จุด rfcclub จุด app และทุกสัญญา pointer และธุรกรรมอยู่ใน GitHub ของเรา ขอบคุณ World, ENS และ Curvegrid และขอบคุณทุกคนที่รับชมค่ะ"}] };
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const stage = document.getElementById("stage");
+  const wrap = document.getElementById("stageWrap");
+  const viewport = document.getElementById("viewport");
+  const rail = document.getElementById("rail");
+  const tag = document.getElementById("tag");
+  const tagText = document.getElementById("tagText");
+  const count = document.getElementById("count");
+  const caption = document.getElementById("caption");
+  const playBtn = document.getElementById("play");
+  const ccBtn = document.getElementById("cc");
+  const params = new URLSearchParams(location.search);
+  const renderMode = params.has("render");
+  let idx = Math.max(0, Math.min(slides.length - 1, (parseInt(params.get("slide") || "1", 10) || 1) - 1));
+  let playing = false;
+  let lang = params.get("lang") === "th" ? "th" : "en";
+  const langBtn = document.getElementById("lang");
+  const audio = new Audio();
+  audio.preload = "auto";
+
+  if (renderMode) document.body.classList.add("render");
+
+  const secOrder = ["rfc", "game", "world", "ens", "curve", "proof"];
+  rail.innerHTML = secOrder.map(s => `<span class="sec" data-s="${s}"><i></i>${SECTIONS[s]}</span>`).join("") + `<span class="num" id="railNum"></span>`;
+
+  function fit() {
+    if (renderMode) { stage.style.transform = "none"; wrap.style.width = "1920px"; wrap.style.height = "1080px"; return; }
+    const w = viewport.clientWidth, h = viewport.clientHeight;
+    const s = Math.min(w / 1920, h / 1080);
+    stage.style.transform = `scale(${s})`;
+    wrap.style.width = (1920 * s) + "px";
+    wrap.style.height = (1080 * s) + "px";
+  }
+  window.addEventListener("resize", fit);
+
+  function narrationFor(i) {
+    const id = slides[i].dataset.id;
+    return NARRATION_BY_LANG[lang].find(n => n.id === id) || { id, text: "" };
+  }
+
+  function show(i) {
+    idx = (i + slides.length) % slides.length;
+    slides.forEach((s, k) => s.classList.toggle("is-active", k === idx));
+    const sec = slides[idx].dataset.sec;
+    const [cls, label] = TAGS[sec];
+    tag.className = "tag" + (cls ? " " + cls : "");
+    tagText.textContent = label;
+    rail.querySelectorAll(".sec").forEach(el => el.classList.toggle("on", el.dataset.s === sec));
+    const n = String(idx + 1).padStart(2, "0") + " / " + String(slides.length).padStart(2, "0");
+    document.getElementById("railNum").textContent = n;
+    count.textContent = (idx + 1) + " / " + slides.length;
+    caption.textContent = narrationFor(idx).text;
+    try { history.replaceState(null, "", "#" + (idx + 1)); } catch (e) {}
+  }
+
+  function playCurrent() {
+    const id = slides[idx].dataset.id;
+    audio.src = (lang === "th" ? "audio-th/" : "audio/") + id + ".mp3";
+    audio.currentTime = 0;
+    audio.play().catch(() => stop());
+  }
+  function start() { playing = true; playBtn.setAttribute("aria-pressed", "true"); playBtn.textContent = "❚❚ Pause"; playCurrent(); }
+  function stop() { playing = false; playBtn.setAttribute("aria-pressed", "false"); playBtn.textContent = "▶ Play narration"; audio.pause(); }
+  audio.addEventListener("ended", () => {
+    if (!playing) return;
+    if (idx < slides.length - 1) { setTimeout(() => { if (!playing) return; show(idx + 1); playCurrent(); }, 700); }
+    else stop();
+  });
+
+  function go(d) { show(idx + d); if (playing) playCurrent(); }
+  document.getElementById("prev").addEventListener("click", () => go(-1));
+  document.getElementById("next").addEventListener("click", () => go(1));
+  playBtn.addEventListener("click", () => (playing ? stop() : start()));
+  ccBtn.addEventListener("click", () => {
+    const on = ccBtn.getAttribute("aria-pressed") !== "true";
+    ccBtn.setAttribute("aria-pressed", String(on));
+    caption.hidden = !on;
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "PageDown") go(1);
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") go(-1);
+    else if (e.key === " ") { e.preventDefault(); playing ? stop() : start(); }
+  });
+
+  function setLang(l) {
+    lang = l;
+    langBtn.textContent = "Voice: " + (lang === "th" ? "ไทย" : "EN");
+    caption.textContent = narrationFor(idx).text;
+    if (playing) playCurrent();
+  }
+  langBtn.addEventListener("click", () => setLang(lang === "th" ? "en" : "th"));
+  setLang(lang);
+
+  const hash = parseInt((location.hash || "").slice(1), 10);
+  if (!params.has("slide") && hash >= 1 && hash <= slides.length) idx = hash - 1;
+  fit();
+  show(idx);
+  window.__deck = { show, count: slides.length };
+})();
+</script>
